@@ -1,4 +1,4 @@
-local Tool = game:GetObjects("rbxassetid://115185577119398")[1]
+local Tool = game:GetObjects("rbxassetid://81334409789995")[1]
 Tool.Parent = game.Players.LocalPlayer.Backpack
 
 -- VARIABLES
