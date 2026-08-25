@@ -59,10 +59,10 @@ local function ScannerStaticStart()
 		ImageTransparency = 1
 	}):Play()
 
-	ScannerViewportFrame.ViewSpecial.ImageColor3 = Color3.fromRGB(217, 255, 206)
+	ScannerViewportFrame.ViewSpecial.ImageColor3 = Color3.fromRGB(0, 0, 255)
 
 	TweenService:Create(ScannerViewportFrame.ViewSpecial, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut, 10, true), {
-		ImageColor3 = Color3.fromRGB(53, 93, 52)
+		ImageColor3 = Color3.fromRGB(0, 0, 255)
 	}):Play()
 
 	ScannerCamera.FieldOfView = 1
