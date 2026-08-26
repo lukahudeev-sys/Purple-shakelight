@@ -1,3 +1,17 @@
+if initiator then
+    local mainGame = initiator:FindFirstChild("Main_Game")
+    if mainGame and mainGame:IsA("ModuleScript") then
+        local mainGameModule = require(mainGame)
+        if type(mainGameModule.caption) == "function" then
+            mainGameModule.caption("Rooms low detailed mode made by Rebound/Rush scripter", true)
+            wait(4)
+            mainGameModule.caption("Rooms low detailed is privated", true)
+            wait(3)
+            mainGameModule.caption("You will have fun (you won't)", true)
+        end
+    end
+end
+
 -- 扫描器脚本
 
 local Scanner = game:GetObjects("rbxassetid://104621053548767")[1]
