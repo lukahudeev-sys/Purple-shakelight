@@ -29,7 +29,8 @@ local Equipped = false
 
 -- tables
 local ScannerObjectives = {
-    "KeyObtain",
+	"RushMoving",
+	"KeyObtain",
     "LeverForGate",
     "LiveBreakerPolePickup",
     "LiveHintBook",
