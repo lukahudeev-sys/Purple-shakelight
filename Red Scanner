@@ -1,6 +1,6 @@
 -- 扫描器脚本
 
-local Scanner = game:GetObjects("rbxassetid://127050766443467")[1]
+local Scanner = game:GetObjects("rbxassetid://71278506819447")[1]
 Scanner.Parent = game.Players.LocalPlayer.Backpack
 
 local target_fps = _G.scanner_fps or 120 -- 这里更改帧率
