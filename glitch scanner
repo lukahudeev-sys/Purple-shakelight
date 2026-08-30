@@ -29,7 +29,7 @@ local Equipped = false
 
 -- tables
 local ScannerObjectives = {
-	"RushNew",
+	"GoldPile",
 	"KeyObtain",
     "LeverForGate",
     "LiveBreakerPolePickup",
