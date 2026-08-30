@@ -3,7 +3,7 @@
 
 -- 扫描器脚本
 
-local Scanner = game:GetObjects("rbxassetid://90668237473606")[1]
+local Scanner = game:GetObjects("rbxassetid://80524289187175")[1]
 Scanner.Parent = game.Players.LocalPlayer.Backpack
 
 local target_fps = _G.scanner_fps or 500 -- 这里更改帧率
@@ -62,10 +62,10 @@ local function ScannerStaticStart()
 		ImageTransparency = 1
 	}):Play()
 
-	ScannerViewportFrame.ViewSpecial.ImageColor3 = Color3.fromRGB(0, 0, 255)
+	ScannerViewportFrame.ViewSpecial.ImageColor3 = Color3.fromRGB(238, 0, 255)
 
 	TweenService:Create(ScannerViewportFrame.ViewSpecial, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut, 10, true), {
-		ImageColor3 = Color3.fromRGB(0, 0, 255)
+		ImageColor3 = Color3.fromRGB(238, 0, 255)
 	}):Play()
 
 	ScannerCamera.FieldOfView = 1
