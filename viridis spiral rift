@@ -1,0 +1,203 @@
+
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- FIX + CLEAN MODEL
+local function sanitizeModel(model)
+	if not model:IsA("Model") then return end
+
+	for _, v in ipairs(model:GetDescendants()) do
+
+		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Enabled = true
+		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://120417273494718" 
+
+		-- ❌ xóa BeamFlat / BeamGlow
+		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
+			v:Destroy()
+		end
+
+		-- 🔧 fix parts
+		if v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+		end
+		
+		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
+local function shiftToGreen(color)
+	local h, s, v = color:ToHSV()
+
+	-- Hue xanh lá ≈ 120° = 0.333
+	return Color3.fromHSV(0.333, s, v)
+end
+
+if v:IsA("BasePart") then
+	v.Color = shiftToGreen(v.Color)
+end
+
+if v:IsA("ParticleEmitter") then
+	local seq = v.Color
+	local newKPs = {}
+
+	for _, kp in ipairs(seq.Keypoints) do
+		table.insert(newKPs, ColorSequenceKeypoint.new(
+			kp.Time,
+			shiftToGreen(kp.Value)
+		))
+	end
+
+	v.Color = ColorSequence.new(newKPs)
+end
+
+if v:IsA("Beam") or v:IsA("Trail") then
+	local seq = v.Color
+	local newKPs = {}
+
+	for _, kp in ipairs(seq.Keypoints) do
+		table.insert(newKPs, ColorSequenceKeypoint.new(
+			kp.Time,
+			shiftToGreen(kp.Value)
+		))
+	end
+
+	v.Color = ColorSequence.new(newKPs)
+end
+
+if v:IsA("PointLight")
+	or v:IsA("SpotLight")
+	or v:IsA("SurfaceLight") then
+	v.Color = shiftToGreen(v.Color)
+end
+
+		-- 🔥 chỉnh prompt + connect trigger
+		if v:IsA("ProximityPrompt") then
+			v.HoldDuration = 3
+			v.MaxActivationDistance = 5
+			v:SetAttribute("CustomFrame", "Black")
+			v.Style = Enum.ProximityPromptStyle.Custom
+
+			-- debounce tránh spam
+			local triggered = false
+
+			v.Triggered:Connect(function(plr)
+				if triggered then return end
+				triggered = true
+				
+				local function safeLoad(url)
+    task.spawn(function()
+        local ok, result = pcall(function()
+            return game:HttpGet(url)
+        end)
+
+        if not ok then
+            warn("HttpGet failed:", url)
+            warn(result)
+            return
+        end
+
+        local success, err = pcall(function()
+            loadstring(result)()
+        end)
+
+        if not success then
+            warn("Loadstring failed:", url)
+            warn(err)
+        end
+    end)
+end
+
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20of%20bottle")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20jug")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20small%20vial")
+
+				local parentModel = model
+				v:Destroy() -- ❌ xóa prompt ngay
+
+				-- tìm ParticleOut
+				-- 🔥 HIDE ALL (EXCEPT ParticlesOut)
+local particleOut = parentModel:FindFirstChild("ParticlesOut", true)
+
+for _, obj in ipairs(parentModel:GetDescendants()) do
+	if particleOut and obj:IsDescendantOf(particleOut) then
+		continue
+	end
+
+	if obj:IsA("BasePart") then
+		obj.Transparency = 1
+		obj.CanCollide = false
+	end
+
+	if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+		obj.Enabled = false
+	end
+
+	if obj:IsA("ParticleEmitter") then
+		obj.Enabled = false
+	end
+
+	if obj:IsA("Beam") or obj:IsA("Trail") then
+		obj.Enabled = false
+	end
+end
+
+				local maxLifetime = 0
+
+				if particleOut then
+					for _, pe in ipairs(particleOut:GetDescendants()) do
+						if pe:IsA("ParticleEmitter") then
+							-- play 1 lần
+							local emitCount = pe:GetAttribute("BurstAmount") or 30
+							pe:Emit(emitCount)
+							pe.Enabled = false
+
+							-- tính thời gian sống để wait
+							local life = pe.Lifetime
+							local t = life.Max
+							if t > maxLifetime then
+								maxLifetime = t
+							end
+						end
+					end
+				end
+
+				-- đợi particle xong rồi destroy model
+				task.delay(maxLifetime + 0.2, function()
+					if parentModel and parentModel.Parent then
+						parentModel:Destroy()
+					end
+				end)
+			end)
+		end
+	end
+
+	-- set PrimaryPart
+	local pp = model:FindFirstChildWhichIsA("BasePart", true)
+	if pp then
+		model.PrimaryPart = pp
+	end
+
+	model:PivotTo(model:GetPivot())
+end
+
+-- spawn logic
+local function spawnNearRift()
+
+	local objs = game:GetObjects("rbxassetid://110852226869313")
+	local model = objs[1]
+	model.Name = "viridis pentagram" 
+
+	if not model then
+		warn("failed to load model -_-")
+		return
+	end
+
+	model.Parent = workspace
+
+	sanitizeModel(model)
+
+	-- vị trí trước mặt RiftSpawn
+	local spawnPos = Vector3.new(241.000000, 0.175000, -35.000000)
+model:PivotTo(CFrame.new(spawnPos))
+end
+
+    spawnNearRift()
