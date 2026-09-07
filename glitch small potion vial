@@ -1,0 +1,497 @@
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local MainUI_upvr = nil
+local RunService = game:GetService("RunService")
+local Lighting = game.Lighting
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+local toolNew = nil
+if game.GameId == 6627207668 then
+	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+else
+	toolNew = game:GetObjects("rbxassetid://121501306189986")[1]
+end
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+local drinked = false
+local CollisionLoopRunning = true
+local ended = false
+newCloneEffect.Name = "GlitchLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+newCloneEffect.Image = "rbxassetid://95707198060965"
+
+local ohhmydayz = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
+local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
+local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+
+local warningGui
+local warningLabel
+local warningConn
+local warningSounds = {}
+
+local function createWarningUI()
+	if warningGui then return end
+
+	warningGui = Instance.new("ScreenGui")
+	warningGui.Name = "EntityWarningUI"
+	warningGui.ResetOnSpawn = false
+	warningGui.Parent = playerGui
+
+	warningLabel = Instance.new("TextLabel")
+	warningLabel.Size = UDim2.new(0, 400, 0, 50)
+	warningLabel.Position = UDim2.new(0.5, -200, 0.85, 0)
+	warningLabel.BackgroundTransparency = 1
+	warningLabel.Text = ""
+	warningLabel.TextScaled = true
+	warningLabel.Font = Enum.Font.GothamBlack
+	warningLabel.Parent = warningGui
+
+	--  gradient tím + hng
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 0, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 170))
+	})
+	grad.Parent = warningLabel
+end
+
+local function glitchText()
+	if not warningLabel then return end
+
+	task.spawn(function()
+		while warningLabel and warningLabel.Parent do
+			local base = "!!! ENTITY DETECTED !!!"
+
+			-- glitch random ký t
+			local glitched = ""
+			for i = 1, #base do
+				local c = base:sub(i,i)
+				if math.random(1, 6) == 1 then
+					c = string.char(math.random(33, 126))
+				end
+				glitched ..= c
+			end
+
+			warningLabel.Text = glitched
+			warningLabel.Rotation = math.random(-3, 3)
+			warningLabel.TextTransparency = math.random(0, 2) * 0.1
+
+			task.wait(1)
+		end
+	end)
+end
+
+local function playWarningSounds()
+	local s1 = Instance.new("Sound", workspace)
+	s1.SoundId = "rbxassetid://101323363019758" -- m thay
+	s1.Volume = 1
+	s1:Play()
+
+	local s2 = Instance.new("Sound", workspace)
+	s2.SoundId = "rbxassetid://126100882513980" -- ambience
+	s2.Looped = true
+	s2.Volume = 0.6
+	s2:Play()
+
+	table.insert(warningSounds, s1)
+	table.insert(warningSounds, s2)
+end
+
+local function stopWarningSystem()
+	if warningConn then
+		warningConn:Disconnect()
+		warningConn = nil
+	end
+
+	if warningGui then
+		warningGui:Destroy()
+		warningGui = nil
+		warningLabel = nil
+	end
+
+	for _, s in ipairs(warningSounds) do
+		if s then
+			s:Stop()
+			s:Destroy()
+		end
+	end
+
+	warningSounds = {}
+
+	if warningGui then
+		warningGui:SetAttribute("Active", false)
+	end
+end
+
+local function startEntityLoop()
+	if warningConn then return end
+
+	warningConn = RunService.Heartbeat:Connect(function()
+		local entityType = nil
+
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			if obj:IsA("Model") then
+				if obj.Name == "RushMoving" then
+					entityType = "RUSH"
+					break
+				elseif obj.Name == "AmbushMoving" then
+					entityType = "AMBUSH"
+					break
+				end
+			end
+		end
+
+		if entityType then
+			createWarningUI()
+
+			-- set text theo entity
+			if entityType == "RUSH" then
+				warningLabel.Text = "RUSH IS COMING"
+			elseif entityType == "AMBUSH" then
+				warningLabel.Text = "AMBUSH IS COMING"
+			end
+
+			-- ch chy glitch + sound 1 ln
+			if not warningGui:GetAttribute("Active") then
+				warningGui:SetAttribute("Active", true)
+				glitchText()
+				playWarningSounds()
+			end
+
+		else
+			-- cleanup khi không còn entity
+			if warningGui then
+				warningGui:Destroy()
+				warningGui = nil
+				warningLabel = nil
+			end
+
+			for _, s in ipairs(warningSounds) do
+				if s then s:Destroy() end
+			end
+			warningSounds = {}
+		end
+	end)
+end
+
+local glitchConn
+local glitchRunning = false
+local Lighting = game:GetService("Lighting")
+
+local cc = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+if not cc then
+	cc = Instance.new("ColorCorrectionEffect")
+	cc.Parent = Lighting
+end
+
+local function screenGlitchOnce()
+
+	-- backup
+	local b = {
+		Brightness = cc.Brightness,
+		Contrast = cc.Contrast,
+		Saturation = cc.Saturation,
+		TintColor = cc.TintColor
+	}
+
+	-- glitch burst
+	cc.Brightness = 1
+	cc.Contrast = 2
+	cc.Saturation = -1
+	cc.TintColor = Color3.fromRGB(255, 0, 255)
+
+	task.wait(0.08)
+
+	-- restore
+	cc.Brightness = b.Brightness
+	cc.Contrast = b.Contrast
+	cc.Saturation = b.Saturation
+	cc.TintColor = b.TintColor
+end
+
+local function startScreenGlitchLoop()
+	if glitchConn then return end
+	glitchRunning = true
+
+	glitchConn = task.spawn(function()
+		while glitchRunning do
+			task.wait(math.random(5,7))
+			if not glitchRunning then break end
+			screenGlitchOnce()
+		end
+	end)
+end
+
+local function stopScreenGlitchLoop()
+	glitchRunning = false
+	if glitchConn then
+		glitchConn = nil
+	end
+end
+
+spawn(function()
+	while wait() do
+		if drinked == true and ended == false then
+				ended = true
+				if game.GameId == 6627207668 then
+					local newTool = script.flyTest:Clone()
+					newTool.Parent = game.Players.LocalPlayer.Backpack
+					newTool.Enabled = true
+				else
+				
+				if getgenv().GlitchlightRunning then
+	return
+end
+getgenv().GlitchlightRunning = true
+				
+				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+startEntityLoop()
+    startScreenGlitchLoop()
+    
+    local activeSpot
+local fogBackup = {
+	FogStart = Lighting.FogStart,
+	FogEnd = Lighting.FogEnd
+}
+    
+    local viridis = Instance.new("Sound", workspace) 
+    viridis.SoundId = "rbxassetid://105484228629232" 
+    viridis.Volume = 1.5
+    
+    local ambience = Instance.new("Sound", workspace) 
+    ambience.SoundId = "rbxassetid://139866863795650" 
+    ambience.Volume = 1
+    ambience.Looped = true
+    ambience:Play()
+    
+    viridis:Play()
+    
+    local activeSpot = RootPart:FindFirstChild("GlitchJugSpot")
+
+if activeSpot then
+	activeSpot:Destroy()
+end
+
+local spot = Instance.new("SpotLight")
+activeSpot = spot
+
+spot.Name = "GlitchJugSpot"
+spot.Color = Color3.fromRGB(170, 0, 255)
+spot.Brightness = 0
+spot.Range = 0
+spot.Angle = 0
+spot.Shadows = true
+spot.Parent = RootPart
+
+--  tween lên trng thái active
+TweenService:Create(spot, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	Range = 30,
+	Angle = 90,
+	Brightness = 3
+}):Play()
+
+Lighting.FogStart = 30
+Lighting.FogEnd = 60
+    
+					local Workspace = game:GetService("Workspace")
+
+local stopped = false
+
+local function process(inst)
+	if stopped then return end
+end
+
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+
+local humanoid = player.Character or player.CharacterAdded:Wait()
+humanoid = humanoid:WaitForChild("Humanoid")
+
+local stopped = false
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+
+-- =========================
+-- ⏳ TIMER UI
+-- =========================
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 200, 0, 40)
+label.Position = UDim2.new(0.5, -100, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(170, 255, 180)
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.TextSize = 20
+label.Visible = false
+label.Text = "0:40"
+label.Parent = gui
+
+-- =========================
+-- ⏱ TIMER LOGIC
+-- =========================
+local timeLeft = 40
+
+local function formatTime(t)
+	local m = math.floor(t / 60)
+	local s = t % 60
+	return string.format("%d:%02d", m, s)
+end
+
+-- =========================
+-- 🔄 RESTORE SYSTEM
+-- =========================
+local function restore()
+	
+	getgenv().GlitchlightRunning = false
+	
+	newCloneEffect.Visible = false
+stopWarningSystem()
+    stopScreenGlitchLoop()
+    
+    if activeSpot then
+	local t = TweenService:Create(activeSpot, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Range = 0,
+		Angle = 0,
+		Brightness = 0
+	})
+
+	t:Play()
+	t.Completed:Connect(function()
+		if activeSpot then
+			activeSpot:Destroy()
+			activeSpot = nil
+		end
+	end)
+end
+
+--  restore fog
+TweenService:Create(Lighting, TweenInfo.new(1.5), {
+	FogStart = fogBackup.FogStart,
+	FogEnd = fogBackup.FogEnd
+}):Play()
+
+	-- destroy UI
+	task.delay(2, function()
+		if gui then gui:Destroy() end
+	end)
+end
+
+viridis:Play() 
+    
+    viridis.Ended:Connect(function()
+    viridis:Destroy() 
+    end) 
+
+-- =========================
+-- ⏳ COUNTDOWN LOOP
+-- =========================
+task.spawn(function()
+	while timeLeft >= 0 do
+		label.Text = formatTime(timeLeft)
+
+		if timeLeft == 0 then
+			restore()
+			ambience:Destroy() 
+
+			break
+		end
+
+		timeLeft -= 1
+		task.wait(1)
+	end
+end)
+				end
+		end
+	end
+end)
+
+local function EffectOnScreen()
+	drinkSoundPlay()
+	newCloneEffect.Visible = true
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name ..= "Live"
+			clone_2.ImageColor3 = Color3.fromRGB(208,0,255)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0;
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0);
+			}):Play()
+			wait(0.5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkGlitchPotionAddonSound") then
+		newSound = Instance.new("Sound",workspace)
+		newSound.Name = "DrinkGlitchPotionAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://105484228629232"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkGlitchPotionAddonSound")
+	end
+	newSound:Play()
+end
+
+toolNew.Parent = game.Players.LocalPlayer.Backpack
+toolNew.Name = "Glitchlight Vial" 
+toolNew.TextureId = "rbxassetid://83697244024585" 
+
+toolNew.Equipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Play()
+	end
+end)
+toolNew.Unequipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Stop()
+	end
+end)
+
+toolNew.Activated:Connect(function()
+	if drinked == false then
+		drinked = true
+		EffectOnScreen()
+
+		if game.GameId == 6627207668 then
+			ohhmydayz2:Play()
+			ohhmydayz2.Ended:Wait()
+		else
+			ohhmydayz3:Play()
+			ohhmydayz3.Ended:Wait()
+		end
+		toolNew:Destroy()
+	end
+end)
