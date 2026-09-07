@@ -1,0 +1,510 @@
+-- i made it very quick and i was lazy so dont mess the very bad code
+
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local StarJug = game:GetObjects("rbxassetid://92785337029492")[1]
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local Lighting = game.Lighting
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local warningGui
+local warningLabel
+local warningConn
+local warningSounds = {}
+
+local function createWarningUI()
+	if warningGui then return end
+
+	warningGui = Instance.new("ScreenGui")
+	warningGui.Name = "EntityWarningUI"
+	warningGui.ResetOnSpawn = false
+	warningGui.Parent = playerGui
+
+	warningLabel = Instance.new("TextLabel")
+	warningLabel.Size = UDim2.new(0, 400, 0, 50)
+	warningLabel.Position = UDim2.new(0.5, -200, 0.85, 0)
+	warningLabel.BackgroundTransparency = 1
+	warningLabel.Text = ""
+	warningLabel.TextScaled = true
+	warningLabel.Font = Enum.Font.GothamBlack
+	warningLabel.Parent = warningGui
+
+	--  gradient tím + hng
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 0, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 170))
+	})
+	grad.Parent = warningLabel
+end
+
+local function glitchText()
+	if not warningLabel then return end
+
+	task.spawn(function()
+		while warningLabel and warningLabel.Parent do
+			local base = "!!! ENTITY DETECTED !!!"
+
+			-- glitch random ký t
+			local glitched = ""
+			for i = 1, #base do
+				local c = base:sub(i,i)
+				if math.random(1, 6) == 1 then
+					c = string.char(math.random(33, 126))
+				end
+				glitched ..= c
+			end
+
+			warningLabel.Text = glitched
+			warningLabel.Rotation = math.random(-3, 3)
+			warningLabel.TextTransparency = math.random(0, 2) * 0.1
+
+			task.wait(1)
+		end
+	end)
+end
+
+local function playWarningSounds()
+	local s1 = Instance.new("Sound", workspace)
+	s1.SoundId = "rbxassetid://101323363019758" -- m thay
+	s1.Volume = 1
+	s1:Play()
+
+	local s2 = Instance.new("Sound", workspace)
+	s2.SoundId = "rbxassetid://126100882513980" -- ambience
+	s2.Looped = true
+	s2.Volume = 0.6
+	s2:Play()
+
+	table.insert(warningSounds, s1)
+	table.insert(warningSounds, s2)
+end
+
+local function stopWarningSystem()
+	if warningConn then
+		warningConn:Disconnect()
+		warningConn = nil
+	end
+
+	if warningGui then
+		warningGui:Destroy()
+		warningGui = nil
+		warningLabel = nil
+	end
+
+	for _, s in ipairs(warningSounds) do
+		if s then
+			s:Stop()
+			s:Destroy()
+		end
+	end
+
+	warningSounds = {}
+
+	if warningGui then
+		warningGui:SetAttribute("Active", false)
+	end
+end
+
+local function startEntityLoop()
+	if warningConn then return end
+
+	warningConn = RunService.Heartbeat:Connect(function()
+		local entityType = nil
+
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			if obj:IsA("Model") then
+				if obj.Name == "RushMoving" then
+					entityType = "RUSH"
+					break
+				elseif obj.Name == "AmbushMoving" then
+					entityType = "AMBUSH"
+					break
+				end
+			end
+		end
+
+		if entityType then
+			createWarningUI()
+
+			-- set text theo entity
+			if entityType == "RUSH" then
+				warningLabel.Text = "RUSH IS COMING"
+			elseif entityType == "AMBUSH" then
+				warningLabel.Text = "AMBUSH IS COMING"
+			end
+
+			-- ch chy glitch + sound 1 ln
+			if not warningGui:GetAttribute("Active") then
+				warningGui:SetAttribute("Active", true)
+				glitchText()
+				playWarningSounds()
+			end
+
+		else
+			-- cleanup khi không còn entity
+			if warningGui then
+				warningGui:Destroy()
+				warningGui = nil
+				warningLabel = nil
+			end
+
+			for _, s in ipairs(warningSounds) do
+				if s then s:Destroy() end
+			end
+			warningSounds = {}
+		end
+	end)
+end
+
+local glitchConn
+local glitchRunning = false
+local Lighting = game:GetService("Lighting")
+
+local cc = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+if not cc then
+	cc = Instance.new("ColorCorrectionEffect")
+	cc.Parent = Lighting
+end
+
+local function screenGlitchOnce()
+
+	-- backup
+	local b = {
+		Brightness = cc.Brightness,
+		Contrast = cc.Contrast,
+		Saturation = cc.Saturation,
+		TintColor = cc.TintColor
+	}
+
+	-- glitch burst
+	cc.Brightness = 1
+	cc.Contrast = 2
+	cc.Saturation = -1
+	cc.TintColor = Color3.fromRGB(255, 0, 255)
+
+	task.wait(0.08)
+
+	-- restore
+	cc.Brightness = b.Brightness
+	cc.Contrast = b.Contrast
+	cc.Saturation = b.Saturation
+	cc.TintColor = b.TintColor
+end
+
+local function startScreenGlitchLoop()
+	if glitchConn then return end
+	glitchRunning = true
+
+	glitchConn = task.spawn(function()
+		while glitchRunning do
+			task.wait(math.random(5,7))
+			if not glitchRunning then break end
+			screenGlitchOnce()
+		end
+	end)
+end
+
+local function stopScreenGlitchLoop()
+	glitchRunning = false
+	if glitchConn then
+		glitchConn = nil
+	end
+end
+
+local speedTweenValue = Instance.new("NumberValue", StarJug)
+
+local durability = 4
+local debounce = false
+StarJug:SetAttribute("Durability", durability)
+
+local MainUI_upvr = nil
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+newCloneEffect.Name = "GlitchLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+newCloneEffect.Image = "rbxassetid://95707198060965"
+
+StarJug.Parent = game.Players.LocalPlayer.Backpack
+StarJug.Name = "Glitchlight Jug" 
+StarJug.TextureId = "rbxassetid://76643684989182" 
+
+local function EffectOnScreen()
+	newCloneEffect.Visible = true
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name ..= "Live"
+			clone_2.ImageColor3 = Color3.fromRGB(208,0,255)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0;
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0);
+			}):Play()
+			wait(35)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkGlitchJugAddonSound") then
+		newSound = Instance.new("Sound",workspace)
+		newSound.Name = "DrinkGlitchJugAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://105484228629232"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkGlitchJugAddonSound")
+	end
+	newSound:Play()
+end
+
+local character = game.Players.LocalPlayer.Character
+local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+local Animations = StarJug:WaitForChild("Animations")
+local LoadedAnims = {}
+
+for _, anim in pairs(Animations:GetChildren()) do
+    LoadedAnims[anim.Name] = humanoid:LoadAnimation(anim)
+    
+    if anim.Name == "idle" then
+        LoadedAnims[anim.Name].Priority = Enum.AnimationPriority.Idle
+        LoadedAnims[anim.Name].Looped = true
+    end
+end
+
+StarJug.Equipped:Connect(function()
+    LoadedAnims["equip"]:Play()
+    
+    task.wait(LoadedAnims["equip"].Length)
+    
+    if StarJug:IsDescendantOf(character) then
+        LoadedAnims["idle"]:Play()
+    end
+end)
+
+StarJug.Unequipped:Connect(function()
+    if LoadedAnims["idle"].IsPlaying then
+        LoadedAnims["idle"]:Stop()
+    end
+end)
+
+StarJug.Activated:Connect(function()
+    if debounce then return end
+    debounce = true
+    
+    startEntityLoop()
+    startScreenGlitchLoop()
+    
+    local activeSpot
+local fogBackup = {
+	FogStart = Lighting.FogStart,
+	FogEnd = Lighting.FogEnd
+}
+    
+    local viridis = Instance.new("Sound", workspace) 
+    viridis.SoundId = "rbxassetid://105484228629232" 
+    viridis.Volume = 1.5
+    
+    local ambience = Instance.new("Sound", workspace) 
+    ambience.SoundId = "rbxassetid://139866863795650" 
+    ambience.Volume = 1
+    ambience.Looped = true
+    ambience:Play()
+    
+    viridis:Play()
+    
+    viridis.Ended:Connect(function()
+    viridis:Destroy()
+    end)
+    
+    EffectOnScreen()
+    
+    drinkSoundPlay()
+    
+    LoadedAnims["open"]:Play()
+    
+    if durability - 1 ~= 0 then
+    durability = durability - 1
+    StarJug:SetAttribute("Durability", durability)
+else
+    StarJug:Destroy()
+end
+   
+   task.spawn(function()
+    if getgenv().GlitchlightRunning2 then
+	return
+end
+getgenv().GlitchlightRunning2 = true
+				
+				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+local activeSpot = RootPart:FindFirstChild("GlitchJugSpot")
+
+if activeSpot then
+	activeSpot:Destroy()
+end
+
+local spot = Instance.new("SpotLight")
+activeSpot = spot
+
+spot.Name = "GlitchJugSpot"
+spot.Color = Color3.fromRGB(170, 0, 255)
+spot.Brightness = 0
+spot.Range = 0
+spot.Angle = 0
+spot.Shadows = true
+spot.Parent = RootPart
+
+--  tween lên trng thái active
+TweenService:Create(spot, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	Range = 30,
+	Angle = 90,
+	Brightness = 6
+}):Play()
+
+Lighting.FogStart = 30
+Lighting.FogEnd = 60
+    
+					local Workspace = game:GetService("Workspace")
+
+local stopped = false
+
+local function process(inst)
+	if stopped then return end
+end
+
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+
+local humanoid = player.Character or player.CharacterAdded:Wait()
+humanoid = humanoid:WaitForChild("Humanoid")
+
+local stopped = false
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+
+-- =========================
+-- â³ TIMER UI
+-- =========================
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 200, 0, 40)
+label.Position = UDim2.new(0.5, -100, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(170, 255, 180)
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.Visible = false
+label.Text = "0:35"
+label.Parent = gui
+
+-- =========================
+-- â± TIMER LOGIC
+-- =========================
+local timeLeft = 35
+
+local function formatTime(t)
+	local m = math.floor(t / 60)
+	local s = t % 60
+	return string.format("%d:%02d", m, s)
+end
+
+-- =========================
+-- ðŸ”„ RESTORE SYSTEM
+-- =========================
+local function restore()
+	
+	getgenv().GlitchlightRunning2 = false
+	
+	stopWarningSystem()
+
+	-- destroy UI
+	task.delay(2, function()
+		if gui then gui:Destroy() end
+	end)
+end
+
+-- =========================
+-- â³ COUNTDOWN LOOP
+-- =========================
+task.spawn(function()
+	while timeLeft >= 0 do
+		label.Text = formatTime(timeLeft)
+
+		if timeLeft == 0 then
+			restore()
+			ambience:Destroy() 
+			stopScreenGlitchLoop()
+			
+			--  restore spotlight
+if activeSpot then
+	local t = TweenService:Create(activeSpot, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Range = 0,
+		Angle = 0,
+		Brightness = 0
+	})
+
+	t:Play()
+	t.Completed:Connect(function()
+		if activeSpot then
+			activeSpot:Destroy()
+			activeSpot = nil
+		end
+	end)
+end
+
+--  restore fog
+TweenService:Create(Lighting, TweenInfo.new(1.5), {
+	FogStart = fogBackup.FogStart,
+	FogEnd = fogBackup.FogEnd
+}):Play()
+			
+			newCloneEffect.Visible = false
+			break
+		end
+
+		timeLeft -= 1
+		task.wait(1)
+	end
+end)
+end) 
+
+    task.wait(35)
+    debounce = false
+end)
