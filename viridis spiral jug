@@ -384,7 +384,7 @@ label.Parent = gui
 -- =========================
 -- â± TIMER LOGIC
 -- =========================
-local timeLeft = 35
+local timeLeft = 60
 
 local function formatTime(t)
 	local m = math.floor(t / 60)
