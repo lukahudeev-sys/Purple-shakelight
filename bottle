@@ -1,0 +1,451 @@
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local MainUI_upvr = nil
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+local toolNew = nil
+if game.GameId == 6627207668 then
+	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+else
+	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
+end
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+local drinked = false
+local CollisionLoopRunning = true
+local ended = false
+newCloneEffect.Name = "GuidingLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+
+local ohhmydayz = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
+local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
+local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+
+spawn(function()
+	while wait() do
+		if drinked == true and ended == false then
+				ended = true
+				if game.GameId == 6627207668 then
+					local newTool = script.flyTest:Clone()
+					newTool.Parent = game.Players.LocalPlayer.Backpack
+					newTool.Enabled = true
+				else
+				
+				if getgenv().ViridislightRunning then
+	return
+end
+getgenv().ViridislightRunning = true
+				
+				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+local potionLight = Instance.new("PointLight")
+potionLight.Name = "ViridisLight"
+potionLight.Color = Color3.fromRGB(0,255,0)
+potionLight.Brightness = 2
+potionLight.Range = 0
+potionLight.Shadows = false
+potionLight.Parent = RootPart
+
+TweenService:Create(
+	potionLight,
+	TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	{
+		Range = 45
+	}
+):Play()
+
+local Camera = workspace.CurrentCamera
+local Collision
+
+Collision = Character:FindFirstChild("CollisionPart")
+    if not Collision then
+        for _, part in pairs(Character:GetChildren()) do
+            if part:IsA("BasePart") and part.Name:lower():find("collision") then
+                Collision = part
+                break
+            end
+        end
+    end
+    
+    if not Collision then
+        Collision = RootPart
+    end
+    
+    local CollisionClone = Collision:Clone()
+    CollisionClone.CanCollide = false
+    CollisionClone.Massless = true
+    CollisionClone.CanQuery = false
+    CollisionClone.Name = "CollisionClone"
+    
+    if CollisionClone:FindFirstChild("CollisionCrouch") then
+        CollisionClone.CollisionCrouch:Destroy()
+    end
+    
+    CollisionClone.Parent = Character
+    
+    task.spawn(function()
+	while Character.Parent and CollisionLoopRunning do
+		if RootPart.Anchored then
+			CollisionClone.Massless = true
+			repeat
+				task.wait()
+			until not RootPart.Anchored or not CollisionLoopRunning
+
+			if not CollisionLoopRunning then
+				break
+			end
+
+			task.wait(0.15)
+		else
+			CollisionClone.Massless = not CollisionClone.Massless
+		end
+
+		task.wait(0.24)
+	end
+end)
+    
+    local viridis = Instance.new("Sound", workspace) 
+    viridis.SoundId = "rbxassetid://140242540481244" 
+    viridis.Volume = 1.2
+    
+    local ambience = Instance.new("Sound", workspace) 
+    ambience.SoundId = "rbxassetid://1841950508" 
+    ambience.Volume = 1
+    ambience.Looped = true
+    ambience:Play()
+    
+					local Workspace = game:GetService("Workspace")
+
+local stopped = false
+local activeHighlights = {}
+
+local function createHighlight(inst)
+	local h = Instance.new("Highlight")
+	h.FillColor = Color3.fromRGB(120, 255, 160)
+	h.OutlineColor = Color3.fromRGB(80, 255, 120)
+	h.FillTransparency = 0.4
+	h.OutlineTransparency = 0
+	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	h.Parent = inst
+
+	table.insert(activeHighlights, h)
+end
+
+local function process(inst)
+	if stopped then return end
+
+	-- 🚪 Door (MODEL only, exact name)
+	if inst:IsA("Model") and inst.Name == "Door" then
+		if not inst:FindFirstChildOfClass("Highlight") then
+			local h = Instance.new("Highlight")
+			h.FillColor = Color3.fromRGB(120, 255, 160)
+			h.OutlineColor = Color3.fromRGB(80, 255, 120)
+			h.FillTransparency = 0.4
+			h.OutlineTransparency = 0
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Parent = inst
+
+			table.insert(activeHighlights, h)
+		end
+	end
+
+	-- 🔑 KeyObtain (giữ nguyên)
+	if inst:IsA("Model") and inst.Name == "KeyObtain" then
+		if not inst:FindFirstChildOfClass("Highlight") then
+			local h = Instance.new("Highlight")
+			h.FillColor = Color3.fromRGB(120, 255, 160)
+			h.OutlineColor = Color3.fromRGB(80, 255, 120)
+			h.FillTransparency = 0.4
+			h.OutlineTransparency = 0
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Parent = inst
+
+			table.insert(activeHighlights, h)
+		end
+	end
+end
+
+local function scanRooms()
+	if stopped then return end
+
+	local rooms = Workspace:FindFirstChild("CurrentRooms")
+	if not rooms then return end
+
+	for _, v in ipairs(rooms:GetDescendants()) do
+		process(v)
+	end
+end
+
+-- 🔄 initial scan
+scanRooms()
+
+-- 🔄 live scan
+local conn
+conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
+	if stopped then return end
+	task.wait()
+	process(v)
+end)
+
+-- =========================
+-- ⏳ TIMER CONTROL HOOK
+-- (gắn vào script timer của m)
+-- =========================
+local function stopHighlights()
+	stopped = true
+
+	-- disconnect event
+	if conn then
+		conn:Disconnect()
+	end
+
+	-- destroy all highlights
+	for _, h in ipairs(activeHighlights) do
+		if h and h.Parent then
+			h:Destroy()
+		end
+	end
+
+	activeHighlights = {}
+end
+
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+
+local humanoid = player.Character or player.CharacterAdded:Wait()
+humanoid = humanoid:WaitForChild("Humanoid")
+
+local stopped = false
+local hpConn
+
+local function startRegen()
+	hpConn = task.spawn(function()
+		while not stopped do
+			task.wait(0.5)
+
+			if humanoid and humanoid.Parent and humanoid.Health > 0 then
+				humanoid.Health = math.min(humanoid.Health + 1, humanoid.MaxHealth)
+			end
+		end
+	end)
+end
+
+local function stopRegen()
+	stopped = true
+end
+
+startRegen()
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+
+-- =========================
+-- 📦 SAVE ORIGINAL STATE
+-- =========================
+local originalWalkSpeed = humanoid.WalkSpeed
+
+-- =========================
+-- 🏃 FORCE SPEED 25
+-- =========================
+local speedConn
+speedConn = RunService.Heartbeat:Connect(function()
+	if humanoid and humanoid.Parent then
+		if humanoid.WalkSpeed ~= 17 then
+			humanoid.WalkSpeed = 17
+		end
+	end
+end)
+
+-- =========================
+-- ⏳ TIMER UI
+-- =========================
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 200, 0, 40)
+label.Position = UDim2.new(0.5, -100, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(170, 255, 180)
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.TextSize = 20
+label.Text = "1:00"
+label.Parent = gui
+
+-- =========================
+-- ⏱ TIMER LOGIC
+-- =========================
+local timeLeft = 30
+
+local function formatTime(t)
+	local m = math.floor(t / 60)
+	local s = t % 60
+	return string.format("%d:%02d", m, s)
+end
+
+-- =========================
+-- 🔄 RESTORE SYSTEM
+-- =========================
+local function restore()
+	
+	getgenv().ViridislightRunning = false
+	
+	if potionLight and potionLight.Parent then
+	local lightTween = TweenService:Create(
+		potionLight,
+		TweenInfo.new(2),
+		{
+			Range = 0
+		}
+	)
+
+	lightTween:Play()
+
+	lightTween.Completed:Connect(function()
+		if potionLight then
+			potionLight:Destroy()
+		end
+	end)
+end
+	
+	newCloneEffect.Visible = false
+	
+	if speedConn then
+	speedConn:Disconnect()
+end
+
+	-- tween speed back
+	local tween = TweenService:Create(humanoid, TweenInfo.new(2), {
+		WalkSpeed = originalWalkSpeed
+	})
+	tween:Play()
+
+	-- destroy UI
+	task.delay(2, function()
+		if gui then gui:Destroy() end
+	end)
+end
+
+viridis:Play() 
+    
+    viridis.Ended:Connect(function()
+    viridis:Destroy() 
+    end) 
+
+-- =========================
+-- ⏳ COUNTDOWN LOOP
+-- =========================
+task.spawn(function()
+	while timeLeft >= 0 do
+		label.Text = formatTime(timeLeft)
+
+		if timeLeft == 0 then
+		stopRegen()
+		stopHighlights() 
+			restore()
+ambience:Destroy() 
+			
+			CollisionLoopRunning = false
+
+if CollisionClone then
+	CollisionClone:Destroy()
+end
+
+			break
+		end
+
+		timeLeft -= 1
+		task.wait(1)
+	end
+end)
+				end
+		end
+	end
+end)
+
+local function EffectOnScreen()
+	drinkSoundPlay()
+	newCloneEffect.Visible = true
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name ..= "Live"
+			clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0;
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0);
+			}):Play()
+			wait(0.5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkPotionAddonSound") then
+		newSound = Instance.new("Sound",workspace)
+		newSound.Name = "DrinkPotionAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://103799151859408"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkPotionAddonSound")
+	end
+	newSound:Play()
+end
+
+toolNew.Parent = game.Players.LocalPlayer.Backpack
+toolNew.Name = "Viridislight Bottle" 
+toolNew.TextureId = "rbxassetid://76865808847706" 
+
+toolNew.Equipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Play()
+	end
+end)
+toolNew.Unequipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Stop()
+	end
+end)
+
+toolNew.Activated:Connect(function()
+	if drinked == false then
+		drinked = true
+		EffectOnScreen()
+
+		if game.GameId == 6627207668 then
+			ohhmydayz2:Play()
+			ohhmydayz2.Ended:Wait()
+		else
+			ohhmydayz3:Play()
+			ohhmydayz3.Ended:Wait()
+		end
+		toolNew:Destroy()
+	end
+end)
