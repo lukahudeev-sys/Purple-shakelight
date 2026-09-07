@@ -1,0 +1,81 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
+
+local tool = LoadCustomInstance("rbxassetid://80449138689595")
+tool.Parent = game:GetService("Players").LocalPlayer.Backpack
+tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
+tool.TextureId = "rbxassetid://103455405358047" 
+tool.Name = "Glitch Candle" 
+
+local function purpleKeepBrightness(color)
+	local _, _, v = Color3.toHSV(color)
+	return Color3.fromHSV(0.78, 1, v) -- tím
+end
+
+local function purpleKeepBrightness(color)
+	local _, _, v = Color3.toHSV(color)
+	return Color3.fromHSV(0.78, 1, v) -- tím
+end
+
+for _, obj in ipairs(tool:GetDescendants()) do
+	-- BasePart
+	if obj:IsA("BasePart") then
+		obj.Color = purpleKeepBrightness(obj.Color)
+
+	-- Lights
+	elseif obj:IsA("PointLight")
+		or obj:IsA("SpotLight")
+		or obj:IsA("SurfaceLight") then
+		obj.Color = purpleKeepBrightness(obj.Color)
+
+	-- ParticleEmitter
+	elseif obj:IsA("ParticleEmitter") then
+		-- Bỏ qua nếu particle nằm trong tool tên "FireParticle"
+		if obj.Name ~= "FireParticle" then
+			local seq = obj.Color
+			local newKeys = {}
+
+			for _, key in ipairs(seq.Keypoints) do
+				table.insert(newKeys,
+					ColorSequenceKeypoint.new(
+						key.Time,
+						purpleKeepBrightness(key.Value)
+					)
+				)
+			end
+
+			obj.Color = ColorSequence.new(newKeys)
+		end
+
+	-- Trails
+	elseif obj:IsA("Trail") then
+		local seq = obj.Color
+		local newKeys = {}
+
+		for _, key in ipairs(seq.Keypoints) do
+			table.insert(newKeys,
+				ColorSequenceKeypoint.new(
+					key.Time,
+					purpleKeepBrightness(key.Value)
+				)
+			)
+		end
+
+		obj.Color = ColorSequence.new(newKeys)
+
+	-- Beams
+	elseif obj:IsA("Beam") then
+		local seq = obj.Color
+		local newKeys = {}
+
+		for _, key in ipairs(seq.Keypoints) do
+			table.insert(newKeys,
+				ColorSequenceKeypoint.new(
+					key.Time,
+					purpleKeepBrightness(key.Value)
+				)
+			)
+		end
+
+		obj.Color = ColorSequence.new(newKeys)
+	end
+end
