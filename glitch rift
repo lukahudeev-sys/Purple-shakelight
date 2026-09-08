@@ -1,0 +1,367 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local TOOL_TEXTURES = {
+	["Viridislight Bottle"] = "rbxassetid://106794895868045",
+	["Viridislight Jug"] = "rbxassetid://76975020872594", 
+	["Viridislight Vial"] = "rbxassetid://138929899887341", 
+	["spiralRiftCandle"] = "rbxassetid://102569558158045"
+}
+
+local function purpleKeepBrightness(color)
+	local _, s, v = Color3.toHSV(color)
+	return Color3.fromHSV(0.78, s, v) -- Giữ lại 's' và 'v' thay vì đặt cứng bằng 1
+end
+
+local function getParticlesOut(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v.Name == "ParticlesOut" then
+			return v
+		end
+	end
+	return nil
+end
+
+local function updateMutateEffects(model)
+	local hasTool = model:GetAttribute("StoredTool") ~= ""
+
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("ParticleEmitter")
+		and (v.Name == "MutateEffect" or v.Name == "Mutated") then
+			v.Enabled = hasTool
+		end
+	end
+end
+
+local function playParticlesOnce(folder)
+	if not folder then return 0 end
+
+	local longest = 0
+
+	for _, v in ipairs(folder:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+
+			local amount = v:GetAttribute("EmitCount") or 20
+			v:Emit(amount)
+
+			local t =
+				v.Lifetime.Max +
+				(v:GetAttribute("EmitDelay") or 0)
+
+			if t > longest then
+				longest = t
+			end
+		end
+	end
+
+	return longest
+end
+
+local function getEquippedTool()
+	local char = player.Character
+	if not char then return nil end
+
+	for _, obj in ipairs(char:GetChildren()) do
+		if obj:IsA("Tool") then
+			return obj
+		end
+	end
+	return nil
+end
+
+local function runToolScript(toolName)
+	if toolName == "Viridislight Bottle" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
+		end)
+
+	elseif toolName == "Viridislight Jug" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug"))()
+		end)
+		
+	elseif toolName == "Viridislight Vial" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20small%20potion%20vial"))()
+		end)
+		
+	elseif toolName == "spiralRiftCandle" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20candle"))()
+		end)
+	end
+end
+
+local function handlePrompt(model, prompt)
+	local debounce = false
+
+	prompt.Triggered:Connect(function()
+		if debounce then return end
+		debounce = true
+
+		local tool = getEquippedTool()
+		local storedTool = model:GetAttribute("StoredTool")
+		
+		if model:GetAttribute("UsedOnce")
+		and tool
+		and storedTool ~= ""
+		and tool.Name ~= storedTool then
+
+			-- chạy script của tool cũ
+			runToolScript(storedTool)
+			
+			local particlesOut3 = getParticlesOut(model)
+			playParticlesOnce(particlesOut3)
+
+			-- đổi sang tool mới
+			local newTex = TOOL_TEXTURES[tool.Name]
+
+			if newTex then
+				model:SetAttribute("StoredTool", tool.Name)
+				model:SetAttribute("StoredTexture", newTex)
+
+				tool:Destroy()
+
+				local item = model:FindFirstChild("StarCenter")
+					and model.StarCenter:FindFirstChild("ItemHolder")
+					and model.StarCenter.ItemHolder:FindFirstChild("Item")
+
+				if item and item:IsA("ParticleEmitter") then
+					item.Texture = newTex
+				end
+			else
+				warn("Texture không tồn tại cho tool: " .. tostring(tool.Name))
+			end
+
+			updateMutateEffects(model)
+
+			debounce = false
+			return
+		end
+
+		if not model:GetAttribute("UsedOnce") then
+			if not tool then
+				debounce = false
+				return
+			end
+
+			local valid =
+				tool.Name == "Viridislight Bottle"
+				or tool.Name == "Viridislight Jug" 
+				or tool.Name == "Viridislight Vial"
+				or tool.Name == "spiralRiftCandle"
+
+			if not valid then
+				debounce = false
+				return
+			end
+		end
+
+		-- =========================
+		-- 🔥 LẦN 1: consume tool
+		-- =========================
+		if not model:GetAttribute("UsedOnce") then
+			model:SetAttribute("UsedOnce", true)
+
+			local tex = TOOL_TEXTURES[tool.Name]
+
+			if tex then
+				model:SetAttribute("StoredTexture", tex)
+				model:SetAttribute("StoredTool", tool.Name)
+
+				updateMutateEffects(model)
+
+				tool:Destroy()
+				
+				local particlesOut = getParticlesOut(model)
+				playParticlesOnce(particlesOut)
+
+				-- đổi particle texture theo tool
+				local item = model:FindFirstChild("StarCenter")
+					and model.StarCenter:FindFirstChild("ItemHolder")
+					and model.StarCenter.ItemHolder:FindFirstChild("Item")
+
+				if item and item:IsA("ParticleEmitter") then
+					item.Texture = tex
+				end
+			else
+				warn("Texture không tồn tại cho tool: " .. tostring(tool.Name))
+			end
+
+			debounce = false
+			return
+		end
+
+		-- =========================
+		-- 🔥 LẦN 2: destroy model
+		-- =========================
+		local storedTex = model:GetAttribute("StoredTexture")
+
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("ParticleEmitter") and storedTex then
+				-- Bỏ qua không đổi màu FireParticle và gán Texture an toàn
+				if obj.Name ~= "FireParticle" then
+					obj.Texture = storedTex
+				end
+			end
+		end
+
+		-- hide model nhanh
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				obj.Transparency = 1
+				obj.CanCollide = false
+			elseif obj:IsA("ParticleEmitter")
+				or obj:IsA("Beam")
+				or obj:IsA("Trail")
+				or obj:IsA("PointLight")
+				or obj:IsA("SpotLight")
+				or obj:IsA("SurfaceLight") then
+				
+				if obj.Name ~= "FireParticle" then
+					obj.Enabled = false
+				end
+			end
+		end
+
+		local storedTool = model:GetAttribute("StoredTool")
+		runToolScript(storedTool)
+
+		local particlesOut2 = getParticlesOut(model)
+
+		-- hide mọi thứ TRỪ ParticlesOut
+		for _, obj in ipairs(model:GetDescendants()) do
+			if particlesOut2 and obj:IsDescendantOf(particlesOut2) then
+				continue
+			end
+
+			if obj:IsA("BasePart") then
+				obj.Transparency = 1
+				obj.CanCollide = false
+			elseif obj:IsA("ParticleEmitter")
+				or obj:IsA("Beam")
+				or obj:IsA("Trail")
+				or obj:IsA("PointLight")
+				or obj:IsA("SpotLight")
+				or obj:IsA("SurfaceLight") then
+				
+				if obj.Name ~= "FireParticle" then
+					obj.Enabled = false
+				end
+			end
+		end
+
+		local waitTime = playParticlesOnce(particlesOut2)
+
+		task.delay(waitTime + 0.1, function()
+			if model and model.Parent then
+				model:SetAttribute("StoredTool", "")
+				model:SetAttribute("StoredTexture", "")
+				updateMutateEffects(model)
+				model:Destroy()
+			end
+		end)
+	end)
+end
+
+-- FIX + CLEAN MODEL
+local function sanitizeModel(model)
+	if not model:IsA("Model") then return end
+
+	for _, v in ipairs(model:GetDescendants()) do
+
+		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
+			v:Destroy()
+		end
+
+		if v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+		end
+
+		-- chuyển sang màu tím giữ nguyên độ sáng
+		-- Sửa lại hàm chuyển màu ở cả 2 nơi trong script thành:
+local function shiftToPurple(color)
+	local _, s, v = color:ToHSV()
+	return Color3.fromHSV(270/360, s, v) -- Giữ nguyên 's' (độ bão hòa) và 'v' (độ sáng) từ màu gốc
+end
+
+
+		if v:IsA("BasePart") then
+			v.Color = shiftToPurple(v.Color)
+		elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+			v.Color = shiftToPurple(v.Color)
+		elseif v:IsA("ParticleEmitter") then
+			-- Không đổi màu particle nếu tên là FireParticle
+			if v.Name ~= "FireParticle" then
+				local seq = v.Color
+				local newKPs = {}
+
+				for _, kp in ipairs(seq.Keypoints) do
+					table.insert(newKPs, ColorSequenceKeypoint.new(kp.Time, shiftToPurple(kp.Value)))
+				end
+
+				v.Color = ColorSequence.new(newKPs)
+			end
+		elseif v:IsA("Beam") or v:IsA("Trail") then
+			local seq = v.Color
+			local newKPs = {}
+
+			for _, kp in ipairs(seq.Keypoints) do
+				table.insert(newKPs, ColorSequenceKeypoint.new(kp.Time, shiftToPurple(kp.Value)))
+			end
+
+			v.Color = ColorSequence.new(newKPs)
+		end
+
+		-- PROMPT ONLY
+		if v:IsA("ProximityPrompt") then
+			v.HoldDuration = 3
+			v.MaxActivationDistance = 5
+			v.Style = Enum.ProximityPromptStyle.Custom
+			v:SetAttribute("CustomFrame", "Black")
+
+			handlePrompt(model, v)
+		end
+	end
+
+	local pp = model:FindFirstChildWhichIsA("BasePart", true)
+	if pp then model.PrimaryPart = pp end
+
+	model:PivotTo(model:GetPivot())
+end
+
+-- spawn logic
+local function spawnNearRift()
+	local objs = game:GetObjects("rbxassetid://110852226869313")
+	local model = objs[1]
+	model.Name = "glitch pentagram" 
+	model:SetAttribute("UsedOnce", false)
+	model:SetAttribute("StoredTexture", "")
+	model:SetAttribute("StoredTool", "")
+
+	if not model then
+		warn("failed to load model -_-")
+		return
+	end
+
+	local item = model:FindFirstChild("StarCenter")
+		and model.StarCenter:FindFirstChild("ItemHolder")
+		and model.StarCenter.ItemHolder:FindFirstChild("Item")
+
+	if item and item:IsA("ParticleEmitter") then
+		item.Enabled = true
+		item.Texture = "" -- Tránh lỗi rbxassetid://0
+	end
+
+	model.Parent = workspace
+
+	sanitizeModel(model)
+
+	-- Vị trí trước mặt RiftSpawn
+	local spawnPos = Vector3.new(241, -0, -24)
+	model:PivotTo(CFrame.new(spawnPos))
+end
+
+spawnNearRift()
