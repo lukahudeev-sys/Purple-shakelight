@@ -79,12 +79,27 @@ local function runToolScript(toolName)
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
 		end)
 
+elseif toolName == "Moon Bottle" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
+		end)
+
 	elseif toolName == "Viridislight Jug" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug"))()
+		end)
+
+elseif toolName == "Moon Jug" then
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug"))()
 		end)
 		
 	elseif toolName == "Viridislight Vial" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20small%20potion%20vial"))()
+		end)
+
+elseif toolName == "MoonVial" then
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20small%20potion%20vial"))()
 		end)
