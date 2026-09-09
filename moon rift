@@ -188,7 +188,7 @@ local function spawnNearRift()
 		return
 	end
 
-	model.Name = "viridis pentagram"
+	model.Name = "moon pentagram"
 	model.Parent = workspace
 
 	sanitizeModel(model)
