@@ -25,10 +25,10 @@ local function sanitizeModel(model)
 		
 		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
 local function shiftToGreen(color)
-	local 234, 44, 255 = color:ToHSV()
+	local h, s, v = color:ToHSV()
 
-	-- Hue xanh lá ≈ 120° = 234
-	return Color3.fromHSV(234, 44, 255)
+	-- Hue xanh lá ≈ 120° = 0.333
+	return Color3.fromHSV(0.333, s, v)
 end
 
 if v:IsA("BasePart") then
@@ -66,7 +66,7 @@ end
 if v:IsA("PointLight")
 	or v:IsA("SpotLight")
 	or v:IsA("SurfaceLight") then
-	v.Color = shiftToBlue(v.Color)
+	v.Color = shiftToGreen(v.Color)
 end
 
 		-- 🔥 chỉnh prompt + connect trigger
@@ -182,9 +182,9 @@ end
 -- spawn logic
 local function spawnNearRift()
 
-	local objs = game:GetObjects("rbxassetid://110852226869313")
+	local objs = game:GetObjects("rbxassetid://109965149955455")
 	local model = objs[1]
-	model.Name = "mischievous pentagram" 
+	model.Name = "moon pentagram" 
 
 	if not model then
 		warn("failed to load model -_-")
@@ -196,7 +196,7 @@ local function spawnNearRift()
 	sanitizeModel(model)
 
 	-- vị trí trước mặt RiftSpawn
-	local spawnPos = Vector3.new(261, -0, -24)
+	local spawnPos = Vector3.new(229, -0, -7)
 model:PivotTo(CFrame.new(spawnPos))
 end
 
