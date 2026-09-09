@@ -24,15 +24,15 @@ local function sanitizeModel(model)
 		end
 		
 		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
-local function shiftToBlue(color)
-	local h, s, v = color:ToHSV()
+local function shiftToGreen(color)
+	local 234, 44, 255 = color:ToHSV()
 
-	-- Hue xanh lá ≈ 120° = 0.333
-	return Color3.fromHSV(0.333, s, v)
+	-- Hue xanh lá ≈ 120° = 234
+	return Color3.fromHSV(234, 44, 255)
 end
 
 if v:IsA("BasePart") then
-	v.Color = shiftToBlue(v.Color)
+	v.Color = shiftToGreen(v.Color)
 end
 
 if v:IsA("ParticleEmitter") then
@@ -42,7 +42,7 @@ if v:IsA("ParticleEmitter") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToBlue(kp.Value)
+			shiftToGreen(kp.Value)
 		))
 	end
 
@@ -56,7 +56,7 @@ if v:IsA("Beam") or v:IsA("Trail") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToBlue(kp.Value)
+			shiftToGreen(kp.Value)
 		))
 	end
 
@@ -184,7 +184,7 @@ local function spawnNearRift()
 
 	local objs = game:GetObjects("rbxassetid://110852226869313")
 	local model = objs[1]
-	model.Name = "moon pentagram" 
+	model.Name = "mischievous pentagram" 
 
 	if not model then
 		warn("failed to load model -_-")
