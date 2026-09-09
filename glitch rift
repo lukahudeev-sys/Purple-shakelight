@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local TOOL_TEXTURES = {
-	["Viridislight Bottle"] = "rbxassetid://106794895868045",
+	["Viridislight Bottle"] = "rbxassetid://90576035812234",
 	["Viridislight Jug"] = "rbxassetid://76975020872594", 
 	["Viridislight Vial"] = "rbxassetid://138929899887341", 
 	["spiralRiftCandle"] = "rbxassetid://102569558158045"
