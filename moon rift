@@ -104,9 +104,9 @@ end
     end)
 end
 
-safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20of%20bottle")
-safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20jug")
-safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20small%20vial")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Bottle")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Jug")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/moon%20vial")
 
 				local parentModel = model
 				v:Destroy() -- ❌ xóa prompt ngay
