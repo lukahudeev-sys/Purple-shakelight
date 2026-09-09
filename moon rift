@@ -1,7 +1,7 @@
 
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+
 
 -- FIX + CLEAN MODEL
 local function sanitizeModel(model)
@@ -23,11 +23,11 @@ local function sanitizeModel(model)
 			v.CanCollide = false
 		end
 		
-		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
+		-- 🔵 đổi mọi màu sang xanh dương nhưng giữ nguyên độ sáng
 local function shiftToBlue(color)
 	local h, s, v = color:ToHSV()
 
-	-- Hue xanh lá ≈ 210° = 0.583
+	-- Hue xanh dương ≈ 210° = 0.583
 	return Color3.fromHSV(0.583, s, v)
 end
 
@@ -63,10 +63,8 @@ if v:IsA("Beam") or v:IsA("Trail") then
 	v.Color = ColorSequence.new(newKPs)
 end
 
-if v:IsA("PointLight")
-	or v:IsA("SpotLight")
-	or v:IsA("SurfaceLight") then
-	v.Color = shiftToGreen(v.Color)
+if v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+	v.Color = shiftToBlue(v.Color)
 end
 
 		-- 🔥 chỉnh prompt + connect trigger
@@ -184,13 +182,13 @@ local function spawnNearRift()
 
 	local objs = game:GetObjects("rbxassetid://110852226869313")
 	local model = objs[1]
-	model.Name = "viridis pentagram" 
 
 	if not model then
 		warn("failed to load model -_-")
 		return
 	end
 
+	model.Name = "viridis pentagram"
 	model.Parent = workspace
 
 	sanitizeModel(model)
