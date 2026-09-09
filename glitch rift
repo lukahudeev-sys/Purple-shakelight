@@ -151,6 +151,9 @@ local function handlePrompt(model, prompt)
 				or tool.Name == "Viridislight Jug" 
 				or tool.Name == "Viridislight Vial"
 				or tool.Name == "spiralRiftCandle"
+				or tool.Name == "Moon Bottle"
+				or tool.Name == "Moon Jug"
+				or tool.Name == "MoonVial"
 
 			if not valid then
 				debounce = false
