@@ -93,7 +93,7 @@ function drinkSoundPlay()
 end
 
 toolNew.Parent = game.Players.LocalPlayer.Backpack
-toolNew.TextureId = "rbxassetid://116484488074906" 
+toolNew.TextureId = "rbxassetid://80659024680124" 
 
 toolNew.Equipped:Connect(function()
 	if game.GameId == 6627207668 then
