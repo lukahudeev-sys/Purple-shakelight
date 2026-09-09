@@ -182,9 +182,9 @@ end
 -- spawn logic
 local function spawnNearRift()
 
-	local objs = game:GetObjects("rbxassetid://109965149955455")
+	local objs = game:GetObjects("rbxassetid://110852226869313")
 	local model = objs[1]
-	model.Name = "moon pentagram" 
+	model.Name = "viridis pentagram" 
 
 	if not model then
 		warn("failed to load model -_-")
