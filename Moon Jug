@@ -25,7 +25,7 @@ newCloneEffect.Image = "rbxassetid://12771067678"
 
 StarJug.Parent = game.Players.LocalPlayer.Backpack
 StarJug.Name = "Moon Jug" 
-StarJug.TextureId = "rbxassetid://87078115035231" 
+StarJug.TextureId = "rbxassetid://104290079782097" 
 
 local function EffectOnScreen()
 	newCloneEffect.Visible = true
