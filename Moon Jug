@@ -1,0 +1,368 @@
+-- i made it very quick and i was lazy so dont mess the very bad code
+
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local StarJug = game:GetObjects("rbxassetid://130011589873078")[1]
+local player = game.Players.LocalPlayer
+
+local speedTweenValue = Instance.new("NumberValue", StarJug)
+
+local durability = 4
+local debounce = false
+local CollisionLoopRunning = true
+StarJug:SetAttribute("Durability", durability)
+
+local MainUI_upvr = nil
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+newCloneEffect.Name = "GuidingLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+newCloneEffect.Image = "rbxassetid://12771067678"
+	newCloneEffect.ImageColor3 = Color3.fromRGB(0, 255, 255) 
+
+StarJug.Parent = game.Players.LocalPlayer.Backpack
+StarJug.Name = "Moon Jug" 
+StarJug.TextureId = "rbxassetid://87078115035231" 
+
+local function EffectOnScreen()
+	newCloneEffect.Visible = true
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name ..= "Live"
+			clone_2.ZIndex = 5
+			clone_2.ImageColor3 = Color3.fromRGB(0, 247, 255)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0;
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0);
+			}):Play()
+			wait(35)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkJugAddonSound") then
+		newSound = Instance.new("Sound",workspace)
+		newSound.Name = "DrinkJugAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://103799151859408"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkJugAddonSound")
+	end
+	newSound:Play()
+end
+
+local character = game.Players.LocalPlayer.Character
+local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+local Animations = StarJug:WaitForChild("Animations")
+local LoadedAnims = {}
+
+for _, anim in pairs(Animations:GetChildren()) do
+    LoadedAnims[anim.Name] = humanoid:LoadAnimation(anim)
+    
+    if anim.Name == "idle" then
+        LoadedAnims[anim.Name].Priority = Enum.AnimationPriority.Idle
+        LoadedAnims[anim.Name].Looped = true
+    end
+end
+
+StarJug.Equipped:Connect(function()
+    LoadedAnims["equip"]:Play()
+    
+    task.wait(LoadedAnims["equip"].Length)
+    
+    if StarJug:IsDescendantOf(character) then
+        LoadedAnims["idle"]:Play()
+    end
+end)
+
+StarJug.Unequipped:Connect(function()
+    if LoadedAnims["idle"].IsPlaying then
+        LoadedAnims["idle"]:Stop()
+    end
+end)
+
+local collisionClone
+StarJug.Activated:Connect(function()
+    if debounce then return end
+    debounce = true
+    
+    EffectOnScreen()
+    
+    drinkSoundPlay()
+    
+    task.spawn(function() 
+    local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "WhiteFlash"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromScale(1, 1)
+frame.Position = UDim2.fromScale(0, 0)
+frame.BackgroundColor3 = Color3.new(1, 1, 1)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+frame.ZIndex = 0
+frame.BackgroundTransparency = 1
+
+function GitAud(soundgit,filename)
+    SoundName=tostring(SoundName)
+    local url=soundgit
+    local FileName = filename
+    writefile(FileName..".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName..".mp3")
+end
+
+function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = workspace
+    sound.Name = "heaven"
+    sound.Volume = 1.5
+    sound:Play()
+   
+   sound.Ended:Wait() 
+   sound:Destroy() 
+end
+
+    FLYING = false
+QEfly = true
+iyflyspeed = 0.4
+vehicleflyspeed = 1
+local vfly = false
+local Players = game.Players
+local MainUI_upvr = nil
+local TweenService_upvr = game:GetService("TweenService")
+local soundNew = Instance.new("Sound",workspace)
+soundNew.Name = "_ThunderStrikeGD"
+soundNew.SoundId = "rbxassetid://1079408535"
+
+local gdPossess = nil
+if game.GameId == 6627207668 then
+	gdPossess = script.GuidingLightStuff:Clone()
+else
+	gdPossess = game:GetObjects("rbxassetid://107690853507208")[1]
+end
+gdPossess.LockedToPart = true
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+function getRoot(PlayerChar)
+	if PlayerChar == nil then
+		PlayerChar = game.Players.LocalPlayer.Character
+	end
+	if not PlayerChar:FindFirstChild("HumanoidRootPart") then
+		return PlayerChar.PrimaryPart
+	else
+		return PlayerChar.HumanoidRootPart
+	end
+end
+local IYMouse = game.Players.LocalPlayer:GetMouse()
+
+spawn(function()
+	wait(2)
+	
+	TweenService:Create(
+	frame,
+	TweenInfo.new(6),
+	{BackgroundTransparency = 0}
+):Play()
+
+task.spawn(function() 
+CustomGitSound("https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260629_01.mp3?raw=true", 1, " tap1")
+end) 
+
+	wait(6.3)
+	frame:Destroy() 
+	soundNew:Play()
+	spawn(function()
+		wait(6)
+		soundNew:Destroy()
+	end)
+	gdPossess.Parent = getRoot()
+	flyR()
+end)
+
+function flyR()
+	repeat wait() until Players.LocalPlayer and Players.LocalPlayer.Character and getRoot(Players.LocalPlayer.Character) and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	repeat wait() until IYMouse
+	if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+
+	local T = getRoot(Players.LocalPlayer.Character)
+	local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+	local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+	local SPEED = 0
+	
+	local BG = Instance.new('BodyGyro')
+	local BV = Instance.new('BodyVelocity')
+
+	local function FLY()
+		FLYING = true
+		BG.P = 9e4
+		BG.Parent = T
+		BV.Parent = T
+		BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+		BG.cframe = T.CFrame
+		BV.velocity = Vector3.new(0, 0, 0)
+		BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+		task.spawn(function()
+			repeat wait()
+				if not vfly and Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+					Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = true
+				end
+				if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+					SPEED = 50
+				elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+					SPEED = 0
+				end
+				if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+					BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+					lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+				elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+					BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+				else
+					BV.velocity = Vector3.new(0, 0, 0)
+				end
+				BG.cframe = workspace.CurrentCamera.CoordinateFrame
+			until not FLYING
+			CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+			lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+			SPEED = 0
+			BG:Destroy()
+			BV:Destroy()
+			if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+				Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
+			end
+		end)
+	end
+	flyKeyDown = IYMouse.KeyDown:Connect(function(KEY)
+		if KEY:lower() == 'w' then
+			CONTROL.F = (vfly and vehicleflyspeed or iyflyspeed)
+		elseif KEY:lower() == 's' then
+			CONTROL.B = - (vfly and vehicleflyspeed or iyflyspeed)
+		elseif KEY:lower() == 'a' then
+			CONTROL.L = - (vfly and vehicleflyspeed or iyflyspeed)
+		elseif KEY:lower() == 'd' then 
+			CONTROL.R = (vfly and vehicleflyspeed or iyflyspeed)
+		elseif QEfly and KEY:lower() == 'e' then
+			CONTROL.Q = (vfly and vehicleflyspeed or iyflyspeed)*2
+		elseif QEfly and KEY:lower() == 'q' then
+			CONTROL.E = -(vfly and vehicleflyspeed or iyflyspeed)*2
+		end
+	end)
+	flyKeyUp = IYMouse.KeyUp:Connect(function(KEY)
+		if KEY:lower() == 'w' then
+			CONTROL.F = 0
+		elseif KEY:lower() == 's' then
+			CONTROL.B = 0
+		elseif KEY:lower() == 'a' then
+			CONTROL.L = 0
+		elseif KEY:lower() == 'd' then
+			CONTROL.R = 0
+		elseif KEY:lower() == 'e' then
+			CONTROL.Q = 0
+		elseif KEY:lower() == 'q' then
+			CONTROL.E = 0
+		end
+	end)
+	FLY()
+	
+	wait(35)
+	if MainUI_upvr.MainFrame.Healthbar.Effects:FindFirstChild("GuidingLightPotion") then
+		MainUI_upvr.MainFrame.Healthbar.Effects:WaitForChild("GuidingLightPotion"):Destroy()
+	end
+	FLYING = false
+	if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+	if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+		Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
+	end
+	BG:Destroy()
+	BV:Destroy()
+	gdPossess:Destroy()
+	script:Destroy()
+end
+end) 
+    
+    LoadedAnims["open"]:Play()
+    
+    if durability - 1 ~= 0 then
+        durability = durability - 1
+        StarJug:SetAttribute("Durability", durability)
+    else
+        StarJug:Destroy()
+    end
+
+-- =========================
+-- â³ TIMER UI
+-- =========================
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 200, 0, 40)
+label.Position = UDim2.new(0.5, -100, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(170, 255, 180)
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.Visible = false
+label.Text = "0:35"
+label.Parent = gui
+
+-- =========================
+-- â± TIMER LOGIC
+-- =========================
+local timeLeft = 35
+
+local function formatTime(t)
+	local m = math.floor(t / 60)
+	local s = t % 60
+	return string.format("%d:%02d", m, s)
+end
+
+-- =========================
+-- â³ COUNTDOWN LOOP
+-- =========================
+task.spawn(function()
+	while timeLeft >= 0 do
+		label.Text = formatTime(timeLeft)
+
+		if timeLeft == 0 then
+			
+			newCloneEffect.Visible = false
+			break
+		end
+
+		timeLeft -= 1
+		task.wait(1)
+	end
+end)
+
+    task.wait(35)
+    debounce = false
+end)
