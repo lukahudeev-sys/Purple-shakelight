@@ -24,15 +24,15 @@ local function sanitizeModel(model)
 		end
 		
 		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
-local function shiftToGreen(color)
+local function shiftToBlue(color)
 	local h, s, v = color:ToHSV()
 
-	-- Hue xanh lá ≈ 120° = 0.333
-	return Color3.fromHSV(0.333, s, v)
+	-- Hue xanh lá ≈ 210° = 0.583
+	return Color3.fromHSV(0.583, s, v)
 end
 
 if v:IsA("BasePart") then
-	v.Color = shiftToGreen(v.Color)
+	v.Color = shiftToBlue(v.Color)
 end
 
 if v:IsA("ParticleEmitter") then
@@ -42,7 +42,7 @@ if v:IsA("ParticleEmitter") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToGreen(kp.Value)
+			shiftToBlue(kp.Value)
 		))
 	end
 
@@ -56,7 +56,7 @@ if v:IsA("Beam") or v:IsA("Trail") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToGreen(kp.Value)
+			shiftToBlue(kp.Value)
 		))
 	end
 
