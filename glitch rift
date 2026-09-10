@@ -9,6 +9,9 @@ local TOOL_TEXTURES = {
 	["Viridislight Jug"] = "rbxassetid://111321318179478", 
 	["Viridislight Vial"] = "rbxassetid://131016623061878", 
 	["spiralRiftCandle"] = "rbxassetid://105497952860324"
+	["Spiral Bottle"] = "rbxassetid://90576035812234"
+	["Spiral Jug"] = "rbxassetid://111321318179478"
+	["SpiralVial"] = "rbxassetid://131016623061878"
 }
 
 local function purpleKeepBrightness(color)
@@ -79,6 +82,11 @@ local function runToolScript(toolName)
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
 		end)
 
+elseif toolName == "Spiral Bottle" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
+		end)
+
 elseif toolName == "Moon Bottle" then
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle"))()
@@ -93,6 +101,11 @@ elseif toolName == "Moon Jug" then
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug"))()
 		end)
+
+elseif toolName == "Spiral Jug" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug"))()
+		end)
 		
 	elseif toolName == "Viridislight Vial" then
 		task.spawn(function()
@@ -100,6 +113,11 @@ elseif toolName == "Moon Jug" then
 		end)
 
 elseif toolName == "MoonVial" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20small%20potion%20vial"))()
+		end)
+
+elseif toolName == "SpiralVial" then
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20small%20potion%20vial"))()
 		end)
