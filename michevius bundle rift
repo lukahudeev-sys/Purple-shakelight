@@ -194,7 +194,7 @@ local function spawnNearRift()
 	sanitizeModel(model)
 
 	-- vị trí trước mặt RiftSpawn
-	local spawnPos = Vector3.new(229, -0, -7)
+	local spawnPos = Vector3.new(279, -0, -20)
 model:PivotTo(CFrame.new(spawnPos))
 end
 
