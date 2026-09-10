@@ -188,6 +188,9 @@ local function handlePrompt(model, prompt)
 				or tool.Name == "Viridislight Vial"
 				or tool.Name == "spiralRiftCandle"
 				or tool.Name == "Moon Bottle"
+				or tool.Name == "Spiral Bottle"
+				or tool.Name == "Spiral Jug"
+				or tool.Name == "SpiralVial"
 				or tool.Name == "Moon Jug"
 				or tool.Name == "MoonVial"
 
