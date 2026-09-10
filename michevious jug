@@ -1,0 +1,311 @@
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local StarJug = game:GetObjects("rbxassetid://135537434947851")[1]
+local player = game.Players.LocalPlayer
+
+local speedTweenValue = Instance.new("NumberValue", StarJug)
+
+local durability = 4
+local debounce = false
+local CollisionLoopRunning = true
+StarJug:SetAttribute("Durability", durability)
+
+local MainUI_upvr = nil
+if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then 
+	repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") 
+end
+MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+
+StarJug.Parent = game.Players.LocalPlayer.Backpack
+StarJug.Name = "Spiral Jug" 
+StarJug.TextureId = "rbxassetid://116633168366376" 
+
+-- Hai hàm chứa script kích hoạt khi gặp Rush hoặc Ambush
+local function OnTriggerRush()
+	local success, achievementGiver = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/achivement"))()
+	end)
+	if success and achievementGiver then
+		achievementGiver({
+			Title = "Rush",
+			Desc = "Rush is coming.",
+			Reason = "",
+			Image = "rbxassetid://117477991851439"
+		})
+	end
+end
+
+local function OnTriggerAmbush()
+	local success, achievementGiver = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/achivement"))()
+	end)
+	if success and achievementGiver then
+		achievementGiver({
+			Title = "Ambush",
+			Desc = "Ambush is coming.",
+			Reason = "",
+			Image = "rbxassetid://81430443488086"
+		})
+	end
+end
+
+-- Hàm tạo hiệu ứng trên màn hình (luôn tạo mới mỗi lần bấm để tránh bị Destroy mất)
+local function EffectOnScreen()
+	local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+	newCloneEffect.Name = "GuidingLightPotion"
+	newCloneEffect.Visible = true
+	newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+	newCloneEffect.Image = "rbxassetid://134441987529364"
+	newCloneEffect.ImageColor3 = Color3.fromRGB(255,255,255) 
+
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name ..= "Live"
+			clone_2.ZIndex = 5
+			clone_2.ImageColor3 = Color3.fromRGB(255, 0, 0)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0;
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0);
+			}):Play()
+			wait(35)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+	
+	return newCloneEffect
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkJugAddonSound") then
+		newSound = Instance.new("Sound", workspace)
+		newSound.Name = "DrinkJugAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://103799151859408"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkJugAddonSound")
+	end
+	newSound:Play()
+end
+
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+local Animations = StarJug:WaitForChild("Animations")
+local LoadedAnims = {}
+
+for _, anim in pairs(Animations:GetChildren()) do
+    LoadedAnims[anim.Name] = humanoid:LoadAnimation(anim)
+    if anim.Name == "idle" then
+        LoadedAnims[anim.Name].Priority = Enum.AnimationPriority.Idle
+        LoadedAnims[anim.Name].Looped = true
+    end
+end
+
+StarJug.Equipped:Connect(function()
+    LoadedAnims["equip"]:Play()
+    task.wait(LoadedAnims["equip"].Length)
+    if StarJug:IsDescendantOf(character) then
+        LoadedAnims["idle"]:Play()
+    end
+end)
+
+StarJug.Unequipped:Connect(function()
+    if LoadedAnims["idle"].IsPlaying then
+        LoadedAnims["idle"]:Stop()
+    end
+end)
+
+StarJug.Activated:Connect(function()
+    if debounce then return end
+    debounce = true
+    
+    local activeEffect = EffectOnScreen()
+    drinkSoundPlay()
+    
+    -- Luồng chạy hiệu ứng hình ảnh & flash trắng
+    task.spawn(function() 
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "WhiteFlash"
+		gui.IgnoreGuiInset = true
+		gui.ResetOnSpawn = false
+		gui.Parent = player:WaitForChild("PlayerGui")
+
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.Position = UDim2.fromScale(0, 0)
+		frame.BackgroundColor3 = Color3.fromRGB(255, 191, 191)
+		frame.BorderSizePixel = 0
+		frame.Parent = gui
+		frame.ZIndex = 0
+		frame.BackgroundTransparency = 1
+
+		function GitAud(soundgit, filename)
+			writefile(filename .. ".mp3", game:HttpGet(soundgit))
+			return (getcustomasset or getsynasset)(filename .. ".mp3")
+		end
+
+		function CustomGitSound(soundlink, vol, filename)
+			local sound = Instance.new("Sound")
+			sound.SoundId = GitAud(soundlink, filename)
+			sound.Parent = workspace
+			sound.Name = "hell"
+			sound.Volume = vol or 1.5
+			sound:Play()
+			sound.Ended:Wait() 
+			sound:Destroy() 
+		end
+
+		local soundNew = Instance.new("Sound", workspace)
+		soundNew.Name = "_ThunderStrikeGD"
+		soundNew.SoundId = "rbxassetid://1079408535"
+
+		local gdPossess = nil
+		if game.GameId == 6627207668 then
+			gdPossess = script.GuidingLightStuff:Clone()
+		else
+			gdPossess = game:GetObjects("rbxassetid://107690853507208")[1]
+		end
+		gdPossess.LockedToPart = true
+
+		local emitter = gdPossess
+		local newKeypoints = {}
+		for _, kp in ipairs(emitter.Color.Keypoints) do
+			local c = kp.Value
+			local brightness = c.R * 0.299 + c.G * 0.587 + c.B * 0.114
+			table.insert(newKeypoints, ColorSequenceKeypoint.new(kp.Time, Color3.new(brightness, 0, 0)))
+		end
+		emitter.Color = ColorSequence.new(newKeypoints)
+
+		local function getRoot(PlayerChar)
+			if PlayerChar == nil then PlayerChar = player.Character end
+			if not PlayerChar:FindFirstChild("HumanoidRootPart") then
+				return PlayerChar.PrimaryPart
+			else
+				return PlayerChar.HumanoidRootPart
+			end
+		end
+
+		task.spawn(function()
+			task.wait(2)
+			TweenService_upvr:Create(frame, TweenInfo.new(4.5), {BackgroundTransparency = 0.2}):Play()
+			task.spawn(function() 
+				CustomGitSound("https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260629145716.mp3?raw=true", 1, "tap1")
+			end) 
+
+			task.wait(5)
+			frame:Destroy() 
+			soundNew:Play()
+			task.spawn(function()
+				task.wait(6)
+				soundNew:Destroy()
+			end)
+			gdPossess.Parent = getRoot()
+		end)
+			
+		task.wait(35)
+		if activeEffect and activeEffect.Parent then
+			activeEffect.Visible = false
+		end
+		gdPossess:Destroy()
+	end)
+    
+    -- Luồng lặp chạy ngầm (Loop Check Workspace & Trừ máu dần)
+    local isActivating = true
+    task.spawn(function()
+		local totalDeducted = 0
+		
+		while isActivating and totalDeducted < 40 do
+			local currentC = player.Character
+			local rush = workspace:FindFirstChild("RushMoving")
+			local ambush = workspace:FindFirstChild("AmbushMoving")
+			
+			if rush then OnTriggerRush() end
+			if ambush then OnTriggerAmbush() end
+			
+			-- Trừ máu nếu phát hiện quái
+			if (rush or ambush) and currentC then
+				local hum = currentC:FindFirstChildOfClass("Humanoid")
+				if hum then
+					for i = 1, 8 do
+						if not isActivating then break end
+						hum.Health = math.max(0, hum.Health - 5)
+						totalDeducted += 5
+						task.wait(0.5)
+					end
+				end
+			end
+			
+			task.wait(1)
+		end
+	end)
+    
+    LoadedAnims["open"]:Play()
+    
+    if durability - 1 ~= 0 then
+        durability = durability - 1
+        StarJug:SetAttribute("Durability", durability)
+    else
+        StarJug:Destroy()
+    end
+
+    -- =========================
+    -- TIMER UI
+    -- =========================
+    local gui = Instance.new("ScreenGui")
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = player:WaitForChild("PlayerGui")
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 200, 0, 40)
+    label.Position = UDim2.new(0.5, -100, 0, 10)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(170, 255, 180)
+    label.TextStrokeTransparency = 0.6
+    label.Font = Enum.Font.Gotham
+    label.Visible = false
+    label.Text = "0:35"
+    label.Parent = gui
+
+    local timeLeft = 35
+    local function formatTime(t)
+		local m = math.floor(t / 60)
+		local s = t % 60
+		return string.format("%d:%02d", m, s)
+	end
+
+    task.spawn(function()
+		while timeLeft >= 0 do
+			label.Text = formatTime(timeLeft)
+			if timeLeft == 0 then
+				if activeEffect and activeEffect.Parent then
+					activeEffect.Visible = false
+				end
+				break
+			end
+			timeLeft -= 1
+			task.wait(1)
+		end
+		gui:Destroy()
+	end)
+
+    task.wait(35)
+    isActivating = false -- Dừng luồng check và trừ máu ngầm
+    debounce = false
+end)
