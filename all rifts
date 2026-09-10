@@ -2,3 +2,4 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20rift"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20rift"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/moon%20rift"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevius%20bundle%20rift"))()
