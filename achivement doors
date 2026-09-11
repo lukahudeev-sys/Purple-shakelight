@@ -1,0 +1,143 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local function PlaySound(parent, soundId, volume)
+	local sound = Instance.new("Sound")
+	sound.SoundId = soundId
+	sound.Volume = volume or 1
+	sound.Parent = parent
+
+	task.spawn(function()
+		task.wait(0.1)
+		sound:Play()
+		sound.Ended:Wait()
+		sound:Destroy()
+	end)
+end
+
+local function DoorsNotify(NotifyOptions)
+	NotifyOptions = NotifyOptions or {}
+
+	local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+	local UIContainer =
+		PlayerGui:FindFirstChild("GlobalUI")
+		or PlayerGui:FindFirstChild("MainUI")
+
+	if not UIContainer then
+		return
+	end
+
+	local AchievementsHolder =
+		UIContainer:FindFirstChild("AchievementsHolder")
+
+	if not AchievementsHolder then
+		return
+	end
+
+	local Template =
+		AchievementsHolder:FindFirstChild("Achievement")
+
+	if not Template then
+		return
+	end
+
+	local Achievement = Template:Clone()
+
+	Achievement.Size = UDim2.new(0, 0, 0, 0)
+	Achievement.Frame.Position = UDim2.new(1.1, 0, 0, 0)
+	Achievement.Name = "LiveAchievement"
+	Achievement.Visible = true
+
+	Achievement.Frame.TextLabel.Text =
+		NotifyOptions.Style or "NOTIFICATION"
+
+	Achievement.Frame.Details.Title.Text =
+		NotifyOptions.Title or "Sem Título"
+
+	Achievement.Frame.Details.Desc.Text =
+		NotifyOptions.Description or "Sem Descrição"
+
+	Achievement.Frame.Details.Reason.Text =
+		NotifyOptions.Reason or ""
+
+	Achievement.Frame.ImageLabel.Image =
+		(NotifyOptions.Image and NotifyOptions.Image ~= "")
+		and NotifyOptions.Image
+		or "rbxassetid://0"
+
+	Achievement.Parent = AchievementsHolder
+
+	PlaySound(
+		AchievementsHolder,
+		"rbxassetid://10469938989",
+		1
+	)
+
+	task.spawn(function()
+		Achievement:TweenSize(
+			UDim2.new(1, 0, 0.2, 0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.8,
+			true
+		)
+
+		task.wait(0.8)
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(0, 0, 0, 0),
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+		TweenService:Create(
+			Achievement.Frame.Glow,
+			TweenInfo.new(
+				1,
+				Enum.EasingStyle.Quad,
+				Enum.EasingDirection.In
+			),
+			{
+				ImageTransparency = 1
+			}
+		):Play()
+
+		if typeof(NotifyOptions.Time) == "Instance" then
+			NotifyOptions.Time.Destroying:Wait()
+		else
+			task.wait(NotifyOptions.Time or 5)
+		end
+
+		if not Achievement.Parent then
+			return
+		end
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(1.1, 0, 0, 0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+		task.wait(0.5)
+
+		Achievement:TweenSize(
+			UDim2.new(1, 0, -0.1, 0),
+			Enum.EasingDirection.InOut,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+		task.wait(0.5)
+
+		Achievement:Destroy()
+	end)
+end
+
+return DoorsNotify
