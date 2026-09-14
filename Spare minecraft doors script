@@ -1,0 +1,178 @@
+local MODEL_ID = "rbxassetid://77319079417281" 
+local ANIM_ID = "rbxassetid://100296215597460"
+local ICON_ID = "rbxassetid://94502813477603" 
+
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local playerGui = player:WaitForChild("PlayerGui")
+
+local CLICK_SOUND_URL = "https://github.com/vuivuiviu2/The-Lunacy-Rebirth/raw/refs/heads/main/click.mp3"
+local HOLD_SOUND_URL = "https://github.com/vuivuiviu2/The-Lunacy-Rebirth/raw/refs/heads/main/hold.mp3"
+
+function GitAud(soundlink, filename)
+    local FileName = filename
+    if not isfile(FileName..".mp3") then
+        writefile(FileName..".mp3", game:HttpGet(soundlink))
+    end
+    return (getcustomasset or getsynasset)(FileName..".mp3")
+end
+
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = GitAud(CLICK_SOUND_URL, "cola_click")
+clickSound.Volume = 7
+clickSound.Parent = rootPart
+
+local holdSound = Instance.new("Sound")
+holdSound.SoundId = GitAud(HOLD_SOUND_URL, "cola_hold")
+holdSound.Volume = 7
+holdSound.Looped = false
+holdSound.Parent = rootPart
+
+local COOLDOWN_TIME = 0.75 
+local DASH_FORCE = 50      
+local lastDash = 0
+
+local cfIdle = CFrame.new(1, -1, 0) * CFrame.Angles(math.rad(-20), 0, math.rad(90 + 15)) 
+local cfActiveClick = CFrame.new(0.7, -1.5, -0.2) * CFrame.Angles(math.rad(-90), 0, math.rad(90))
+local cfActiveHold = CFrame.new(0.7, -1.5, -0.2) * CFrame.Angles(math.rad(-90), 0, 0)
+
+local tweenFast = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local tweenSlow = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+local function applyAntiSpeed(char)
+    local RootPart = char:WaitForChild("HumanoidRootPart")
+    local Collision = char:FindFirstChild("CollisionPart") or char:FindFirstChild("Collision") or RootPart
+    local CollisionClone = Collision:Clone()
+    CollisionClone.CanCollide, CollisionClone.Massless, CollisionClone.CanQuery = false, true, false
+    CollisionClone.Name = "CollisionClone"
+    if CollisionClone:FindFirstChild("CollisionCrouch") then CollisionClone.CollisionCrouch:Destroy() end
+    CollisionClone.Parent = char
+    task.spawn(function()
+        while char.Parent do
+            if RootPart.Anchored then CollisionClone.Massless = true repeat task.wait() until not RootPart.Anchored task.wait(0.15)
+            else CollisionClone.Massless = not CollisionClone.Massless end
+            task.wait(0.24)
+        end
+    end)
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ColaHoldGui"
+screenGui.ResetOnSpawn = false
+screenGui.Enabled = false
+screenGui.Parent = playerGui
+
+local holdButton = Instance.new("ImageButton")
+holdButton.Size = UDim2.new(0, 80, 0, 80) 
+holdButton.Position = UDim2.new(0.85, -40, 0.6, -80) 
+holdButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+holdButton.BackgroundTransparency = 0.5
+holdButton.Parent = screenGui
+
+local btnIcon = Instance.new("ImageLabel")
+btnIcon.Size = UDim2.new(0.65, 0, 0.65, 0)
+btnIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+btnIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+btnIcon.BackgroundTransparency = 1
+btnIcon.Image = "rbxassetid://" .. ICON_ID:match("%d+")
+btnIcon.ScaleType = Enum.ScaleType.Fit
+btnIcon.Parent = holdButton
+
+Instance.new("UICorner", holdButton).CornerRadius = UDim.new(1, 0)
+local stroke = Instance.new("UIStroke", holdButton)
+stroke.Color = Color3.fromRGB(150, 255, 255)
+stroke.Thickness = 3.5
+
+local function dash()
+    local now = tick()
+    if now - lastDash < COOLDOWN_TIME then return end
+    lastDash = now
+    
+    clickSound:Play()
+    
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e6, 0, 1e6) 
+    bv.Velocity = rootPart.CFrame.LookVector * DASH_FORCE
+    bv.Parent = rootPart
+    task.spawn(function()
+        task.wait(0.2)
+        for i = 1, 10 do if bv then bv.Velocity *= 0.7 task.wait(0.02) end end
+        if bv then bv:Destroy() end
+    end)
+end
+
+local function getCola()
+    local success, objects = pcall(function() return game:GetObjects(MODEL_ID) end)
+    if success and objects[1] then
+        local toolModel = objects[1]
+        for _, v in pairs(toolModel:GetDescendants()) do
+            if v:IsA("BasePart") then v.Size = Vector3.new(v.Size.X, 0.15, v.Size.Z) end
+        end
+
+        local tool = Instance.new("Tool")
+        tool.Name = "Sound Dash Cola V28"
+        tool.RequiresHandle = false 
+        tool.TextureId = "rbxassetid://" .. ICON_ID:match("%d+")
+        toolModel.Parent = tool
+        tool.Parent = player:FindFirstChildOfClass("Backpack")
+
+        local motorWeld = nil
+        local currentAnimTrack = nil
+
+        holdButton.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and motorWeld then
+                TweenService:Create(motorWeld, tweenSlow, {C0 = cfActiveHold}):Play()
+                holdButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                holdSound:Play()
+            end
+        end)
+
+        holdButton.InputEnded:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and motorWeld then
+                TweenService:Create(motorWeld, tweenFast, {C0 = cfIdle}):Play()
+                holdButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                holdSound:Stop()
+            end
+        end)
+
+        tool.Activated:Connect(function()
+            if not motorWeld or (tick() - lastDash < COOLDOWN_TIME) then return end
+            dash()
+            local tClick = TweenService:Create(motorWeld, tweenFast, {C0 = cfActiveClick})
+            tClick:Play()
+            tClick.Completed:Connect(function()
+                task.wait(0.3)
+                if motorWeld then TweenService:Create(motorWeld, tweenFast, {C0 = cfIdle}):Play() end
+            end)
+        end)
+
+        tool.Equipped:Connect(function()
+            screenGui.Enabled = true
+            applyAntiSpeed(character)
+            local holdAnim = Instance.new("Animation")
+            holdAnim.AnimationId = ANIM_ID
+            currentAnimTrack = humanoid:LoadAnimation(holdAnim)
+            currentAnimTrack.Priority = Enum.AnimationPriority.Action
+            currentAnimTrack:Play()
+            local arm = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+            local mainPart = toolModel:IsA("Model") and (toolModel.PrimaryPart or toolModel:FindFirstChildWhichIsA("BasePart")) or toolModel
+            motorWeld = Instance.new("Weld", mainPart)
+            motorWeld.Part0, motorWeld.Part1, motorWeld.C0 = arm, mainPart, cfIdle
+        end)
+
+        tool.Unequipped:Connect(function()
+            screenGui.Enabled = false
+            holdSound:Stop()
+            if currentAnimTrack then currentAnimTrack:Stop() end
+            if motorWeld then motorWeld:Destroy() end
+            local oldClone = character:FindFirstChild("CollisionClone")
+            if oldClone then oldClone:Destroy() end
+        end)
+    end
+end
+
+getCola()
