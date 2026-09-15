@@ -1,0 +1,270 @@
+if not isfolder("IndexellScripts") then
+	makefolder("IndexellScripts")
+end
+
+if not isfolder("IndexellScripts/hardgen") then
+	makefolder("IndexellScripts/hardgen")
+end
+
+writefile("IndexellScripts/hardgen/Assets.rbxm", game:HttpGet("https://github.com/IdkMyNameLoll/OtherAssets/raw/refs/heads/main/veryHardGenAssets.rbxm"))
+
+local Assets:Model = game:GetObjects(getcustomasset("IndexellScripts/hardgen/Assets.rbxm", true))[1]
+local hasinit = false
+
+local RoomIn = {}
+
+local function givegenfuse()
+	local StoredFuse = (game.Players.LocalPlayer.Backpack:FindFirstChild("GeneratorFuse") or game.Players.LocalPlayer.Character:FindFirstChild("GeneratorFuse"))
+	if StoredFuse then
+		StoredFuse:SetAttribute("Durability",StoredFuse:GetAttribute("Durability")+1)
+		return
+	end
+	local NewFuse = Assets.GeneratorFuse:Clone()
+	NewFuse.Parent = game.Players.LocalPlayer.Backpack
+end
+
+local function placeFuseInRoom(room)
+	local LootHolders = {}
+	
+	for _, d in pairs(room:QueryDescendants("BasePart")) do
+		if d.Name == "LootHolder" then
+			table.insert(LootHolders,d)
+		end
+	end
+	
+	if #LootHolders > 0 then
+		local RandomHolder = LootHolders[math.random(1,#LootHolders)]
+		local NewFuse = Assets.FuseHolder:Clone()
+		NewFuse.Parent = RandomHolder.Parent
+		NewFuse:PivotTo(RandomHolder.CFrame)
+		NewFuse.FuseHolder.FuseObtain.Weld.Part1 = RandomHolder
+		local okeh = NewFuse.FuseHolder
+		okeh.FuseObtain.ModulePrompt.Triggered:Connect(function()
+			okeh:Destroy()
+			givegenfuse()
+		end)
+		NewFuse.FuseHolder.Parent = NewFuse.Parent
+		NewFuse:Destroy()
+		return true
+	else
+		return false
+	end
+end
+
+local NotifiedFirst = false
+local seekinit = false
+
+local function isseekedroom(room)
+	if room:GetAttribute("RawName") and string.find(room:GetAttribute("RawName"),"Seek") then
+		return true
+	else
+		return false
+	end
+end
+
+game.Players.LocalPlayer:GetAttributeChangedSignal("CurrentRoom"):Connect(function()
+	if hasinit and not table.find(RoomIn,game.Players.LocalPlayer:GetAttribute("CurrentRoom")) then
+		table.insert(RoomIn,game.Players.LocalPlayer:GetAttribute("CurrentRoom"))
+		if not isseekedroom(workspace.CurrentRooms:WaitForChild(tostring(game.Players.LocalPlayer:GetAttribute("CurrentRoom")))) then
+			local jsdone = false
+			if seekinit == true then
+				seekinit = "done"
+				jsdone = true
+				require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("WHY WOULD U BREAK ALL THOSE GATES??","thought")
+			end
+			local hadtogive = 0
+			for _ = 1,11 do
+				if not placeFuseInRoom(workspace.CurrentRooms:WaitForChild(tostring(game.Players.LocalPlayer:GetAttribute("CurrentRoom")))) then
+					givegenfuse()
+					hadtogive += 1
+				end
+			end
+			if hadtogive > 0 and not jsdone then
+				if seekinit == "done" then
+					require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("..here "..tostring(hadtogive).." fuses anyway.. baka","thought")
+				else
+					require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Here "..tostring(hadtogive).." Fuses from daddy LSplash :3","thought")
+				end
+			end
+		else
+			if not seekinit then
+				seekinit = true
+			end
+		end
+	end
+end)
+
+local function roominit(room)
+	if isseekedroom(room) then
+		local MinesGate = Assets.Gate:Clone()
+		for _, d in pairs(MinesGate:QueryDescendants("BasePart")) do
+			if d.Name == "Caution" then continue end
+			d.Anchored = true
+		end
+		MinesGate:PivotTo(room:WaitForChild("RoomExit").CFrame)
+		MinesGate.Entrance:Destroy()
+		MinesGate.Parent = room
+		MinesGate.MinesGateButton.Button.ActivateEventPrompt:Destroy()
+		MinesGate.MinesGate.Main.CanCollide = false
+		local HitboxOk = MinesGate.MinesGate.Main:Clone()
+		local DestroySound = Instance.new("Sound")
+		DestroySound.SoundId = "rbxassetid://111786378942697"
+		DestroySound.Volume = 1
+		DestroySound.Parent = MinesGate.MinesGate
+		HitboxOk.CanCollide = false
+		HitboxOk.CanQuery = false
+		HitboxOk.CanTouch = true
+		HitboxOk.Transparency = 1
+		HitboxOk:ClearAllChildren()
+		HitboxOk.Name = "HitBoxChase"
+		HitboxOk.Parent = MinesGate.MinesGate
+		HitboxOk.Size *= 7
+		HitboxOk.Touched:Connect(function(hh)
+			if hh.Parent:FindFirstChild("Humanoid") and hh.Parent == game.Players.LocalPlayer.Character then
+				MinesGate.MinesGate.Main:Destroy()
+				HitboxOk:Destroy()
+				task.spawn(function()
+					firesignal(game:GetService("ReplicatedStorage").RemotesFolder.CamShake.OnClientEvent,3,30,0.2,1)
+					if not NotifiedFirst then
+						NotifiedFirst = true
+						require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("HEY THOSE GATES COST A LOT!!","thought")
+					end
+				end)
+				DestroySound.Parent = game.SoundService
+				DestroySound:Play()
+				DestroySound.Ended:Wait()
+				DestroySound:Destroy()
+			end
+		end)
+		return
+	end
+	local PosNew = Assets._RandomPositions:Clone()
+	local MinesGen = Assets.MinesGenerator:Clone()
+	local MinesGate = Assets.Gate:Clone()
+	local Done = false
+	local CurrentFuse = MinesGen.Fuses:WaitForChild("2")
+	local CurrentThingTest = 0.9
+	local CurrentOk = 0
+	
+	for _, d in pairs(MinesGen.Fuses:GetChildren()) do
+		if not d:IsA("Model") then continue end
+		CurrentThingTest += 0.1
+		CurrentOk += 1
+		local v = MinesGen.Fuses:WaitForChild(tostring(CurrentOk))
+		v.Fuse.Sound.PlaybackSpeed = CurrentThingTest
+	end
+	
+	for _, d in pairs(MinesGate:QueryDescendants("BasePart")) do
+		if d.Name == "Caution" then continue end
+		d.Anchored = true
+	end
+	
+	local function genCompleted(v)
+		if v then
+			Done = true
+			local Button = MinesGate.MinesGateButton
+			Button.Light.SoundEnable:Play()
+			Button.Light.SoundHum:Play()
+			Button.Light.Transparency = 0.2
+			Button.Light.Material = Enum.Material.Neon
+			Button.Light.Color = Color3.fromRGB(226, 159, 126)
+		else
+			MinesGen.Lever.LeverPrompt.Enabled = true
+			MinesGen.Lever.LeverPrompt.Triggered:Connect(function()
+				MinesGen.Lever.LeverPrompt.Enabled = false
+				MinesGen.Lever.Sound:Play()
+				MinesGen.GeneratorMain.Sound:Play()
+				game:GetService("TweenService"):Create(MinesGen.Lever,TweenInfo.new(0.5,Enum.EasingStyle.Cubic,Enum.EasingDirection.In),{
+					CFrame = MinesGen.LeverGoal.CFrame
+				}):Play()
+				genCompleted(true)
+			end)
+		end
+	end
+	
+	local isopen = false
+	
+	MinesGate:PivotTo(room:WaitForChild("RoomExit").CFrame)
+	MinesGate.Entrance:Destroy()
+	MinesGate.Parent = room
+	MinesGate.MinesGateButton.Button.ActivateEventPrompt.Triggered:Connect(function()
+		MinesGate.MinesGateButton.Button.ActivateEventPrompt.Enabled = false
+		MinesGate.MinesGateButton.Button.SoundPress:Play()
+		task.delay(0.35,function()
+			if Done then
+				MinesGate.MinesGateButton.Button.SoundWork:Play()
+			end
+		end)
+		if Done and not isopen then
+			isopen = true
+			MinesGate.MinesGate.Main.SoundOpen:Play()
+			game:GetService("TweenService"):Create(MinesGate.MinesGate.Main,TweenInfo.new(5,Enum.EasingStyle.Linear),{
+				CFrame = MinesGate.MinesGate.Main.CFrame + Vector3.new(0,10,0)
+			}):Play()
+		end
+		task.wait(1)
+		MinesGate.MinesGateButton.Button.ActivateEventPrompt.Enabled = true
+	end)
+	
+	CurrentFuse.FusesPrompt.Triggered:Connect(function()
+		if game.Players.LocalPlayer.Character:FindFirstChild("GeneratorFuse") then
+			local CurrentUses = game.Players.LocalPlayer.Character:FindFirstChild("GeneratorFuse"):GetAttribute("Durability")
+			if CurrentUses == 1 then
+				game.Players.LocalPlayer.Character:FindFirstChild("GeneratorFuse"):Destroy()
+			else
+				game.Players.LocalPlayer.Character:FindFirstChild("GeneratorFuse"):SetAttribute("Durability",CurrentUses-1)
+			end
+			CurrentFuse.Fuse.Sound:Play()
+			CurrentFuse.Fuse.Transparency = 0
+			CurrentFuse.Fuse.Bulb.Transparency = 0
+			CurrentFuse.Fuse.Mesh.Transparency = 0
+			CurrentFuse.Fuse.Wires.Transparency = 0
+			if CurrentFuse.Name ~= "1" and CurrentFuse.Name ~= "2" and CurrentFuse.Name ~= "3" then
+				CurrentFuse.Fuse.Attachment.PointLight.Color = CurrentFuse.Fuse.Bulb.Color
+				CurrentFuse.Fuse.particleatt.particle.Color = ColorSequence.new(CurrentFuse.Fuse.Bulb.Color)
+			end
+			CurrentFuse.Fuse.Attachment.PointLight.Enabled = true
+			CurrentFuse.Fuse.particleatt.particle:Emit(2)
+			if MinesGen.Fuses:FindFirstChild(tostring(tonumber(CurrentFuse.Name)+1)) then
+				local oldprompt = CurrentFuse.FusesPrompt
+				CurrentFuse = MinesGen.Fuses:FindFirstChild(tostring(tonumber(CurrentFuse.Name)+1))
+				oldprompt.Parent = CurrentFuse
+			else
+				CurrentFuse.FusesPrompt.Enabled = false
+				genCompleted()
+			end
+		end
+	end)
+	
+	local UseGenWay = math.random(1,2) == 2
+	if room.Name == "0" then UseGenWay = false end
+	local Isthatagubby = UseGenWay and PosNew.GatePos or PosNew.EntrancePos
+	
+	PosNew:PivotTo(UseGenWay and room.RoomExit.CFrame or room.RoomEntrance.CFrame)
+	MinesGen.Lever.Anchored = true
+	MinesGen:PivotTo(Isthatagubby:GetChildren()[math.random(1,#Isthatagubby:GetChildren())].CFrame)
+	PosNew:Destroy()
+	MinesGen.Parent = room
+end
+
+local function init()
+	if hasinit then return end
+	hasinit = true
+	table.insert(RoomIn,game.Players.LocalPlayer:GetAttribute("CurrentRoom"))
+	if not isseekedroom(workspace.CurrentRooms:WaitForChild(tostring(game.Players.LocalPlayer:GetAttribute("CurrentRoom")))) then
+		for _ = 1,11 do
+			if not placeFuseInRoom(workspace.CurrentRooms:WaitForChild(tostring(game.Players.LocalPlayer:GetAttribute("CurrentRoom")))) then
+				givegenfuse()
+			end
+		end
+	end
+	for _, d in pairs(workspace.CurrentRooms:GetChildren()) do
+		roominit(d)
+	end
+	workspace.CurrentRooms.ChildAdded:Connect(function(d)
+		task.wait(0.1)
+		roominit(d)
+	end)
+end
+
+init()
