@@ -1,0 +1,144 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
+
+local function giveEntitySpawnerItem(assetId)
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(assetId))
+    end)
+
+    if not (success and objects and #objects > 0) then
+        warn("[DOORS Mod] Failed to download asset " .. tostring(assetId))
+        return
+    end
+
+    local rawAsset = objects[1]
+
+    local tool = Instance.new("Tool")
+    tool.Name = (rawAsset.Name ~= "" and rawAsset.Name) or "Entity Spawner"
+    tool.RequiresHandle = true
+
+    tool.Grip = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(0), math.rad(-180), math.rad(0))
+
+    local centerCFrame = rawAsset:IsA("Model") and rawAsset:GetBoundingBox() or rawAsset.CFrame
+
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 1, 1)
+    handle.Transparency = 1
+    handle.CFrame = centerCFrame
+    handle.CanCollide = false
+    handle.Anchored = false
+    handle.Parent = tool
+
+    rawAsset.Parent = tool
+
+    for _, part in ipairs(rawAsset:GetDescendants()) do
+        if part:IsA("BasePart") and part ~= handle then
+            part.CanCollide = false
+            part.Anchored = false
+
+            local weld = Instance.new("WeldConstraint")
+            weld.Part0 = handle
+            weld.Part1 = part
+            weld.Parent = part
+        end
+    end
+
+    local holdAnimTrack = nil
+
+    tool.Equipped:Connect(function()
+        local character = LocalPlayer.Character
+        if not character then return end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+
+        if animator then
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://507768375" 
+
+            holdAnimTrack = animator:LoadAnimation(anim)
+            holdAnimTrack.Priority = Enum.AnimationPriority.Action
+            holdAnimTrack:Play()
+        end
+    end)
+
+    tool.Unequipped:Connect(function()
+        if holdAnimTrack then
+            holdAnimTrack:Stop()
+            holdAnimTrack = nil
+        end
+    end)
+
+    local canUse = true
+
+    tool.Activated:Connect(function()
+        if not canUse then return end
+        canUse = false
+
+        local entity = Spawner:Create({
+            Entity = {
+                Name = "Trollface",
+                Asset = "rbxassetid://11541624412",
+                HeightOffset = 0
+            },
+            Lights = {
+                Flicker = {
+                    Enabled = true,
+                    Duration = 2
+                },
+                Shatter = false,
+                Repair = false
+            },
+            Earthquake = {
+                Enabled = false
+            },
+            CameraShake = {
+                Enabled = false,
+                Range = 100,
+                Values = {1.5, 20, 0.1, 1}
+            },
+            Movement = {
+                Speed = 70,
+                Delay = 2,
+                Reversed = false
+            },
+            Rebounding = {
+                Enabled = true,
+                Type = "Ambush", 
+                Min = 1,
+                Max = 1,
+                Delay = 2
+            },
+            Damage = {
+                Enabled = true,
+                IgnoreHiding = false,
+                Range = 40,
+                Amount = 125
+            },
+            Crucifixion = {
+                Type = "Guiding",
+                Enabled = true,
+                Range = 40,
+                Resist = false,
+                Break = true
+            },
+            Death = {
+                Type = "Guiding",
+                Hints = {"who the hell is that white guy??", "well i guess he rebounds like ambush thats all i know"},
+                Cause = ""
+            }
+        })
+
+        entity:Run(true)
+
+        task.wait(3)
+        canUse = true
+    end)
+
+    tool.Parent = LocalPlayer:WaitForChild("Backpack")
+end
+
+giveEntitySpawnerItem(90353902906208)
