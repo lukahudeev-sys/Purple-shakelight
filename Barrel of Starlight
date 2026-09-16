@@ -154,7 +154,7 @@ parent.Activated:Connect(function()
         end
     end
 
-    numberValue.Value = 10
+    numberValue.Value = 15
 
     local connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
         character:SetAttribute("SpeedBoost", numberValue.Value)
