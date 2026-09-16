@@ -1,0 +1,188 @@
+-- Barrel of Starlight - cleaned/fixed version
+-- Reconstructed from the supplied obfuscated script.
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+
+local parent = game:GetObjects("rbxassetid://125943594768770")[1]
+if not parent then
+    error("Failed to load Barrel of Starlight asset")
+end
+
+local numberValue = Instance.new("NumberValue")
+numberValue.Name = "StarlightSpeed"
+numberValue.Parent = parent
+
+local durability = 1
+local busy = false
+local collisionCrouchContainer = nil
+
+parent:SetAttribute("Durability", durability)
+parent.Parent = player:WaitForChild("Backpack")
+
+local animations = parent:WaitForChild("Animations")
+local animationTracks = {}
+
+local animator = humanoid:FindFirstChildOfClass("Animator")
+if not animator then
+    animator = Instance.new("Animator")
+    animator.Parent = humanoid
+end
+
+for _, animation in ipairs(animations:GetChildren()) do
+    if animation:IsA("Animation") then
+        local track = animator:LoadAnimation(animation)
+        animationTracks[animation.Name] = track
+
+        if animation.Name == "idle" then
+            track.Priority = Enum.AnimationPriority.Idle
+            track.Looped = true
+        end
+    end
+end
+
+local function playTrack(name)
+    local track = animationTracks[name]
+    if track then
+        track:Play()
+    end
+    return track
+end
+
+parent.Equipped:Connect(function()
+    local equipTrack = playTrack("equip")
+    if equipTrack then
+        task.wait(equipTrack.Length)
+    end
+
+    if parent:IsDescendantOf(character) then
+        playTrack("idle")
+    end
+end)
+
+parent.Unequipped:Connect(function()
+    local idleTrack = animationTracks.idle
+    if idleTrack and idleTrack.IsPlaying then
+        idleTrack:Stop()
+    end
+end)
+
+parent.Activated:Connect(function()
+    if busy then
+        return
+    end
+    busy = true
+
+    playTrack("open")
+
+    -- The original obfuscated condition simplifies to: durability ~= 1.
+    if durability ~= 1 then
+        durability -= 1
+        parent:SetAttribute("Durability", durability)
+    else
+        parent:Destroy()
+    end
+
+    character:SetAttribute("Starlight", true)
+    character:SetAttribute("StarlightHuge", true)
+
+    local effectFinished = false
+    local oldSpeedBypassValue = nil
+
+    -- MSPaint compatibility.
+    -- In the broken version this was a blocking repeat/until loop, so the code
+    -- that sets effectFinished = true could never be reached.
+    if getgenv().mspaint_loaded
+        and getgenv().Linoria
+        and getgenv().Linoria.Toggles
+        and getgenv().Linoria.Toggles.SpeedBypass then
+
+        if collisionCrouchContainer then
+            collisionCrouchContainer:Destroy()
+            collisionCrouchContainer = nil
+        end
+
+        local speedBypass = getgenv().Linoria.Toggles.SpeedBypass
+        oldSpeedBypassValue = speedBypass.Value
+
+        task.spawn(function()
+            while not effectFinished do
+                task.wait()
+                if not speedBypass.Value then
+                    speedBypass:SetValue(true)
+                end
+            end
+
+            speedBypass:SetValue(oldSpeedBypassValue)
+        end)
+    else
+        local collision = character:FindFirstChild("Collision")
+        if collision then
+            collisionCrouchContainer = collision:Clone()
+            collisionCrouchContainer.Name = "CollisionClone"
+
+            local crouch = collisionCrouchContainer:FindFirstChild("CollisionCrouch")
+            if crouch then
+                crouch:Destroy()
+            end
+
+            if collisionCrouchContainer:IsA("BasePart") then
+                collisionCrouchContainer.CanCollide = false
+                collisionCrouchContainer.Massless = true
+            end
+
+            collisionCrouchContainer.Parent = character
+
+            task.spawn(function()
+                while not effectFinished and collisionCrouchContainer and collisionCrouchContainer.Parent do
+                    if collisionCrouchContainer:IsA("BasePart") then
+                        collisionCrouchContainer.Massless = not collisionCrouchContainer.Massless
+                    end
+                    task.wait(0.21)
+                end
+
+                if collisionCrouchContainer
+                    and collisionCrouchContainer.Parent
+                    and collisionCrouchContainer:IsA("BasePart") then
+                    collisionCrouchContainer.Massless = true
+                end
+            end)
+        end
+    end
+
+    numberValue.Value = 3
+
+    local connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
+        character:SetAttribute("SpeedBoost", numberValue.Value)
+    end)
+
+    TweenService:Create(
+        numberValue,
+        TweenInfo.new(70, Enum.EasingStyle.Linear),
+        { Value = 0 }
+    ):Play()
+
+    -- Original script waits 35 seconds before ending the effect.
+    task.wait(10)
+
+    effectFinished = true
+
+    if connection then
+        connection:Disconnect()
+    end
+
+    if collisionCrouchContainer then
+        collisionCrouchContainer:Destroy()
+        collisionCrouchContainer = nil
+    end
+
+    character:SetAttribute("Starlight", false)
+    character:SetAttribute("StarlightHuge", false)
+    character:SetAttribute("SpeedBoost", 0)
+
+    busy = false
+end)
