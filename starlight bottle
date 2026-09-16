@@ -8,7 +8,7 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
 
-local parent = game:GetObjects("rbxassetid://129801994125381")[1]
+local parent = game:GetObjects("rbxassetid://136395720440502")[1]
 if not parent then
     error("Failed to load Barrel of Starlight asset")
 end
