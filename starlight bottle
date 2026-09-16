@@ -167,7 +167,7 @@ parent.Activated:Connect(function()
     ):Play()
 
     -- Original script waits 35 seconds before ending the effect.
-    task.wait(60)
+    task.wait(35)
 
     effectFinished = true
 
