@@ -8,7 +8,7 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
 
-local parent = game:GetObjects("rbxassetid://119885581324516")[1]
+local parent = game:GetObjects("rbxassetid://91861155290386")[1]
 if not parent then
     error("Failed to load Barrel of Starlight asset")
 end
@@ -154,7 +154,7 @@ parent.Activated:Connect(function()
         end
     end
 
-    numberValue.Value = 35
+    numberValue.Value = 2
 
     local connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
         character:SetAttribute("SpeedBoost", numberValue.Value)
