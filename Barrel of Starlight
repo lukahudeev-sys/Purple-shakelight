@@ -154,7 +154,7 @@ parent.Activated:Connect(function()
         end
     end
 
-    numberValue.Value = 2
+    numberValue.Value = 5
 
     local connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
         character:SetAttribute("SpeedBoost", numberValue.Value)
@@ -167,7 +167,7 @@ parent.Activated:Connect(function()
     ):Play()
 
     -- Original script waits 35 seconds before ending the effect.
-    task.wait(35)
+    task.wait(60)
 
     effectFinished = true
 
