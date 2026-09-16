@@ -1,297 +1,188 @@
-local v72 = game:GetService("TweenService")
-        local v73 = game:GetObjects("rbxassetid://119885581324516")[(5 - 1) - 3]
-        local v74 = Instance.new("NumberValue", parent)
-        local v75 = (6 + 5) - 7
-        local v76 = false
-        parent:SetAttribute("Durability", difference)
-        parent.Parent = game.Players.LocalPlayer.Backpack
-        local v79 = game.Players.LocalPlayer.Character
-        local v80 = character:FindFirstChildOfClass("Humanoid")
-        local v81 = parent:WaitForChild("Animations")
-        local v82 = {}
-        for v128, item in pairs(animations:GetChildren()) do
-            local v130 = 0 + 0
-            while true do
-                if sum == ((4999 - 3163) - ((2909 - (1710 + 154)) + (1109 - (200 + 118)))) then
-                    nameData[item.Name] = humanoid:LoadAnimation(item)
-                    if item.Name == "idle" then
-                        local v290 = (0 + 0) - 0
-                        local v291
-                        while true do
-                            if ((0 - 0) - (0 - 0)) == difference then
-                                number = 505 - (312 + 39 + 153 + 1)
-                                while true do
-                                    if 0 == number then
-                                        nameData[item.Name].Priority = Enum.AnimationPriority.Idle
-                                        nameData[item.Name].Looped = true
-                                        break
-                                    end
-                                end
-                                break
-                            end
-                        end
-                    end
-                    break
-                end
-            end
+-- Barrel of Starlight - cleaned/fixed version
+-- Reconstructed from the supplied obfuscated script.
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+
+local parent = game:GetObjects("rbxassetid://119885581324516")[1]
+if not parent then
+    error("Failed to load Barrel of Starlight asset")
+end
+
+local numberValue = Instance.new("NumberValue")
+numberValue.Name = "StarlightSpeed"
+numberValue.Parent = parent
+
+local durability = 4
+local busy = false
+local collisionCrouchContainer = nil
+
+parent:SetAttribute("Durability", durability)
+parent.Parent = player:WaitForChild("Backpack")
+
+local animations = parent:WaitForChild("Animations")
+local animationTracks = {}
+
+local animator = humanoid:FindFirstChildOfClass("Animator")
+if not animator then
+    animator = Instance.new("Animator")
+    animator.Parent = humanoid
+end
+
+for _, animation in ipairs(animations:GetChildren()) do
+    if animation:IsA("Animation") then
+        local track = animator:LoadAnimation(animation)
+        animationTracks[animation.Name] = track
+
+        if animation.Name == "idle" then
+            track.Priority = Enum.AnimationPriority.Idle
+            track.Looped = true
         end
-        parent.Equipped:Connect(function()
-            local v131 = 0 + 0
-            local v132
-            while true do
-                if sum == 0 then
-                    number = 0 + 0
-                    while true do
-                        if number == (1575 - (1281 + (634 - 341))) then
-                            if parent:IsDescendantOf(character) then
-                                nameData["idle"]:Play()
-                            end
-                            break
-                        end
-                        if number == ((1516 - (363 + 887)) - (28 + (415 - 177))) then
-                            local v312 = 0 - 0
-                            while true do
-                                if sum == 1 then
-                                    number = 1 + 0
-                                    break
-                                end
-                                if sum == (0 - 0) then
-                                    nameData["equip"]:Play()
-                                    task.wait(nameData["equip"].Length)
-                                    sum = 1 + 0
-                                end
-                            end
-                        end
-                    end
-                    break
-                end
-            end
-        end)
-        parent.Unequipped:Connect(function()
-            if nameData["idle"].IsPlaying then
-                nameData["idle"]:Stop()
-            end
-        end)
-        local v83
-        parent.Activated:Connect(function()
-            if flag then
-                return
-            end
-            flag = true
-            nameData["open"]:Play()
-            if (difference - ((1666 - (674 + 990)) - 1)) ~= ((447 + 1112) - (1381 + 73 + 105)) then
-                local v182 = 0
-                local v183
-                while true do
-                    if number == 0 then
-                        secondaryDifference = 0 - 0
-                        while true do
-                            if secondaryDifference == (1055 - (507 + 548)) then
-                                difference = difference - (1 + 0)
-                                parent:SetAttribute("Durability", difference)
-                                break
-                            end
-                        end
-                        break
-                    end
-                end
-            else
-                parent:Destroy()
-            end
-            character:SetAttribute("Starlight", true)
-            character:SetAttribute("StarlightHuge", true)
-            local v133, secondaryFlag, alternateFlag = 25 + (842 - (289 + 548)), false, false
-            if getgenv().mspaint_loaded then
-                local v184 = 1818 - (821 + 997)
-                local v185
-                local v186
-                while true do
-                    if sum == (255 - (195 + 60)) then
-                        difference = 0 + 0
-                        value = nil
-                        sum = 1 + 0
-                    end
-                    if sum == (1502 - (251 + 1250)) then
-                        while true do
-                            if difference == 0 then
-                                local v394 = 0
-                                while true do
-                                    if sum == (0 - 0) then
-                                        if collisionCrouchContainer then
-                                            collisionCrouchContainer:Destroy()
-                                        end
-                                        alternateFlag = true
-                                        sum = 1 + 0
-                                    end
-                                    if sum == (1033 - (809 + 223)) then
-                                        difference = 3 - (2 - 0)
-                                        break
-                                    end
-                                end
-                            end
-                            if difference == ((2 - 1) + (0 - 0)) then
-                                local v395 = 0 + 0
-                                while true do
-                                    if sum == (0 + 0) then
-                                        value = getgenv().Linoria.Toggles.SpeedBypass.Value
-                                        repeat
-                                            local v452 = 617 - (14 + 603)
-                                            local v453
-                                            while true do
-                                                if difference == (129 - (118 + 11)) then
-                                                    number = 0
-                                                    while true do
-                                                        if number == (470 - (62 + 319 + 89)) then
-                                                            task.wait()
-                                                            if not getgenv().Linoria.Toggles.SpeedBypass.Value then
-                                                                getgenv().Linoria.Toggles.SpeedBypass:SetValue(true)
-                                                            end
-                                                            break
-                                                        end
-                                                    end
-                                                    break
-                                                end
-                                            end
-                                        until secondaryFlag
-                                        sum = 1
-                                    end
-                                    if sum == (1 + 0) then
-                                        difference = (5 - 3) + (949 - (551 + 398))
-                                        break
-                                    end
-                                end
-                            end
-                            if difference == (2 + 0 + 0) then
-                                getgenv().Linoria.Toggles.SpeedBypass:SetValue(value)
-                                break
-                            end
-                        end
-                        break
-                    end
-                end
-            else
-                local v187 = 0 + 0
-                while true do
-                    if sum == (0 + 0) then
-                        if not collisionCrouchContainer then
-                            local v355 = 0 - 0
-                            local v356
-                            while true do
-                                if difference == (0 - 0) then
-                                    sum = 0 + 0
-                                    while true do
-                                        if (0 - 0) == sum then
-                                            collisionCrouchContainer = character.Collision:Clone()
-                                            do
-                                                local v465 = (0 + 0) - (89 - (40 + 49))
-                                                while true do
-                                                    if sum == (1158 - ((4089 - 3015) + 82)) then
-                                                        collisionCrouchContainer.Parent = character
-                                                        break
-                                                    end
-                                                    if sum == ((491 - (99 + 391)) - 0) then
-                                                        local v492 = 0 + 0
-                                                        while true do
-                                                            if number == (4 - 3) then
-                                                                sum = (4422 - 2636) - (214 + 1530 + 40)
-                                                                break
-                                                            end
-                                                            if number == 0 then
-                                                                collisionCrouchContainer.Name = "CollisionClone"
-                                                                if
-                                                                    collisionCrouchContainer:FindFirstChild(
-                                                                        "CollisionCrouch"
-                                                                    )
-                                                                then
-                                                                    collisionCrouchContainer.CollisionCrouch:Destroy()
-                                                                end
-                                                                number = 1
-                                                            end
-                                                        end
-                                                    end
-                                                    if sum == (1455 - (990 + 465)) then
-                                                        local v493 = 0 - 0
-                                                        local v494
-                                                        while true do
-                                                            if difference == (1604 - (1032 + 572)) then
-                                                                number = 417 - (203 + 214)
-                                                                while true do
-                                                                    if number == (1817 - (568 + 1249)) then
-                                                                        collisionCrouchContainer.CanCollide = false
-                                                                        collisionCrouchContainer.Massless = true
-                                                                        number = 1 + 0
-                                                                    end
-                                                                    if 1 == number then
-                                                                        sum = 1 + (0 - 0)
-                                                                        break
-                                                                    end
-                                                                end
-                                                                break
-                                                            end
-                                                        end
-                                                    end
-                                                end
-                                            end
-                                            break
-                                        end
-                                    end
-                                    break
-                                end
-                            end
-                        end
-                        task.spawn(function()
-                            local v313 = 0 - 0
-                            local v314
-                            while true do
-                                if 0 == difference then
-                                    sum = 0 + (1306 - (913 + 393))
-                                    while true do
-                                        if sum == (0 + (0 - 0)) then
-                                            while not secondaryFlag do
-                                                local v461 = 0 - 0
-                                                while true do
-                                                    if difference == (1726 - (1668 + (81 - 23))) then
-                                                        collisionCrouchContainer.Massless =
-                                                            not collisionCrouchContainer.Massless
-                                                        task.wait(
-                                                            (1036.21 - (269 + 141))
-                                                                - ((1138 - 626) + (2095 - (362 + 1619)))
-                                                        )
-                                                        break
-                                                    end
-                                                end
-                                            end
-                                            collisionCrouchContainer.Massless = true
-                                            break
-                                        end
-                                    end
-                                    break
-                                end
-                            end
-                        end)
-                        break
-                    end
-                end
-            end
-            numberValue.Value = (1716 - (950 + 675)) - (22 + 34)
-            tweenService
-                :Create(
-                    numberValue,
-                    TweenInfo.new((1323 - (216 + 963)) - (1361 - (485 + 802)), Enum.EasingStyle.Linear),
-                    { ["Value"] = (559 - (432 + 127)) - (1073 - (1065 + 8)) }
-                )
-                :Play()
-            local v137
-            connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
-                character:SetAttribute("SpeedBoost", numberValue.Value)
-            end)
-            task.wait(10 + 7 + (1619 - (635 + 966)))
-            secondaryFlag = true
-            connection:Disconnect()
-            collisionCrouchContainer:Destroy()
-            character:SetAttribute("Starlight", false)
-            character:SetAttribute("StarlightHuge", false)
-            character:SetAttribute("SpeedBoost", 0 + 0)
-            flag = false
-        end)
     end
+end
+
+local function playTrack(name)
+    local track = animationTracks[name]
+    if track then
+        track:Play()
+    end
+    return track
+end
+
+parent.Equipped:Connect(function()
+    local equipTrack = playTrack("equip")
+    if equipTrack then
+        task.wait(equipTrack.Length)
+    end
+
+    if parent:IsDescendantOf(character) then
+        playTrack("idle")
+    end
+end)
+
+parent.Unequipped:Connect(function()
+    local idleTrack = animationTracks.idle
+    if idleTrack and idleTrack.IsPlaying then
+        idleTrack:Stop()
+    end
+end)
+
+parent.Activated:Connect(function()
+    if busy then
+        return
+    end
+    busy = true
+
+    playTrack("open")
+
+    -- The original obfuscated condition simplifies to: durability ~= 1.
+    if durability ~= 1 then
+        durability -= 1
+        parent:SetAttribute("Durability", durability)
+    else
+        parent:Destroy()
+    end
+
+    character:SetAttribute("Starlight", true)
+    character:SetAttribute("StarlightHuge", true)
+
+    local effectFinished = false
+    local oldSpeedBypassValue = nil
+
+    -- MSPaint compatibility.
+    -- In the broken version this was a blocking repeat/until loop, so the code
+    -- that sets effectFinished = true could never be reached.
+    if getgenv().mspaint_loaded
+        and getgenv().Linoria
+        and getgenv().Linoria.Toggles
+        and getgenv().Linoria.Toggles.SpeedBypass then
+
+        if collisionCrouchContainer then
+            collisionCrouchContainer:Destroy()
+            collisionCrouchContainer = nil
+        end
+
+        local speedBypass = getgenv().Linoria.Toggles.SpeedBypass
+        oldSpeedBypassValue = speedBypass.Value
+
+        task.spawn(function()
+            while not effectFinished do
+                task.wait()
+                if not speedBypass.Value then
+                    speedBypass:SetValue(true)
+                end
+            end
+
+            speedBypass:SetValue(oldSpeedBypassValue)
+        end)
+    else
+        local collision = character:FindFirstChild("Collision")
+        if collision then
+            collisionCrouchContainer = collision:Clone()
+            collisionCrouchContainer.Name = "CollisionClone"
+
+            local crouch = collisionCrouchContainer:FindFirstChild("CollisionCrouch")
+            if crouch then
+                crouch:Destroy()
+            end
+
+            if collisionCrouchContainer:IsA("BasePart") then
+                collisionCrouchContainer.CanCollide = false
+                collisionCrouchContainer.Massless = true
+            end
+
+            collisionCrouchContainer.Parent = character
+
+            task.spawn(function()
+                while not effectFinished and collisionCrouchContainer and collisionCrouchContainer.Parent do
+                    if collisionCrouchContainer:IsA("BasePart") then
+                        collisionCrouchContainer.Massless = not collisionCrouchContainer.Massless
+                    end
+                    task.wait(0.21)
+                end
+
+                if collisionCrouchContainer
+                    and collisionCrouchContainer.Parent
+                    and collisionCrouchContainer:IsA("BasePart") then
+                    collisionCrouchContainer.Massless = true
+                end
+            end)
+        end
+    end
+
+    numberValue.Value = 35
+
+    local connection = numberValue:GetPropertyChangedSignal("Value"):Connect(function()
+        character:SetAttribute("SpeedBoost", numberValue.Value)
+    end)
+
+    TweenService:Create(
+        numberValue,
+        TweenInfo.new(70, Enum.EasingStyle.Linear),
+        { Value = 0 }
+    ):Play()
+
+    -- Original script waits 35 seconds before ending the effect.
+    task.wait(35)
+
+    effectFinished = true
+
+    if connection then
+        connection:Disconnect()
+    end
+
+    if collisionCrouchContainer then
+        collisionCrouchContainer:Destroy()
+        collisionCrouchContainer = nil
+    end
+
+    character:SetAttribute("Starlight", false)
+    character:SetAttribute("StarlightHuge", false)
+    character:SetAttribute("SpeedBoost", 0)
+
+    busy = false
+end)
