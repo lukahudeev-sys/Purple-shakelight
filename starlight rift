@@ -10,7 +10,7 @@ local function sanitizeModel(model)
 	for _, v in ipairs(model:GetDescendants()) do
 
 		workspace["starlight pentagram"].StarCenter.ItemHolder.Item.Enabled = true
-		workspace["starlight pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://111135588588241" 
+		workspace["starlight pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://124359735765354" 
 
 		-- ❌ xóa BeamFlat / BeamGlow
 		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
