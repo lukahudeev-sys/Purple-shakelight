@@ -1,0 +1,343 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- =========================================================
+-- 2 ITEMS -> 1 ITEM CRAFT
+-- Moon Bottle + Viridislight Bottle = Starlight Bottle
+-- =========================================================
+
+local RECIPE_ITEM_1 = "Moon Bottle"
+local RECIPE_ITEM_2 = "Viridislight Bottle"
+local RESULT_ITEM = "Starlight Bottle"
+local RESULT_TEXTURE = "rbxassetid://90576035812234"
+
+local TOOL_TEXTURES = {
+	["MoonVial"] = "rbxassetid://131016623061878",
+	["Moon Bottle"] = "rbxassetid://90576035812234",
+	["Moon Jug"] = "rbxassetid://111321318179478",
+	["Viridislight Bottle"] = "rbxassetid://90576035812234",
+	["Viridislight Jug"] = "rbxassetid://111321318179478",
+	["Viridislight Vial"] = "rbxassetid://131016623061878",
+	["spiralRiftCandle"] = "rbxassetid://105497952860324",
+	["Starlight Bottle"] = RESULT_TEXTURE,
+}
+
+local function shiftToPurple(color)
+	local _, s, v = color:ToHSV()
+	return Color3.fromHSV(270 / 360, s, v)
+end
+
+local function getParticlesOut(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v.Name == "ParticlesOut" then
+			return v
+		end
+	end
+	return nil
+end
+
+local function getItemHolder(model)
+	local starCenter = model:FindFirstChild("StarCenter")
+	if not starCenter then return nil end
+
+	local holder = starCenter:FindFirstChild("ItemHolder")
+	if not holder then return nil end
+
+	return holder:FindFirstChild("Item")
+end
+
+local function getEquippedTool()
+	local character = player.Character
+	if not character then return nil end
+
+	for _, obj in ipairs(character:GetChildren()) do
+		if obj:IsA("Tool") then
+			return obj
+		end
+	end
+
+	return nil
+end
+
+local function playParticlesOnce(folder)
+	if not folder then return 0 end
+
+	local longest = 0
+
+	for _, v in ipairs(folder:GetDescendants()) do
+		if v:IsA("ParticleEmitter") then
+			v.Enabled = false
+
+			local amount = v:GetAttribute("EmitCount") or 20
+			v:Emit(amount)
+
+			local t = v.Lifetime.Max + (v:GetAttribute("EmitDelay") or 0)
+			if t > longest then
+				longest = t
+			end
+		end
+	end
+
+	return longest
+end
+
+local function updateMutateEffects(model, enabled)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("ParticleEmitter")
+			and (v.Name == "MutateEffect" or v.Name == "Mutated") then
+			v.Enabled = enabled
+		end
+	end
+end
+
+local function setModelTexture(model, texture)
+	if not texture or texture == "" then return end
+
+	for _, obj in ipairs(model:GetDescendants()) do
+		if obj:IsA("ParticleEmitter") and obj.Name ~= "FireParticle" then
+			obj.Texture = texture
+		end
+	end
+
+	local item = getItemHolder(model)
+	if item and item:IsA("ParticleEmitter") then
+		item.Texture = texture
+	end
+end
+
+local function hideModel(model, keepFolder)
+	for _, obj in ipairs(model:GetDescendants()) do
+		if keepFolder and obj:IsDescendantOf(keepFolder) then
+			continue
+		end
+
+		if obj:IsA("BasePart") then
+			obj.Transparency = 1
+			obj.CanCollide = false
+		elseif obj:IsA("ParticleEmitter")
+			or obj:IsA("Beam")
+			or obj:IsA("Trail")
+			or obj:IsA("PointLight")
+			or obj:IsA("SpotLight")
+			or obj:IsA("SurfaceLight") then
+			if obj.Name ~= "FireParticle" then
+				obj.Enabled = false
+			end
+		end
+	end
+end
+
+local function giveResultTool()
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not backpack then
+		warn("Backpack not found")
+		return nil
+	end
+
+	local replicatedStorage = game:GetService("ReplicatedStorage")
+	local template = replicatedStorage:FindFirstChild(RESULT_ITEM, true)
+
+	if template and template:IsA("Tool") then
+		local result = template:Clone()
+		result.Parent = backpack
+		return result
+	end
+
+	-- Fallback: creates a simple Tool if no template exists.
+	local result = Instance.new("Tool")
+	result.Name = RESULT_ITEM
+	result.RequiresHandle = false
+	result.CanBeDropped = true
+	result.TextureId = RESULT_TEXTURE
+	result.Parent = backpack
+
+	return result
+end
+
+local function craft(model)
+	if not model or not model.Parent then return end
+
+	local tool = getEquippedTool()
+	if not tool then return end
+
+	if tool.Name ~= RECIPE_ITEM_1 and tool.Name ~= RECIPE_ITEM_2 then
+		return
+	end
+
+	local firstItem = model:GetAttribute("FirstItem")
+
+	-- =====================================================
+	-- FIRST ITEM
+	-- =====================================================
+	if not firstItem or firstItem == "" then
+		model:SetAttribute("FirstItem", tool.Name)
+		model:SetAttribute("FirstTexture", TOOL_TEXTURES[tool.Name] or "")
+
+		tool:Destroy()
+		updateMutateEffects(model, true)
+
+		local item = getItemHolder(model)
+		local texture = model:GetAttribute("FirstTexture")
+
+		if item and item:IsA("ParticleEmitter") and texture ~= "" then
+			item.Texture = texture
+		end
+
+		playParticlesOnce(getParticlesOut(model))
+		return
+	end
+
+	-- =====================================================
+	-- SECOND ITEM
+	-- =====================================================
+	if tool.Name == firstItem then
+		warn("Use two different recipe items.")
+		return
+	end
+
+	local validPair =
+		(firstItem == RECIPE_ITEM_1 and tool.Name == RECIPE_ITEM_2)
+		or
+		(firstItem == RECIPE_ITEM_2 and tool.Name == RECIPE_ITEM_1)
+
+	if not validPair then
+		return
+	end
+
+	-- Consume second item.
+	tool:Destroy()
+
+	model:SetAttribute("Crafted", true)
+	model:SetAttribute("ResultItem", RESULT_ITEM)
+	model:SetAttribute("StoredTexture", RESULT_TEXTURE)
+
+	setModelTexture(model, RESULT_TEXTURE)
+
+	local particles = getParticlesOut(model)
+	hideModel(model, particles)
+
+	local waitTime = playParticlesOnce(particles)
+
+	task.delay(waitTime + 0.1, function()
+		if not model or not model.Parent then
+			giveResultTool()
+			return
+		end
+
+		giveResultTool()
+		model:Destroy()
+	end)
+end
+
+local function handlePrompt(model, prompt)
+	local debounce = false
+
+	prompt.Triggered:Connect(function()
+		if debounce then return end
+		debounce = true
+
+		local ok, err = pcall(function()
+			craft(model)
+		end)
+
+		if not ok then
+			warn("Crafting error: " .. tostring(err))
+		end
+
+		task.wait(0.15)
+		debounce = false
+	end)
+end
+
+local function sanitizeModel(model)
+	if not model or not model:IsA("Model") then return end
+
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
+			v:Destroy()
+
+		elseif v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+			v.Color = shiftToPurple(v.Color)
+
+		elseif v:IsA("PointLight")
+			or v:IsA("SpotLight")
+			or v:IsA("SurfaceLight") then
+			v.Color = shiftToPurple(v.Color)
+
+		elseif v:IsA("ParticleEmitter") then
+			if v.Name ~= "FireParticle" then
+				local keypoints = {}
+
+				for _, kp in ipairs(v.Color.Keypoints) do
+					table.insert(
+						keypoints,
+						ColorSequenceKeypoint.new(kp.Time, shiftToPurple(kp.Value))
+					)
+				end
+
+				v.Color = ColorSequence.new(keypoints)
+			end
+
+		elseif v:IsA("Beam") or v:IsA("Trail") then
+			local keypoints = {}
+
+			for _, kp in ipairs(v.Color.Keypoints) do
+				table.insert(
+					keypoints,
+					ColorSequenceKeypoint.new(kp.Time, shiftToPurple(kp.Value))
+				)
+			end
+
+			v.Color = ColorSequence.new(keypoints)
+
+		elseif v:IsA("ProximityPrompt") then
+			v.HoldDuration = 3
+			v.MaxActivationDistance = 5
+			v.Style = Enum.ProximityPromptStyle.Custom
+			v:SetAttribute("CustomFrame", "Black")
+
+			handlePrompt(model, v)
+		end
+	end
+
+	local primary = model:FindFirstChildWhichIsA("BasePart", true)
+	if primary then
+		model.PrimaryPart = primary
+	end
+end
+
+local function spawnNearRift()
+	local ok, objects = pcall(function()
+		return game:GetObjects("rbxassetid://110852226869313")
+	end)
+
+	if not ok or not objects or not objects[1] then
+		warn("Failed to load crafting model")
+		return
+	end
+
+	local model = objects[1]
+	model.Name = "glitch pentagram"
+
+	model:SetAttribute("FirstItem", "")
+	model:SetAttribute("FirstTexture", "")
+	model:SetAttribute("Crafted", false)
+	model:SetAttribute("ResultItem", "")
+	model:SetAttribute("StoredTexture", "")
+
+	local item = getItemHolder(model)
+	if item and item:IsA("ParticleEmitter") then
+		item.Enabled = true
+		item.Texture = ""
+	end
+
+	model.Parent = workspace
+	sanitizeModel(model)
+
+	local spawnPos = Vector3.new(235, 0, -20)
+	model:PivotTo(CFrame.new(spawnPos))
+end
+
+spawnNearRift()
