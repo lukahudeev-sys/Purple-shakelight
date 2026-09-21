@@ -1,0 +1,295 @@
+-- This file was generated at discord.gg/syncrypt
+
+math.randomseed(os.time())
+local ok, result = pcall(function()
+    return game:GetObjects("rbxassetid://100580381006063")
+end)
+local u3
+if ok then
+    ok = result
+
+    if result then
+        ok = #result > 0
+    end
+end
+if ok then
+    u3 = result[1]
+end
+local t1 = {}
+for i, v in ipairs({
+	"rbxassetid://112614017739816",
+	"rbxassetid://102256438083222",
+	"rbxassetid://138477095870622"
+}) do
+    local v7 = v
+    local v8 = i
+    local ok2, result2 = pcall(function()
+        return game:GetObjects(v7)
+    end)
+
+    if ok2 then
+        ok2 = result2 and #result2 > 0
+    end
+
+    if ok2 then
+        t1[v8] = result2[1]
+        print(string.format("Loaded successfullay", v8))
+    else
+        warn(string.format("Fail", v8, v7))
+    end
+end
+local ok3, result3 = pcall(function()
+    return game:GetObjects("rbxassetid://74333583703937")
+end)
+local u13
+if ok3 then
+    ok3 = result3
+
+    if result3 then
+        ok3 = #result3 > 0
+    end
+end
+if ok3 then
+    u13 = result3[1]
+end
+local v14 = not u3
+if v14 then
+    v14 = #t1 == 0 and not u13
+end
+if v14 then
+    return
+end
+local function v15(p1, p2)
+    local descendants = p1:GetDescendants()
+
+    table.insert(descendants, p1)
+
+    for _, v in ipairs(descendants) do
+        if v:IsA("BasePart") and p2 then
+            v.Anchored = false
+            v.CanCollide = false
+            v.Massless = true
+
+            local WeldConstraint = Instance.new("WeldConstraint")
+
+            WeldConstraint.Part0 = p2
+            WeldConstraint.Part1 = v
+            WeldConstraint.Parent = v
+        elseif v:IsA("ParticleEmitter") then
+            v.Enabled = true
+        end
+    end
+end
+local function u16(p3, p4, p5)
+    local _ipairs = ipairs
+    for _, v42 in _ipairs(p3:GetChildren()) do
+        local v43 = v42:IsA("Motor6D")
+
+        if not v43 then
+            v43 = v42:IsA("Bone")
+
+            if not v43 then
+                v43 = v42:IsA("Humanoid")
+
+                if not v43 then
+                    v43 = v42:IsA("ControllerManager") or v42:IsA("AnimationController")
+                end
+            end
+        end
+
+        if not v43 then
+            local Name = p4:FindFirstChild(v42.Name)
+            local v45 = Name
+
+            if Name then
+                v45 = Name.ClassName == v42.ClassName
+            end
+
+            if v45 then
+                if Name:IsA("Sound") then
+                    Name.SoundId = v42.SoundId
+                    Name.Volume = v42.Volume
+                    Name.PlaybackSpeed = v42.PlaybackSpeed
+                    Name.RollOffMaxDistance = v42.RollOffMaxDistance
+                    Name.RollOffMinDistance = v42.RollOffMinDistance
+                    u16(v42, Name, p5)
+                else
+                    _ipairs = Name:IsA("Attachment")
+
+                    if _ipairs then
+                        Name.Position = v42.Position
+                        Name.Orientation = v42.Orientation
+                        u16(v42, Name, p5)
+                    else
+                        local v46 = Name:IsA("ParticleEmitter")
+
+                        if not v46 then
+                            v46 = Name:IsA("Beam")
+
+                            if not v46 then
+                                v46 = Name:IsA("Trail")
+
+                                if not v46 then
+                                    v46 = Name:IsA("Light")
+
+                                    if not v46 then
+                                        v46 = Name:IsA("SoundEffect")
+                                    end
+                                end
+                            end
+                        end
+
+                        if v46 then
+                            Name:Destroy()
+                            local clone = v42:Clone()
+                            if clone:IsA("ParticleEmitter") then
+                                clone.Enabled = true
+                            end
+                            clone.Parent = p4
+                        end
+                    end
+                end
+            else
+                local clone = v42:Clone()
+                v15(clone, p5)
+                clone.Parent = p4
+            end
+        end
+    end
+end
+local function v17(p6, p7)
+    if not p7 then
+        return
+    end
+
+    for _, descendant in ipairs(p7:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            local descendantName = p6:FindFirstChild(descendant.Name, true)
+
+            if descendantName and descendantName:IsA("BasePart") then
+                descendantName.Color = descendant.Color
+                descendantName.Material = descendant.Material
+                descendantName.Transparency = descendant.Transparency
+
+                local v32 = descendantName:IsA("MeshPart")
+
+                if v32 then
+                    v32 = descendant:IsA("MeshPart")
+                end
+
+                if v32 then
+                    descendantName.MeshId = descendant.MeshId
+                    descendantName.TextureID = descendant.TextureID
+                end
+
+                local SpecialMesh = descendantName:FindFirstChildOfClass("SpecialMesh")
+                local SpecialMesh2 = descendant:FindFirstChildOfClass("SpecialMesh")
+
+                if SpecialMesh and SpecialMesh2 then
+                    SpecialMesh.MeshId = SpecialMesh2.MeshId
+                    SpecialMesh.TextureId = SpecialMesh2.TextureId
+                    SpecialMesh.Scale = SpecialMesh2.Scale
+                end
+
+                local Decal = descendantName:FindFirstChildWhichIsA("Decal")
+
+                if not Decal then
+                    Decal = descendantName:FindFirstChildWhichIsA("Texture")
+                end
+
+                local v36 = descendant:FindFirstChildWhichIsA("Decal") or descendant:FindFirstChildWhichIsA("Texture")
+
+                if Decal and v36 then
+                    Decal.Texture = v36.Texture
+                end
+            end
+        end
+    end
+end
+local function v18(p8)
+    if not p8:IsA("Model") or not p8.Name then
+        return
+    end
+
+    task.wait(0.1)
+
+    if p8.Name == "SeekMovingNewClone" then
+        if not u3 then
+            return
+        end
+        local SeekRig = p8:FindFirstChild("SeekRig")
+        local Root
+        if SeekRig then
+            Root = SeekRig:FindFirstChild("Root")
+
+            if not Root then
+                Root = SeekRig:FindFirstChild("Figure")
+            end
+        end
+        if not Root then
+            Root = p8.PrimaryPart or p8:FindFirstChildWhichIsA("BasePart", true)
+        end
+        u16(u3, p8, Root)
+        for _, descendant in ipairs(u3:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                local descendantName = p8:FindFirstChild(descendant.Name, true)
+                local v55 = descendantName
+
+                if descendantName then
+                    v55 = descendantName:IsA("BasePart")
+                end
+
+                if v55 then
+                    descendantName.Color = descendant.Color
+                    descendantName.Material = descendant.Material
+                    descendantName.Transparency = descendant.Transparency
+
+                    local v56 = descendantName:IsA("MeshPart")
+
+                    if v56 then
+                        v56 = descendant:IsA("MeshPart")
+                    end
+
+                    if v56 then
+                        descendantName.MeshId = descendant.MeshId
+                        descendantName.TextureID = descendant.TextureID
+                    end
+
+                    u16(descendant, descendantName, descendantName)
+                end
+            end
+        end
+
+        return
+    end
+
+    if p8.Name == "Eye" then
+        local v57 = #t1
+
+        if v57 == 0 then
+            return
+        end
+
+        local v58 = math.random(1, v57)
+        local v59 = t1[v58]
+
+        print(string.format("Reskin successufl", v58))
+        v17(p8, v59)
+
+        return
+    end
+
+    if p8.Name == "Seek_Arm" then
+        if not u13 then
+            return
+        end
+
+        v17(p8, u13)
+    end
+end
+for _, descendant in ipairs(workspace:GetDescendants()) do
+    v18(descendant)
+end
+workspace.DescendantAdded:Connect(function(descendant)
+    v18(descendant)
+end)
