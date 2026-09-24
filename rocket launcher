@@ -1,0 +1,210 @@
+local v2 = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))
+v2 = v2()
+local v1 = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Shop%20Items/Source.lua"))
+v1 = v1()
+local v3 = game:GetService("Debris")
+local v4 = game.Players.LocalPlayer:GetMouse()
+local v5 = game:GetObjects("rbxassetid://13602301356")
+local v6 = v5[1]:WaitForChild("Boom")
+local v7 = v5[1]:WaitForChild("Swoosh")
+local v8 = Instance.new("Part")
+v8.Name = "Rocket"
+v8.FormFactor = Enum.FormFactor.Custom
+local v9 = Vector3.new(1.2, 1.2, 3.27)
+v8.Size = v9
+v8.CanCollide = false
+v9 = Instance.new("SpecialMesh", v8)
+v9.MeshId = "rbxassetid://2251534"
+local v10 = Vector3.new(0.35, 0.35, 0.25)
+v9.Scale = v10
+v10 = Instance.new("Fire", v8)
+v10.Heat = 5
+v10.Size = 2
+local v11 = Instance.new("BodyForce", v8)
+local v12 = v8:GetMass()
+local v13 = Vector3.new(0, v12 * workspace.Gravity, 0)
+v11.Force = v13
+
+if not game.Players.LocalPlayer.PlayerGui.MainUI.ItemShop then
+
+	if not game.Players.LocalPlayer.PlayerGui.MainUI.ItemShop.Visible then
+		v1.CreateItem(seekGun, {
+			Title = "Rocket Launcher",
+			Desc = "Shoot rockets",
+			Image = "rbxassetid://90021376",
+			Price = 1000,
+			Stack = 1,
+		})
+	end
+
+end
+
+v5[1].Parent = game.Players.LocalPlayer.Backpack
+v5[1].Activated:Connect(function()
+	local v14 = _u0:Clone()
+	local v15 = game:GetService("ReplicatedStorage")
+	v14.Parent = v15
+	v15 = _u1:Clone()
+	local v16 = game:GetService("ReplicatedStorage")
+	v15.Parent = v16
+	local v17 = _u3:Clone()
+	local v18 = BrickColor.Gray()
+	v17.BrickColor = v18
+	_u4:AddItem(v17, 10)
+	v14:Play()
+	local v19 = CFrame.new(5, 0, 0)
+	v19 = CFrame.new((_u5.Handle.CFrame * v19).p, _u2.Hit.p)
+	v17.CFrame = v19
+	v17.Velocity = v17.CFrame.lookVector * 60
+	v17.Parent = workspace
+	task.spawn(function()
+		while true do
+			task.wait()
+			local v20 = _u0:IsDescendantOf(workspace)
+
+			if not v20 then
+
+				if _u0 == nil then
+				end
+
+			end
+
+			_u1.Volume = 0
+			_u1:Stop()
+			_u1:Destroy()
+
+			if _u2.isPlaying then
+				_u2:Stop()
+				_u2:Destroy()
+			end
+	end)
+	v17.Touched:Connect(function()
+		_u0:Destroy()
+		task.spawn(function()
+			_u0.Volume = 0
+			_u0:Stop()
+			_u0:Destroy()
+			_u1:Play()
+			_u1.Ended:Wait()
+			_u1.Volume = 0
+			_u1:Stop()
+			_u1:Destroy()
+		end)
+		local v21 = Instance.new("Explosion")
+		v21.BlastPressure = 0
+		v21.BlastRadius = 8
+		v21.ExplosionType = Enum.ExplosionType.NoCraters
+		v21.Position = _u0.Position
+		v21.Parent = workspace
+		local v23 = workspace:GetPartBoundsInBox(workspace)
+		local v24, v25, v26 = ipairs(v23)
+
+		while true do
+			local v27 = string.find(10.Name, "Wall")
+
+			if v27 then
+				v27 = string.find(10.Name, "Floor")
+
+				if v27 then
+					10.Anchored = false
+					v27 = Instance.new("BodyVelocity", 10)
+					v27.Velocity = ((15 - ((10.Position - _u0.Position).Magnitude)) * 100) * ((10.Position - _u0.Position).Unit)
+					table.insert(v22, v27)
+					local v28 = math.random(1, 5)
+					local v29 = CFrame.new()
+					10.CFrame = 10.CFrame * v29
+				end
+
+			end
+
+			for v30, v31 in v24, v25, v26 do
+			end
+
+			task.wait(0.25)
+			local v24, v25, v26 = pairs(v22)
+
+			while true do
+				10:Destroy()
+
+				for v30, v31 in v24, v25, v26 do
+				end
+	end)
+end)
+
+local function v9(a)
+	local v32 = a:WaitForChild("Assets", 2)
+
+	if not v32 then
+		local v34, v33, v35 = ipairs(v32:GetChildren())
+
+		while true do
+			local v37 = string.match(v36.Name, "Painting")
+
+			if v37 then
+				v37 = string.match(v36.Name, "painting")
+
+				if not v37 then
+				else
+					local v37, v38, v39 = ipairs(v36:GetDescendants())
+
+					while true do
+						local v41 = v40:IsA("BasePart")
+
+						if v41 then
+							v41 = v40:IsA("Part")
+
+							if v41 then
+								v41 = v40:IsA("MeshPart")
+
+								if not v41 then
+								else
+								else
+									v40.CanTouch = true
+								end
+
+							end
+
+						end
+
+						for v42, v40 in v37, v38, v39 do
+						end
+
+					end
+
+				end
+
+				for v43, v36 in v34, v33, v35 do
+				end
+
+			end
+end
+
+v11 = workspace.CurrentRooms.ChildAdded:Connect(function(a) _u0(a) end)
+local v11, v13, v44 = pairs(workspace.CurrentRooms:GetChildren())
+
+while true do
+	v5[1].Activated:Connect(0)
+
+	for v12, v45 in v11, v13, v44 do
+	end
+
+	task.spawn(function()
+		while true do
+			task.wait()
+
+			if _u0 ~= nil then
+				local v46 = _u0:IsDescendantOf(_u1.Character)
+
+				if v46 then
+				end
+
+				v46 = _u0:IsDescendantOf(_u1.Backpack)
+
+				if v46 then
+				end
+
+			end
+
+			_u2:Disconnect()
+			_u3:Destroy()
+	end)
