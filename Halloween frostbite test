@@ -314,7 +314,7 @@ local function GetGithubModel(url, fileName)
 	return success and result or nil
 end
 
-local Phase1Sound = GetGitSound("https://github.com/vuivuiviu2/Doors-Hardcore-Reignited-/raw/refs/heads/main/THE%20FIRST%20PHASE.mp3", "FrostbitePhase1")
+local Phase1Sound = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
 if Phase1Sound then
     Phase1Sound.Parent = workspace
     Phase1Sound.Volume = 3.75
