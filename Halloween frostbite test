@@ -1,0 +1,630 @@
+local http_request = (syn and syn.request) or (http and http.request) or http_request or request or (fluxus and fluxus.request)
+local getasset = getcustomasset or getsynasset
+
+if not (writefile and getasset and http_request) then
+    warn("[Frostbite]: Executor của bạn không hỗ trợ writefile/getcustomasset/request!")
+    return
+end
+
+getgenv().FrostbiteHere = true
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+
+local LocalPlayer = Players.LocalPlayer
+
+local CYAN_COLOR = Color3.fromRGB(156,194,255)
+local DARK_CYAN = Color3.fromRGB(84,150,255)
+local LIGHT_CYAN = Color3.fromRGB(160, 240, 240)
+local ORANGE_COLOR = Color3.fromRGB(255, 130, 30)
+
+local activeCyanLights = {}
+local spawnedEffectsList = {}
+local isEntityActive = true
+
+local EffectModel
+pcall(function()
+    EffectModel = game:GetObjects("rbxassetid://11864783283")[1]
+end)
+
+local function EnsurePrimary(model)
+    if not model:IsA("Model") then return end
+    if not model.PrimaryPart then
+        for _, p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") then
+                model.PrimaryPart = p
+                break
+            end
+        end
+    end
+end
+
+local function PrepareModel(model)
+    if model:IsA("BasePart") then
+        model.Anchored = true
+        model.CanCollide = false
+    end
+    for _, p in ipairs(model:GetDescendants()) do
+        if p:IsA("BasePart") then
+            p.Anchored = true
+            p.CanCollide = false
+        end
+    end
+end
+
+local function ConfigureEffectModel(model)
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj:IsA("Light") then
+            obj.Enabled = false
+        elseif obj:IsA("ParticleEmitter") then
+            obj.Rate = obj.Rate * 0.5
+        elseif obj:IsA("Sound") then
+            obj:Destroy()
+        end
+    end
+end
+
+local function GetLightsInRoom(room)
+    local lights = {}
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "LightStand" or obj.Name == "LightStandSingle" then
+            table.insert(lights, obj)
+        end
+    end
+    return lights
+end
+
+local function CreateSmallNativeFire(parent)
+    local fire = Instance.new("Fire")
+    fire.Size = 1.75
+    fire.Heat = 3
+    fire.Color = Color3.fromRGB(255, 140, 30)
+    fire.SecondaryColor = Color3.fromRGB(255, 40, 0)
+    fire.Parent = parent
+    return fire
+end
+
+local function ProcessRandomLight(room)
+    if not isEntityActive or not room then return end
+    local lights = GetLightsInRoom(room)
+    if #lights == 0 then return end
+
+    local randomLight = lights[math.random(1, #lights)]
+    table.insert(activeCyanLights, randomLight)
+
+    if EffectModel then
+        local spawnedEffect = EffectModel:Clone()
+        spawnedEffect.Parent = randomLight.Parent
+        
+        EnsurePrimary(spawnedEffect)
+        PrepareModel(spawnedEffect)
+        ConfigureEffectModel(spawnedEffect)
+        
+        spawnedEffect:PivotTo(randomLight:GetPivot())
+        table.insert(spawnedEffectsList, spawnedEffect)
+    end
+
+    local lightPart = randomLight:IsA("BasePart") and randomLight or randomLight:FindFirstChildWhichIsA("BasePart", true)
+
+    local fireWorldCFrames = {}
+    local lightFixture = randomLight:FindFirstChild("LightFixture")
+    if lightFixture then
+        local neonMesh = lightFixture:FindFirstChild("Neon")
+        if neonMesh then
+            for _, child in ipairs(neonMesh:GetChildren()) do
+                if child:IsA("Attachment") and child.Name == "Attachment" then
+                    table.insert(fireWorldCFrames, child.WorldCFrame)
+                end
+            end
+        end
+    end
+
+    local tweenInfo = TweenInfo.new(2.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+    local neonParts = {}
+
+    for _, obj in ipairs(randomLight:GetDescendants()) do
+        if obj:IsA("Light") then
+            obj.Enabled = false
+        elseif obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
+            obj.Material = Enum.Material.Glass
+            obj.Color = CYAN_COLOR
+            table.insert(neonParts, obj)
+            
+            TweenService:Create(obj, tweenInfo, {Color = DARK_CYAN}):Play()
+        end
+    end
+
+    if lightPart then
+        local soundEmitter = Instance.new("Attachment")
+        soundEmitter.WorldCFrame = lightPart.CFrame
+        soundEmitter.Parent = workspace.Terrain
+
+        local pointLight = Instance.new("PointLight")
+        pointLight.Color = Color3.fromRGB(255,255,255)
+        pointLight.Range = 20
+        pointLight.Brightness = 0
+        pointLight.Parent = lightPart
+
+        task.spawn(function()
+            local chargeSound = Instance.new("Sound")
+            chargeSound.SoundId = "rbxassetid://106208934969746"
+            chargeSound.PlaybackSpeed = 1.1
+            chargeSound.Volume = 3
+            chargeSound.RollOffMinDistance = 10
+            chargeSound.RollOffMaxDistance = 100
+            chargeSound.Parent = soundEmitter
+            chargeSound:Play()
+
+            local tweenIn = TweenService:Create(
+                pointLight, 
+                TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), 
+                {Brightness = 4}
+            )
+            tweenIn:Play()
+            tweenIn.Completed:Wait()
+
+            task.wait(0.5)
+
+            local tweenOut = TweenService:Create(
+                pointLight, 
+                TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.In), 
+                {Brightness = 0}
+            )
+            tweenOut:Play()
+            tweenOut.Completed:Wait()
+
+            if chargeSound then
+                chargeSound:Stop()
+                chargeSound:Destroy()
+            end
+
+            local breakSound = Instance.new("Sound")
+            breakSound.SoundId = "rbxassetid://8828938165"
+            breakSound.Volume = 5
+            breakSound.RollOffMinDistance = 15
+            breakSound.RollOffMaxDistance = 120
+            breakSound.Parent = soundEmitter
+            breakSound:Play()
+
+            task.delay(2.2, function()
+                if breakSound then
+                    breakSound:Stop()
+                    breakSound:Destroy()
+                end
+            end)
+
+            for _, neonPart in ipairs(neonParts) do
+                if neonPart and neonPart.Parent then
+                    neonPart:Destroy()
+                end
+            end
+
+            if pointLight and pointLight.Parent then
+                pointLight:Destroy()
+            end
+
+            task.wait(0.1)
+
+            local orangeLight = Instance.new("PointLight")
+            orangeLight.Color = ORANGE_COLOR
+            orangeLight.Range = 12
+            orangeLight.Brightness = 0
+            orangeLight.Parent = lightPart
+
+            local fireObjects = {}
+            if #fireWorldCFrames == 0 then
+                table.insert(fireWorldCFrames, soundEmitter.WorldCFrame)
+            end
+
+            for _, cf in ipairs(fireWorldCFrames) do
+                local fireAtt = Instance.new("Attachment")
+                fireAtt.WorldCFrame = cf
+                fireAtt.Parent = workspace.Terrain
+
+                local nativeFire = CreateSmallNativeFire(fireAtt)
+                table.insert(fireObjects, {fire = nativeFire, attachment = fireAtt})
+            end
+
+            local orangeIn = TweenService:Create(
+                orangeLight,
+                TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                {Brightness = 1.8}
+            )
+            orangeIn:Play()
+
+            task.wait(8)
+
+            for _, f in ipairs(fireObjects) do
+                if f.fire then
+                    f.fire.Enabled = false
+                end
+            end
+
+            local orangeOut = TweenService:Create(
+                orangeLight,
+                TweenInfo.new(1.0, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+                {Brightness = 0}
+            )
+            orangeOut:Play()
+            orangeOut.Completed:Wait()
+
+            for _, f in ipairs(fireObjects) do
+                if f.attachment then
+                    f.attachment:Destroy()
+                end
+            end
+            if orangeLight then
+                orangeLight:Destroy()
+            end
+            if soundEmitter then
+                soundEmitter:Destroy()
+            end
+
+            local idx = table.find(activeCyanLights, randomLight)
+            if idx then
+                table.remove(activeCyanLights, idx)
+            end
+        end)
+    end
+end
+
+local gameData = ReplicatedStorage:WaitForChild("GameData")
+local latestRoom = gameData:WaitForChild("LatestRoom")
+latestRoom.Changed:Wait()
+
+local function GetGitSound(GithubSnd, SoundName)
+    local fileName = SoundName .. ".mp3"
+    if not isfile(fileName) then
+        local success, response = pcall(function() return game:HttpGet(GithubSnd) end)
+        if success and response then
+            writefile(fileName, response)
+        else
+            warn("[Frostbite]: Không thể tải âm thanh: " .. SoundName)
+            return nil
+        end
+    end
+    local sound = Instance.new("Sound")
+    sound.SoundId = getasset(fileName)
+    return sound
+end
+
+local function GetGithubModel(url, fileName)
+	if not isfile(fileName) then
+		local response = http_request({
+			Url = url,
+			Method = "GET"
+		})
+
+		if response and response.StatusCode == 200 then
+			writefile(fileName, response.Body)
+		else
+			warn("[Frostbite]: Không thể tải Model từ GitHub!")
+			return nil
+		end
+	end
+
+	local success, result = pcall(function()
+		return game:GetObjects(getcustomasset(fileName))[1]
+	end)
+
+	return success and result or nil
+end
+
+local Phase1Sound = GetGitSound("https://github.com/vuivuiviu2/Doors-Hardcore-Reignited-/raw/refs/heads/main/THE%20FIRST%20PHASE.mp3", "FrostbitePhase1")
+if Phase1Sound then
+    Phase1Sound.Parent = workspace
+    Phase1Sound.Volume = 3.75
+    Phase1Sound.PlaybackSpeed = 1
+    Phase1Sound.Looped = true
+    Phase1Sound.Name = "FrostymanPhase1"
+    Phase1Sound:Play()
+end
+
+local Phase2Sound = GetGitSound("https://github.com/vuivuiviu2/Doors-Hardcore-Reignited-/raw/refs/heads/main/THE%20LAST%20PHASE.mp3", "FrostbitePhase2")
+
+local modelTemplate = GetGithubModel("https://github.com/reboundplayz/hardcore-reignited/raw/refs/heads/main/frostbiteREAL.rbxm", "kcjjsjnjjckoos")
+if not modelTemplate then
+    warn("[Frostbite]: Không thể khởi tạo Model, đã dừng script.")
+    return
+end
+
+local function GetPreviousRoom()
+    local rooms = workspace:FindFirstChild("CurrentRooms")
+    if rooms then
+        local highestRoomNum = -1
+        for _, room in ipairs(rooms:GetChildren()) do
+            local roomNum = tonumber(room.Name)
+            if roomNum and roomNum > highestRoomNum then
+                highestRoomNum = roomNum
+            end
+        end
+        if highestRoomNum >= 1 then
+            return rooms:FindFirstChild(tostring(highestRoomNum - 1))
+        end
+    end
+    return nil
+end
+
+local function GetCurrentHighestRoom()
+    local rooms = workspace:FindFirstChild("CurrentRooms")
+    if rooms and latestRoom.Value then
+        return rooms:FindFirstChild(tostring(latestRoom.Value))
+    end
+    return nil
+end
+
+local function CreateColdBarUI()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local oldGui = playerGui:FindFirstChild("FrostbiteColdBarGui")
+    if oldGui then oldGui:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FrostbiteColdBarGui"
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 100000
+
+    local frostbar = Instance.new("CanvasGroup")
+    frostbar.Name = "Frostbar"
+    frostbar.AnchorPoint = Vector2.new(0, 1)
+    frostbar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    frostbar.BackgroundTransparency = 1
+    frostbar.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    frostbar.Position = UDim2.new(0.994454, 10, 1.032909, -50)
+    frostbar.Size = UDim2.new(-0.341988, 20, 0.027266, 20)
+    frostbar.SizeConstraint = Enum.SizeConstraint.RelativeYY
+    frostbar.ZIndex = 1005
+    frostbar.Parent = gui
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0.1, 0)
+    padding.PaddingRight = UDim.new(0.1, 0)
+    padding.Parent = frostbar
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0.2, 0)
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    listLayout.Parent = frostbar
+
+    local outerBar = Instance.new("Frame")
+    outerBar.Name = "Bar"
+    outerBar.AnchorPoint = Vector2.new(0.5, 0.5)
+    outerBar.BackgroundColor3 = Color3.fromRGB(50, 75, 93)
+    outerBar.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    outerBar.LayoutOrder = 5
+    outerBar.Position = UDim2.new(0.5, 0, 0.5, 0)
+    outerBar.Size = UDim2.new(1, 0, 0.3, 0)
+    outerBar.ZIndex = 0
+    outerBar.Parent = frostbar
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(134, 202, 250)
+    stroke.Thickness = 4
+    stroke.Transparency = 0
+    stroke.Enabled = true
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.LineJoinMode = Enum.LineJoinMode.Round
+    stroke.BorderStrokePosition = Enum.BorderStrokePosition.Outer
+    stroke.BorderOffset = UDim.new(0, 0)
+    stroke.Parent = outerBar
+
+    local barPadding = Instance.new("UIPadding")
+    barPadding.PaddingBottom = UDim.new(0, 4)
+    barPadding.PaddingLeft = UDim.new(0, 4)
+    barPadding.PaddingRight = UDim.new(0, 4)
+    barPadding.PaddingTop = UDim.new(0, 4)
+    barPadding.Parent = outerBar
+
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0.25, 0)
+    barCorner.Parent = outerBar
+
+    local barBg = Instance.new("Frame")
+    barBg.Name = "BarBackground"
+    barBg.AnchorPoint = Vector2.new(0, 0.5)
+    barBg.BackgroundColor3 = Color3.fromRGB(245, 114, 81)
+    barBg.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    barBg.Position = UDim2.new(0, 0, 0.5, 0)
+    barBg.Size = UDim2.new(1, 0, 1, 0)
+    barBg.Parent = outerBar
+
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0.25, 0)
+    bgCorner.Parent = barBg
+
+    local bgGradient = Instance.new("UIGradient")
+    bgGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 4, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    bgGradient.Parent = barBg
+
+    local fillBar = Instance.new("Frame")
+    fillBar.Name = "FillBar"
+    fillBar.AnchorPoint = Vector2.new(0, 0.5)
+    fillBar.BackgroundColor3 = Color3.fromRGB(146, 174, 211)
+    fillBar.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    fillBar.Position = UDim2.new(0, 0, 0.5, 0)
+    fillBar.Size = UDim2.new(1, 0, 1, 0)
+    fillBar.ZIndex = 2
+    fillBar.Parent = outerBar
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0.25, 0)
+    fillCorner.Parent = fillBar
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    uiStroke.Color = Color3.fromRGB(134, 202, 250)
+    uiStroke.Thickness = 4
+    uiStroke.Transparency = 1
+    uiStroke.Parent = outerBar
+
+    local icon = Instance.new("ImageLabel")
+    icon.Image = "rbxassetid://14443362047"
+    icon.ImageColor3 = Color3.fromRGB(144, 194, 255)
+    icon.BackgroundColor3 = Color3.fromRGB(255, 0, 4)
+    icon.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    icon.BorderSizePixel = 0
+    icon.Position = UDim2.new(5.32, 0, 0.404255, 0)
+    icon.Size = UDim2.new(0, 36, 0, 36)
+    icon.Parent = outerBar
+
+    gui.Parent = playerGui
+    return gui, frostbar, fillBar
+end
+
+local function IsNearWarmSource(character)
+    if not character then return false end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+
+    local overlapParams = OverlapParams.new()
+    overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+    local filterList = {character}
+    local entityModel = workspace:FindFirstChild("Frostyma5n")
+    if entityModel then table.insert(filterList, entityModel) end
+    overlapParams.FilterDescendantsInstances = filterList
+
+    local nearbyParts = workspace:GetPartBoundsInRadius(root.Position, 18, overlapParams)
+    for _, part in ipairs(nearbyParts) do
+        if part:IsDescendantOf(entityModel) then continue end
+        local pName = part.Name:lower()
+        if pName:find("fireplace") or pName:find("heater") then
+            return true
+        end
+        local parent = part.Parent
+        if parent then
+            local parentName = parent.Name:lower()
+            if parentName:find("fireplace") or parentName:find("heater") then
+                return true
+            end
+        end
+    end
+
+    if isEntityActive then
+        for _, lightObj in ipairs(activeCyanLights) do
+            if lightObj and lightObj.Parent then
+                local pos = lightObj:IsA("Model") and lightObj:GetPivot().Position or lightObj.Position
+                if (root.Position - pos).Magnitude <= 18 then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+local attackWaves = math.random(5, 7)
+local phase2StartWave
+
+if attackWaves == 5 then
+    phase2StartWave = 4
+elseif attackWaves == 6 then
+    phase2StartWave = math.random(1, 100) <= 45 and 5 or 4
+elseif attackWaves == 7 then
+    phase2StartWave = math.random(1, 100) <= 25 and 6 or 5
+end
+
+local isPhase2 = false
+local currentWave = 1
+
+local coldGui, coldContainer, fillBar = CreateColdBarUI()
+local currentColdValue = 1
+
+local camera = workspace.CurrentCamera
+
+local s = modelTemplate:Clone()
+s.Name = "Frostyma5n"
+s.Parent = workspace
+
+for _, v in ipairs(s:GetDescendants()) do
+    if v:IsA("Sound") then
+        v:Play()
+    elseif v:IsA("ParticleEmitter") then
+        v.Enabled = true
+    end
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart") or s.PrimaryPart or s:FindFirstChild("FrostyNew")
+
+if not entity then
+    s:Destroy()
+    return
+end
+
+entity.CanCollide = false
+
+local attachment = entity:FindFirstChild("Attachment")
+
+if attachment then
+    for _, v in ipairs(attachment:GetDescendants()) do
+        if v:IsA("ParticleEmitter") then
+            v.Enabled = false
+        end
+    end
+end
+
+local activeRoom
+local roomOriginalColors = {}
+
+local FROST_ROOM_COLOR = Color3.fromRGB(166, 196, 255)
+
+local function RestoreRoomColors()
+    for obj, color in pairs(roomOriginalColors) do
+        if obj and obj.Parent then
+            TweenService:Create(
+                obj,
+                TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                {Color = color}
+            ):Play()
+        end
+    end
+
+    table.clear(roomOriginalColors)
+    activeRoom = nil
+end
+
+local function ApplyRoomColors(room)
+    if not room or not room.Parent or activeRoom == room then
+        return
+    end
+
+    RestoreRoomColors()
+    activeRoom = room
+
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj:IsA("Light") then
+            roomOriginalColors[obj] = obj.Color
+
+            TweenService:Create(
+                obj,
+                TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                {Color = FROST_ROOM_COLOR}
+            ):Play()
+
+        elseif obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
+            roomOriginalColors[obj] = obj.Color
+
+            TweenService:Create(
+                obj,
+                TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                {Color = FROST_ROOM_COLOR}
+            ):Play()
+        end
+    end
+end
+
+local function GetRoomTarget(room)
+    if not room then return nil end
+
+    ApplyRoomColors(room)
+
+    local entrance = room:FindFirstChild("RoomEntrance")
+    loca
