@@ -314,7 +314,7 @@ local function GetGithubModel(url, fileName)
 	return success and result or nil
 end
 
-local Phase1Sound = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
+local Phase1Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
 if Phase1Sound then
     Phase1Sound.Parent = workspace
     Phase1Sound.Volume = 3.75
@@ -324,7 +324,7 @@ if Phase1Sound then
     Phase1Sound:Play()
 end
 
-local Phase2Sound = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
+local Phase2Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
 
 local modelTemplate = GetGithubModel("https://github.com/reboundplayz/hardcore-reignited/raw/refs/heads/main/frostbiteREAL.rbxm", "kcjjsjnjjckoos")
 if not modelTemplate then
@@ -626,5 +626,4 @@ local function GetRoomTarget(room)
 
     ApplyRoomColors(room)
 
-    local entrance = room:FindFirstChild("RoomEntrance")
-    loca
+    local entrance = room:FindFirstChild("RoomEntr
