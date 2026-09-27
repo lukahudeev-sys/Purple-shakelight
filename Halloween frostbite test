@@ -332,15 +332,44 @@ pcall(function()
     Phase2Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
 end)
 
+print("[Frostbite]: Начинаем загружать модель...")
+
 local modelTemplate
 pcall(function()
-    modelTemplate = GetGithubModel("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/frostbitefixed.rbxm", "kcjjsjnjjckoos")
+    -- Попытка 1: Попробуем загрузить по ID
+    if modelTemplate == nil then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://11864783283")[1]
+        end)
+        if success and result then
+            modelTemplate = result
+            print("[Frostbite]: Модель загружена по ID")
+        end
+    end
+    
+    -- Попытка 2: Если не получилось, создаем тестовую модель
+    if modelTemplate == nil then
+        modelTemplate = Instance.new("Model")
+        modelTemplate.Name = "FrostbyteModel"
+        
+        local part = Instance.new("Part")
+        part.Name = "Body"
+        part.Shape = Enum.PartType.Ball
+        part.Size = Vector3.new(2, 2, 2)
+        part.Color = Color3.fromRGB(100, 150, 255)
+        part.Parent = modelTemplate
+        
+        modelTemplate.PrimaryPart = part
+        print("[Frostbite]: Создана тестовая модель")
+    end
 end)
 
 if not modelTemplate then
-    warn("[Frostbite]: Не удалось загрузить модель. Проверьте интернет соединение.")
+    warn("[Frostbite]: КРИТИЧЕСКАЯ ОШИБКА - Не удалось загрузить или создать модель!")
     return
 end
+
+print("[Frostbite]: Модель готова к использованию")
 
 local function GetPreviousRoom()
     local rooms = workspace:FindFirstChild("CurrentRooms")
