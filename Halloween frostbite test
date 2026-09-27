@@ -2,7 +2,7 @@ local http_request = (syn and syn.request) or (http and http.request) or http_re
 local getasset = getcustomasset or getsynasset
 
 if not (writefile and getasset and http_request) then
-    warn("[Frostbite]: Executor вашего не поддерживает writefile/getcustomasset/request!")
+    warn("[Frostbite]: Executor của bạn không hỗ trợ writefile/getcustomasset/request!")
     return
 end
 
@@ -150,6 +150,15 @@ local function ProcessRandomLight(room)
         pointLight.Parent = lightPart
 
         task.spawn(function()
+            local chargeSound = Instance.new("Sound")
+            chargeSound.SoundId = "rbxassetid://106208934969746"
+            chargeSound.PlaybackSpeed = 1.1
+            chargeSound.Volume = 3
+            chargeSound.RollOffMinDistance = 10
+            chargeSound.RollOffMaxDistance = 100
+            chargeSound.Parent = soundEmitter
+            chargeSound:Play()
+
             local tweenIn = TweenService:Create(
                 pointLight, 
                 TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), 
@@ -167,6 +176,26 @@ local function ProcessRandomLight(room)
             )
             tweenOut:Play()
             tweenOut.Completed:Wait()
+
+            if chargeSound then
+                chargeSound:Stop()
+                chargeSound:Destroy()
+            end
+
+            local breakSound = Instance.new("Sound")
+            breakSound.SoundId = "rbxassetid://8828938165"
+            breakSound.Volume = 5
+            breakSound.RollOffMinDistance = 15
+            breakSound.RollOffMaxDistance = 120
+            breakSound.Parent = soundEmitter
+            breakSound:Play()
+
+            task.delay(2.2, function()
+                if breakSound then
+                    breakSound:Stop()
+                    breakSound:Destroy()
+                end
+            end)
 
             for _, neonPart in ipairs(neonParts) do
                 if neonPart and neonPart.Parent then
@@ -245,7 +274,7 @@ end
 
 local gameData = ReplicatedStorage:FindFirstChild("GameData")
 if not gameData then
-    warn("[Frostbite]: GameData не найден в ReplicatedStorage!")
+    warn("[Frostbite]: GameData не найден!")
     return
 end
 
@@ -255,7 +284,61 @@ if not latestRoom then
     return
 end
 
-print("[Frostbite]: GameData и LatestRoom найдены")
+local function GetGitSound(GithubSnd, SoundName)
+    local fileName = SoundName .. ".mp3"
+    if not isfile(fileName) then
+        local success, response = pcall(function() return game:HttpGet(GithubSnd) end)
+        if success and response then
+            writefile(fileName, response)
+        else
+            warn("[Frostbite]: Не удалось загрузить звук: " .. SoundName)
+            return nil
+        end
+    end
+    local sound = Instance.new("Sound")
+    sound.SoundId = getasset(fileName)
+    return sound
+end
+
+local function GetGithubModel(url, fileName)
+	if not isfile(fileName) then
+		local response = http_request({
+			Url = url,
+			Method = "GET"
+		})
+
+		if response and response.StatusCode == 200 then
+			writefile(fileName, response.Body)
+		else
+			warn("[Frostbite]: Не удалось загрузить модель из GitHub!")
+			return nil
+		end
+	end
+
+	local success, result = pcall(function()
+		return game:GetObjects(getcustomasset(fileName))[1]
+	end)
+
+	return success and result or nil
+end
+
+local Phase1Sound = GetGitSound("https://github.com/vuivuiviu2/Doors-Hardcore-Reignited-/raw/refs/heads/main/THE%20FIRST%20PHASE.mp3", "FrostbitePhase1")
+if Phase1Sound then
+    Phase1Sound.Parent = workspace
+    Phase1Sound.Volume = 3.75
+    Phase1Sound.PlaybackSpeed = 1
+    Phase1Sound.Looped = true
+    Phase1Sound.Name = "FrostymanPhase1"
+    Phase1Sound:Play()
+end
+
+local Phase2Sound = GetGitSound("https://github.com/vuivuiviu2/Doors-Hardcore-Reignited-/raw/refs/heads/main/THE%20LAST%20PHASE.mp3", "FrostbitePhase2")
+
+local modelTemplate = GetGithubModel("https://github.com/reboundplayz/hardcore-reignited/raw/refs/heads/main/frostbiteREAL.rbxm", "kcjjsjnjjckoos")
+if not modelTemplate then
+    warn("[Frostbite]: Не удалось загрузить модель. Остановка скрипта.")
+    return
+end
 
 local function GetPreviousRoom()
     local rooms = workspace:FindFirstChild("CurrentRooms")
@@ -465,49 +548,36 @@ local currentColdValue = 1
 
 local camera = workspace.CurrentCamera
 
-print("[Frostbite]: Создаем модель Frostbyte...")
-
-local modelTemplate = Instance.new("Model")
-modelTemplate.Name = "FrostbyteTemplate"
-
-local part = Instance.new("Part")
-part.Name = "Body"
-part.Shape = Enum.PartType.Ball
-part.Size = Vector3.new(3, 3, 3)
-part.Color = Color3.fromRGB(100, 150, 255)
-part.Material = Enum.Material.Neon
-part.CanCollide = false
-part.TopSurface = Enum.SurfaceType.Smooth
-part.BottomSurface = Enum.SurfaceType.Smooth
-part.Parent = modelTemplate
-
-modelTemplate.PrimaryPart = part
-
 local s = modelTemplate:Clone()
 s.Name = "Frostyma5n"
-s:PivotTo(CFrame.new(0, 15, 0))
 s.Parent = workspace
-
-print("[Frostbite]: Модель добавлена в workspace")
 
 for _, v in ipairs(s:GetDescendants()) do
     if v:IsA("Sound") then
         v:Destroy()
     elseif v:IsA("ParticleEmitter") then
-        v.Enabled = false
+        v.Enabled = true
     end
 end
 
-local entity = s:FindFirstChildWhichIsA("BasePart") or s.PrimaryPart
+local entity = s:FindFirstChildWhichIsA("BasePart") or s.PrimaryPart or s:FindFirstChild("FrostyNew")
 
 if not entity then
-    warn("[Frostbite]: Entity не найден! Скрипт остановлен.")
     s:Destroy()
     return
 end
 
-print("[Frostbite]: Entity найден: " .. entity.Name)
 entity.CanCollide = false
+
+local attachment = entity:FindFirstChild("Attachment")
+
+if attachment then
+    for _, v in ipairs(attachment:GetDescendants()) do
+        if v:IsA("ParticleEmitter") then
+            v.Enabled = false
+        end
+    end
+end
 
 local activeRoom
 local roomOriginalColors = {}
@@ -565,36 +635,396 @@ local function GetRoomTarget(room)
     ApplyRoomColors(room)
 
     local entrance = room:FindFirstChild("RoomEntrance")
-    if entrance then
-        return entrance.Position
+    local exit = room:FindFirstChild("RoomExit")
+
+    if entrance and exit then
+        local pos = (entrance.Position + exit.Position) / 2
+
+        return CFrame.new(
+            pos.X,
+            pos.Y + 1,
+            pos.Z
+        )
+    elseif entrance then
+        local pos = (entrance.CFrame * CFrame.new(0, 0, -15)).Position
+
+        return CFrame.new(
+            pos.X,
+            pos.Y + 1,
+            pos.Z
+        )
     end
-    return room:GetPivot().Position
+
+    return nil
 end
 
-print("[Frostbite]: Game loop запущен")
+local movingTween
 
-RunService.Heartbeat:Connect(function()
-    if not entity or not entity.Parent then return end
-    
-    local player = LocalPlayer
-    if not player or not player.Character then return end
-    
-    local playerRoot = player.Character:FindFirstChild("HumanoidRootPart")
-    if not playerRoot then return end
-    
-    local distance = (entity.Position - playerRoot.Position).Magnitude
-    
-    if distance > 5 then
-        local direction = (playerRoot.Position - entity.Position).Unit
-        entity.AssemblyLinearVelocity = direction * 25
-    else
-        entity.AssemblyLinearVelocity = Vector3.new(0, entity.AssemblyLinearVelocity.Y, 0)
+local function MoveToRoom(room)
+    if not s or not s.Parent then return end
+
+    local target = GetRoomTarget(room)
+    if not target then return end
+
+    if movingTween then
+        movingTween:Cancel()
+        movingTween = nil
     end
-    
-    local currentRoom = GetCurrentHighestRoom()
-    if currentRoom then
-        ApplyRoomColors(currentRoom)
+
+    local cfValue = Instance.new("CFrameValue")
+    cfValue.Value = s:GetPivot()
+
+    local connection = cfValue:GetPropertyChangedSignal("Value"):Connect(function()
+        if s and s.Parent then
+            s:PivotTo(cfValue.Value)
+        end
+    end)
+
+    movingTween = TweenService:Create(
+        cfValue,
+        TweenInfo.new(
+            0.5,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.InOut
+        ),
+        {Value = target}
+    )
+
+    movingTween.Completed:Connect(function()
+        if connection then
+            connection:Disconnect()
+        end
+
+        cfValue:Destroy()
+
+        if movingTween then
+            movingTween = nil
+        end
+    end)
+
+    movingTween:Play()
+end
+
+local attacking = true
+
+task.spawn(function()
+    pcall(function()
+        local CameraShaker = require(
+            ReplicatedStorage:WaitForChild("CameraShaker", 2)
+        )
+
+        if not CameraShaker then return end
+
+        local camShake = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(shakeCf)
+                camera.CFrame = camera.CFrame * shakeCf
+            end
+        )
+
+        camShake:Start()
+
+        while attacking and s and s.Parent do
+            if isPhase2 then
+                camShake:ShakeOnce(
+                    15,
+                    25,
+                    0.15,
+                    0.3,
+                    3,
+                    1
+                )
+            else
+                camShake:ShakeOnce(
+                    20,
+                    25,
+                    0.2,
+                    0.3,
+                    2,
+                    0.5
+                )
+            end
+
+            task.wait(0.15)
+        end
+    end)
+end)
+
+if attachment then
+    for _, v in ipairs(attachment:GetDescendants()) do
+        if v:IsA("ParticleEmitter") then
+            v.Enabled = true
+        end
+    end
+end
+
+task.spawn(function()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "Aihoi"
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 999999
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
+    imageLabel.Image = "rbxassetid://10344339712"
+    imageLabel.ImageTransparency = 1
+    imageLabel.Parent = screenGui
+
+    local blur = Lighting:FindFirstChild("Blur5")
+
+    if not blur then
+        blur = Instance.new("BlurEffect")
+        blur.Name = "Blur5"
+        blur.Size = 4
+        blur.Parent = Lighting
+    else
+        blur.Size = 4
+        blur.Enabled = true
+    end
+
+    local renderConn
+
+    renderConn = RunService.RenderStepped:Connect(function(dt)
+        if not attacking or not entity or not entity.Parent then
+            renderConn:Disconnect()
+
+            if screenGui then
+                screenGui:Destroy()
+            end
+
+            return
+        end
+
+        local character = LocalPlayer.Character
+
+        if character then
+            if IsNearWarmSource(character) then
+                currentColdValue = math.min(
+                    1,
+                    currentColdValue + (0.08 * dt)
+                )
+            else
+                local coldRate = isPhase2 and (2 / 13) or (1 / 13)
+
+                currentColdValue = math.max(
+                    0,
+                    currentColdValue - (coldRate * dt)
+                )
+            end
+        end
+
+        if fillBar and fillBar.Parent then
+            fillBar.Size = UDim2.new(
+                currentColdValue,
+                0,
+                1,
+                0
+            )
+        end
+
+        if currentColdValue <= 0 then
+            imageLabel.ImageTransparency = 0.2
+            blur.Enabled = true
+        else
+            imageLabel.ImageTransparency = math.clamp(
+                0.2 + currentColdValue * 0.8,
+                0.2,
+                1
+            )
+
+            blur.Enabled = currentColdValue < 0.35
+        end
+    end)
+
+    while attacking and s and s.Parent do
+        task.wait(0.1)
+
+        local character = LocalPlayer.Character
+        if not character then continue end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        if not humanoid or humanoid.Health <= 0 then
+            break
+        end
+
+        if currentColdValue <= 0 then
+            pcall(function()
+                local damageAmount = isPhase2 and 2 or 1
+
+                humanoid.Health = math.max(
+                    0,
+                    humanoid.Health - damageAmount
+                )
+
+                local statsFolder = ReplicatedStorage:FindFirstChild("GameStats")
+
+                if statsFolder then
+                    local playerStats = statsFolder:FindFirstChild(
+                        "Player_" .. LocalPlayer.Name
+                    )
+
+                    if playerStats
+                    and playerStats:FindFirstChild("Total")
+                    and playerStats.Total:FindFirstChild("DeathCause") then
+
+                        playerStats.Total.DeathCause.Value = "Frostbite"
+                    end
+                end
+            end)
+        end
     end
 end)
 
-print("[Frostbite]: Скрипт полностью загружен! Frostbyte активен.")
+local processedRooms = {}
+
+local function ProcessEntityRoom(room)
+    if not room or processedRooms[room] then
+        return
+    end
+
+    processedRooms[room] = true
+
+    ProcessRandomLight(room)
+    MoveToRoom(room)
+
+    if currentWave >= phase2StartWave and not isPhase2 then
+        isPhase2 = true
+
+        if Phase1Sound then
+            Phase1Sound:Stop()
+        end
+
+        if Phase2Sound then
+            Phase2Sound.Parent = workspace
+            Phase2Sound.Volume = 6
+            Phase2Sound.PlaybackSpeed = 1
+            Phase2Sound.Looped = true
+            Phase2Sound.Name = "FrostymanPhase2"
+            Phase2Sound:Play()
+        end
+    end
+end
+
+local firstRoom = GetCurrentHighestRoom()
+
+if firstRoom then
+    local entrance = firstRoom:FindFirstChild("RoomEntrance")
+
+    if entrance then
+        s:PivotTo(
+            entrance.CFrame * CFrame.new(0, 0, -15)
+        )
+    else
+        s:PivotTo(firstRoom:GetPivot())
+    end
+
+    ProcessEntityRoom(firstRoom)
+end
+
+local roomConnection
+
+roomConnection = latestRoom.Changed:Connect(function()
+    if not attacking or not s or not s.Parent then
+        return
+    end
+
+    if currentWave >= attackWaves then
+        attacking = false
+        return
+    end
+
+    currentWave += 1
+
+    local rooms = workspace:FindFirstChild("CurrentRooms")
+    if not rooms then return end
+
+    task.spawn(function()
+        local room = rooms:WaitForChild(
+            tostring(latestRoom.Value),
+            2
+        )
+
+        if not room or not attacking then
+            return
+        end
+
+        room:WaitForChild("RoomEntrance", 2)
+        room:WaitForChild("RoomExit", 2)
+
+        ProcessEntityRoom(room)
+    end)
+end)
+
+while attacking and s and s.Parent do
+    task.wait(0.1)
+
+    if currentWave >= attackWaves then
+        attacking = false
+        break
+    end
+end
+
+if roomConnection then
+    roomConnection:Disconnect()
+end
+
+if movingTween then
+    movingTween:Cancel()
+end
+
+RestoreRoomColors()
+
+if s and s.Parent then
+    s:Destroy()
+end
+
+isEntityActive = false
+
+for _, effect in ipairs(spawnedEffectsList) do
+    if effect and effect.Parent then
+        effect:Destroy()
+    end
+end
+table.clear(spawnedEffectsList)
+table.clear(activeCyanLights)
+
+if coldContainer then
+    TweenService:Create(coldContainer, TweenInfo.new(1.5), {GroupTransparency = 1}):Play()
+    task.delay(1.5, function()
+        if coldGui then coldGui:Destroy() end
+    end)
+end
+
+getgenv().FrostbiteHere = false
+
+if Phase1Sound then Phase1Sound:Destroy() end
+if Phase2Sound then Phase2Sound:Destroy() end
+
+local soundPhase1 = workspace:FindFirstChild("FrostymanPhase1")
+if soundPhase1 then soundPhase1:Destroy() end
+
+local soundPhase2 = workspace:FindFirstChild("FrostymanPhase2")
+if soundPhase2 then soundPhase2:Destroy() end
+
+local blurObj = Lighting:FindFirstChild("Blur5")
+if blurObj then blurObj:Destroy() end
+
+local Ahoi = GetGitSound("https://github.com/eoyoustme/Impossible/raw/main/frostbite%20end.mp3", "Frostenddd")
+if Ahoi then
+    Ahoi.Parent = workspace
+    Ahoi.Volume = 7.5
+    Ahoi.PlaybackSpeed = 1
+    Ahoi:Play()
+    Debris:AddItem(Ahoi, 10)
+end
+
+local cac = Instance.new("Sound")
+cac.SoundId = "rbxassetid://9125402735"
+cac.Volume = 7.5
+cac.Parent = workspace
+cac.PlaybackSpeed = 0.7
+cac:Play()
+Debris:AddItem(cac, 3.6)
