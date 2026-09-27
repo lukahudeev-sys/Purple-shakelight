@@ -302,7 +302,7 @@ local function GetGithubModel(url, fileName)
 		if response and response.StatusCode == 200 then
 			writefile(fileName, response.Body)
 		else
-			warn("[Frostbite]: Không thể tải Model từ GitHub!")
+			warn("[Frostbite]: Не thể tải Model từ GitHub!")
 			return nil
 		end
 	end
