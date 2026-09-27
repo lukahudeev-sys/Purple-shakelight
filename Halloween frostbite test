@@ -2,7 +2,7 @@ local http_request = (syn and syn.request) or (http and http.request) or http_re
 local getasset = getcustomasset or getsynasset
 
 if not (writefile and getasset and http_request) then
-    warn("[Frostbite]: Executor của bạn không hỗ trợ writefile/getcustomasset/request!")
+    warn("[Frostbite]: Executor вашего не поддерживает writefile/getcustomasset/request!")
     return
 end
 
@@ -150,15 +150,6 @@ local function ProcessRandomLight(room)
         pointLight.Parent = lightPart
 
         task.spawn(function()
-            local chargeSound = Instance.new("Sound")
-            chargeSound.SoundId = "rbxassetid://9125402235"  -- Стандартный звук Roblox
-            chargeSound.PlaybackSpeed = 1.1
-            chargeSound.Volume = 3
-            chargeSound.RollOffMinDistance = 10
-            chargeSound.RollOffMaxDistance = 100
-            chargeSound.Parent = soundEmitter
-            chargeSound:Play()
-
             local tweenIn = TweenService:Create(
                 pointLight, 
                 TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), 
@@ -176,26 +167,6 @@ local function ProcessRandomLight(room)
             )
             tweenOut:Play()
             tweenOut.Completed:Wait()
-
-            if chargeSound then
-                chargeSound:Stop()
-                chargeSound:Destroy()
-            end
-
-            local breakSound = Instance.new("Sound")
-            breakSound.SoundId = "rbxassetid://12221967"  -- Другой стандартный звук
-            breakSound.Volume = 5
-            breakSound.RollOffMinDistance = 15
-            breakSound.RollOffMaxDistance = 120
-            breakSound.Parent = soundEmitter
-            breakSound:Play()
-
-            task.delay(2.2, function()
-                if breakSound then
-                    breakSound:Stop()
-                    breakSound:Destroy()
-                end
-            end)
 
             for _, neonPart in ipairs(neonParts) do
                 if neonPart and neonPart.Parent then
@@ -272,104 +243,19 @@ local function ProcessRandomLight(room)
     end
 end
 
-local gameData = ReplicatedStorage:WaitForChild("GameData")
-local latestRoom = gameData:WaitForChild("LatestRoom")
-latestRoom.Changed:Wait()
-
-local function GetGitSound(GithubSnd, SoundName)
-    local fileName = SoundName .. ".mp3"
-    if not isfile(fileName) then
-        local success, response = pcall(function() return game:HttpGet(GithubSnd) end)
-        if success and response then
-            writefile(fileName, response)
-        else
-            warn("[Frostbite]: Không thể tải âm thanh: " .. SoundName)
-            return nil
-        end
-    end
-    local sound = Instance.new("Sound")
-    sound.SoundId = getasset(fileName)
-    return sound
-end
-
-local function GetGithubModel(url, fileName)
-	if not isfile(fileName) then
-		local response = http_request({
-			Url = url,
-			Method = "GET"
-		})
-
-		if response and response.StatusCode == 200 then
-			writefile(fileName, response.Body)
-		else
-			warn("[Frostbite]: Не thể tải Model từ GitHub!")
-			return nil
-		end
-	end
-
-	local success, result = pcall(function()
-		return game:GetObjects(getcustomasset(fileName))[1]
-	end)
-
-	return success and result or nil
-end
-
-local Phase1Sound
-pcall(function()
-    Phase1Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
-    if Phase1Sound then
-        Phase1Sound.Parent = workspace
-        Phase1Sound.Volume = 0.5
-        Phase1Sound.PlaybackSpeed = 1
-        Phase1Sound.Looped = true
-        Phase1Sound.Name = "FrostymanPhase1"
-        pcall(function() Phase1Sound:Play() end)
-    end
-end)
-
-local Phase2Sound
-pcall(function()
-    Phase2Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
-end)
-
-print("[Frostbite]: Начинаем загружать модель...")
-
-local modelTemplate
-pcall(function()
-    -- Попытка 1: Попробуем загрузить по ID
-    if modelTemplate == nil then
-        local success, result = pcall(function()
-            return game:GetObjects("rbxassetid://11864783283")[1]
-        end)
-        if success and result then
-            modelTemplate = result
-            print("[Frostbite]: Модель загружена по ID")
-        end
-    end
-    
-    -- Попытка 2: Если не получилось, создаем тестовую модель
-    if modelTemplate == nil then
-        modelTemplate = Instance.new("Model")
-        modelTemplate.Name = "FrostbyteModel"
-        
-        local part = Instance.new("Part")
-        part.Name = "Body"
-        part.Shape = Enum.PartType.Ball
-        part.Size = Vector3.new(2, 2, 2)
-        part.Color = Color3.fromRGB(100, 150, 255)
-        part.Parent = modelTemplate
-        
-        modelTemplate.PrimaryPart = part
-        print("[Frostbite]: Создана тестовая модель")
-    end
-end)
-
-if not modelTemplate then
-    warn("[Frostbite]: КРИТИЧЕСКАЯ ОШИБКА - Не удалось загрузить или создать модель!")
+local gameData = ReplicatedStorage:FindFirstChild("GameData")
+if not gameData then
+    warn("[Frostbite]: GameData не найден в ReplicatedStorage!")
     return
 end
 
-print("[Frostbite]: Модель готова к использованию")
+local latestRoom = gameData:FindFirstChild("LatestRoom")
+if not latestRoom then
+    warn("[Frostbite]: LatestRoom не найден!")
+    return
+end
+
+print("[Frostbite]: GameData и LatestRoom найдены")
 
 local function GetPreviousRoom()
     local rooms = workspace:FindFirstChild("CurrentRooms")
@@ -579,36 +465,49 @@ local currentColdValue = 1
 
 local camera = workspace.CurrentCamera
 
+print("[Frostbite]: Создаем модель Frostbyte...")
+
+local modelTemplate = Instance.new("Model")
+modelTemplate.Name = "FrostbyteTemplate"
+
+local part = Instance.new("Part")
+part.Name = "Body"
+part.Shape = Enum.PartType.Ball
+part.Size = Vector3.new(3, 3, 3)
+part.Color = Color3.fromRGB(100, 150, 255)
+part.Material = Enum.Material.Neon
+part.CanCollide = false
+part.TopSurface = Enum.SurfaceType.Smooth
+part.BottomSurface = Enum.SurfaceType.Smooth
+part.Parent = modelTemplate
+
+modelTemplate.PrimaryPart = part
+
 local s = modelTemplate:Clone()
 s.Name = "Frostyma5n"
+s:PivotTo(CFrame.new(0, 15, 0))
 s.Parent = workspace
+
+print("[Frostbite]: Модель добавлена в workspace")
 
 for _, v in ipairs(s:GetDescendants()) do
     if v:IsA("Sound") then
-        v:Destroy()  -- УДАЛЯЕМ все звуки!
+        v:Destroy()
     elseif v:IsA("ParticleEmitter") then
-        v.Enabled = true
+        v.Enabled = false
     end
 end
 
-local entity = s:FindFirstChildWhichIsA("BasePart") or s.PrimaryPart or s:FindFirstChild("FrostyNew")
+local entity = s:FindFirstChildWhichIsA("BasePart") or s.PrimaryPart
 
 if not entity then
+    warn("[Frostbite]: Entity не найден! Скрипт остановлен.")
     s:Destroy()
     return
 end
 
+print("[Frostbite]: Entity найден: " .. entity.Name)
 entity.CanCollide = false
-
-local attachment = entity:FindFirstChild("Attachment")
-
-if attachment then
-    for _, v in ipairs(attachment:GetDescendants()) do
-        if v:IsA("ParticleEmitter") then
-            v.Enabled = false
-        end
-    end
-end
 
 local activeRoom
 local roomOriginalColors = {}
@@ -671,11 +570,8 @@ local function GetRoomTarget(room)
     end
     return room:GetPivot().Position
 end
--- ===== MAIN GAME LOOP =====
-print("[Frostbite]: Модель успешно загружена! Entity: " .. tostring(entity))
 
-local lastAttackTime = 0
-local attackCooldown = 3
+print("[Frostbite]: Game loop запущен")
 
 RunService.Heartbeat:Connect(function()
     if not entity or not entity.Parent then return end
@@ -686,7 +582,6 @@ RunService.Heartbeat:Connect(function()
     local playerRoot = player.Character:FindFirstChild("HumanoidRootPart")
     if not playerRoot then return end
     
-    -- Движение к игроку
     local distance = (entity.Position - playerRoot.Position).Magnitude
     
     if distance > 5 then
@@ -696,11 +591,10 @@ RunService.Heartbeat:Connect(function()
         entity.AssemblyLinearVelocity = Vector3.new(0, entity.AssemblyLinearVelocity.Y, 0)
     end
     
-    -- Применяем цвета комнаты
     local currentRoom = GetCurrentHighestRoom()
     if currentRoom then
         ApplyRoomColors(currentRoom)
     end
 end)
 
-print("[Frostbite]: Скрипт загружен полностью!")
+print("[Frostbite]: Скрипт полностью загружен! Frostbyte активен.")
