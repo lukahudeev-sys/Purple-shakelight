@@ -556,7 +556,7 @@ s.Parent = workspace
 
 for _, v in ipairs(s:GetDescendants()) do
     if v:IsA("Sound") then
-        v:Play()
+        v:Destroy()  -- УДАЛЯЕМ все звуки!
     elseif v:IsA("ParticleEmitter") then
         v.Enabled = true
     end
@@ -642,3 +642,36 @@ local function GetRoomTarget(room)
     end
     return room:GetPivot().Position
 end
+-- ===== MAIN GAME LOOP =====
+print("[Frostbite]: Модель успешно загружена! Entity: " .. tostring(entity))
+
+local lastAttackTime = 0
+local attackCooldown = 3
+
+RunService.Heartbeat:Connect(function()
+    if not entity or not entity.Parent then return end
+    
+    local player = LocalPlayer
+    if not player or not player.Character then return end
+    
+    local playerRoot = player.Character:FindFirstChild("HumanoidRootPart")
+    if not playerRoot then return end
+    
+    -- Движение к игроку
+    local distance = (entity.Position - playerRoot.Position).Magnitude
+    
+    if distance > 5 then
+        local direction = (playerRoot.Position - entity.Position).Unit
+        entity.AssemblyLinearVelocity = direction * 25
+    else
+        entity.AssemblyLinearVelocity = Vector3.new(0, entity.AssemblyLinearVelocity.Y, 0)
+    end
+    
+    -- Применяем цвета комнаты
+    local currentRoom = GetCurrentHighestRoom()
+    if currentRoom then
+        ApplyRoomColors(currentRoom)
+    end
+end)
+
+print("[Frostbite]: Скрипт загружен полностью!")
