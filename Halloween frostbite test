@@ -1012,8 +1012,14 @@ if soundPhase2 then soundPhase2:Destroy() end
 local blurObj = Lighting:FindFirstChild("Blur5")
 if blurObj then blurObj:Destroy() end
 
-local Ahoi = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/lv_0_20260927123343.mp4", "Frostenddd")
-if Ahoi then
+local Ahoi = GetGitSound(
+    "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lv_0_20260927123343.mp3",
+    "Frostenddd"
+)
+
+if not Ahoi then
+    Ahoi = Instance.new("Sound")
+    Ahoi.SoundId = "rbxassetid://9125402735"
     Ahoi.Parent = workspace
     Ahoi.Volume = 7.5
     Ahoi.PlaybackSpeed = 1
