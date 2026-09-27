@@ -151,7 +151,7 @@ local function ProcessRandomLight(room)
 
         task.spawn(function()
             local chargeSound = Instance.new("Sound")
-            chargeSound.SoundId = "rbxassetid://106208934969746"
+            chargeSound.SoundId = "rbxassetid://9125402235"  -- Стандартный звук Roblox
             chargeSound.PlaybackSpeed = 1.1
             chargeSound.Volume = 3
             chargeSound.RollOffMinDistance = 10
@@ -183,7 +183,7 @@ local function ProcessRandomLight(room)
             end
 
             local breakSound = Instance.new("Sound")
-            breakSound.SoundId = "rbxassetid://8828938165"
+            breakSound.SoundId = "rbxassetid://12221967"  -- Другой стандартный звук
             breakSound.Volume = 5
             breakSound.RollOffMinDistance = 15
             breakSound.RollOffMaxDistance = 120
@@ -314,21 +314,31 @@ local function GetGithubModel(url, fileName)
 	return success and result or nil
 end
 
-local Phase1Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
-if Phase1Sound then
-    Phase1Sound.Parent = workspace
-    Phase1Sound.Volume = 3.75
-    Phase1Sound.PlaybackSpeed = 1
-    Phase1Sound.Looped = true
-    Phase1Sound.Name = "FrostymanPhase1"
-    Phase1Sound:Play()
-end
+local Phase1Sound
+pcall(function()
+    Phase1Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233537.mp3", "FrostbitePhase1")
+    if Phase1Sound then
+        Phase1Sound.Parent = workspace
+        Phase1Sound.Volume = 0.5
+        Phase1Sound.PlaybackSpeed = 1
+        Phase1Sound.Looped = true
+        Phase1Sound.Name = "FrostymanPhase1"
+        pcall(function() Phase1Sound:Play() end)
+    end
+end)
 
-local Phase2Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
+local Phase2Sound
+pcall(function()
+    Phase2Sound = GetGitSound("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lv_0_20260926233731.mp3", "FrostbitePhase2")
+end)
 
-local modelTemplate = GetGithubModel("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/frostbitefixed.rbxm", "kcjjsjnjjckoos")
+local modelTemplate
+pcall(function()
+    modelTemplate = GetGithubModel("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/frostbitefixed.rbxm", "kcjjsjnjjckoos")
+end)
+
 if not modelTemplate then
-    warn("[Frostbite]: Không thể khởi tạo Model, đã dừng script.")
+    warn("[Frostbite]: Не удалось загрузить модель. Проверьте интернет соединение.")
     return
 end
 
