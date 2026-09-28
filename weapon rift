@@ -24,15 +24,24 @@ local function sanitizeModel(model)
 		end
 		
 		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
-local function shiftToGreen(color)
+local function shiftToMilitary(color)
 	local h, s, v = color:ToHSV()
 
-	-- Hue xanh lá ≈ 120° = 0.333
-	return Color3.fromHSV(0.333, s, v)
+	-- Đen / xanh quân đội tối
+	local green = Color3.fromRGB(35, 55, 30)
+	local black = Color3.fromRGB(8, 10, 8)
+
+	-- Màu tối hơn sẽ thành gần đen,
+	-- màu sáng hơn sẽ thành xanh quân đội
+	if v < 0.35 then
+		return black
+	else
+		return green
+	end
 end
 
 if v:IsA("BasePart") then
-	v.Color = shiftToGreen(v.Color)
+	v.Color = shiftToMilitary(v.Color)
 end
 
 if v:IsA("ParticleEmitter") then
@@ -42,7 +51,7 @@ if v:IsA("ParticleEmitter") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToGreen(kp.Value)
+			shiftToMilitary(kp.Value)
 		))
 	end
 
@@ -56,7 +65,7 @@ if v:IsA("Beam") or v:IsA("Trail") then
 	for _, kp in ipairs(seq.Keypoints) do
 		table.insert(newKPs, ColorSequenceKeypoint.new(
 			kp.Time,
-			shiftToGreen(kp.Value)
+			shiftToMilitary(kp.Value)
 		))
 	end
 
@@ -66,7 +75,7 @@ end
 if v:IsA("PointLight")
 	or v:IsA("SpotLight")
 	or v:IsA("SurfaceLight") then
-	v.Color = shiftToGreen(v.Color)
+	v.Color = shiftToMilitary(v.Color)
 end
 
 		-- 🔥 chỉnh prompt + connect trigger
