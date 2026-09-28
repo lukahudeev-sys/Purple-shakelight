@@ -238,30 +238,36 @@ local function transformIntoFigure()
     end)
 end
 
--- === ИСПРАВЛЕННЫЙ БЛОК КАМЕРЫ ===
+-- === ЖЁСТКОЕ ТРЕТЬЕ ЛИЦО ===
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
-
--- Принудительно удерживаем третье лицо
-local function enforceThirdPerson()
-    player.CameraMode = Enum.CameraMode.Classic
-    player.CameraMinZoomDistance = 8
-    player.CameraMaxZoomDistance = 14
-end
+local RunService = game:GetService("RunService")
 
 -- Ставим сразу
-enforceThirdPerson()
+player.CameraMode = Enum.CameraMode.Classic
+player.CameraMinZoomDistance = 10
+player.CameraMaxZoomDistance = 20
 
--- И повторяем каждый кадр, чтобы никакой другой скрипт не перебил
-game:GetService("RunService").RenderStepped:Connect(function()
+-- Удерживаем каждый кадр + принудительно двигаем камеру назад
+RunService.RenderStepped:Connect(function()
+    -- Перебиваем настройки игрока
     if player.CameraMode ~= Enum.CameraMode.Classic then
         player.CameraMode = Enum.CameraMode.Classic
     end
-    if player.CameraMinZoomDistance < 8 then
-        player.CameraMinZoomDistance = 8
+    if player.CameraMinZoomDistance < 10 then
+        player.CameraMinZoomDistance = 10
     end
-    if player.CameraMaxZoomDistance > 14 or player.CameraMaxZoomDistance < 8 then
-        player.CameraMaxZoomDistance = 14
+    if player.CameraMaxZoomDistance < 10 then
+        player.CameraMaxZoomDistance = 20
+    end
+
+    -- Если игра ставит CameraSubject = Head (first person), возвращаем на Humanoid
+    local char = player.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum and camera.CameraSubject ~= hum then
+            camera.CameraSubject = hum
+        end
     end
 end)
 
