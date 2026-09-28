@@ -3,6 +3,11 @@
 -- Для среды, где доступен game:GetObjects и LocalPlayer.
 
 local function transformIntoFigure()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local player = Players.LocalPlayer
+    local camera = workspace.CurrentCamera
+
     if _G.TransformedIntoAnyMorph == true then
 	   return
     end
@@ -229,6 +234,12 @@ local function transformIntoFigure()
 	   end
     end)
 end
+
+-- Третье лицо: Roblox будет держать камеру за персонажем.
+local player = game.Players.LocalPlayer
+player.CameraMode = Enum.CameraMode.Classic
+player.CameraMinZoomDistance = 8
+player.CameraMaxZoomDistance = 14
 
 -- Запуск морфа:
 transformIntoFigure()
