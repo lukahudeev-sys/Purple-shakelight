@@ -238,36 +238,79 @@ local function transformIntoFigure()
     end)
 end
 
--- === ЖЁСТКОЕ ТРЕТЬЕ ЛИЦО ===
+-- === ПОЛНОСТЬЮ РУЧНАЯ КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
--- Ставим сразу
-player.CameraMode = Enum.CameraMode.Classic
-player.CameraMinZoomDistance = 10
-player.CameraMaxZoomDistance = 20
-
--- Удерживаем каждый кадр + принудительно двигаем камеру назад
-RunService.RenderStepped:Connect(function()
-    -- Перебиваем настройки игрока
-    if player.CameraMode ~= Enum.CameraMode.Classic then
-        player.CameraMode = Enum.CameraMode.Classic
-    end
-    if player.CameraMinZoomDistance < 10 then
-        player.CameraMinZoomDistance = 10
-    end
-    if player.CameraMaxZoomDistance < 10 then
-        player.CameraMaxZoomDistance = 20
-    end
-
-    -- Если игра ставит CameraSubject = Head (first person), возвращаем на Humanoid
-    local char = player.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum and camera.CameraSubject ~= hum then
-            camera.CameraSubject = hum
+-- Отключаем родной CameraScript игры, чтобы он не дрался с нами
+pcall(function()
+    local playerScripts = player:WaitForChild("PlayerScripts")
+    local cameraScript = playerScripts:FindFirstChild("PlayerModule")
+    if cameraScript then
+        local modules = require(cameraScript)
+        local cameras = modules:GetCameras()
+        for _, cam in pairs(cameras) do
+            if cam.SetActive then
+                pcall(function() cam:SetActive(false) end)
+            end
         end
+    end
+end)
+
+-- Настройки камеры
+local cameraDistance = 14      -- дистанция от персонажа
+local cameraHeight = 4         -- высота над тазом
+local rotationX = 0            -- горизонтальный угол (мышь)
+local rotationY = -15          -- вертикальный угол (градусы)
+local sensitivity = 0.3
+
+-- Захват мыши
+UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+-- Поворот камеры мышью
+UIS.InputChanged:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        rotationX = rotationX - input.Delta.X * sensitivity
+        rotationY = math.clamp(rotationY - input.Delta.Y * sensitivity, -70, 60)
+    end
+end)
+
+-- Постоянно держим мышь в центре
+RunService.RenderStepped:Connect(function()
+    if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+        UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+    end
+
+    local char = player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Целевая точка — таз персонажа
+    local targetPos = hrp.Position + Vector3.new(0, 2, 0)
+
+    -- Считаем позицию камеры по сферическим координатам
+    local radX = math.rad(rotationX)
+    local radY = math.rad(rotationY)
+
+    local offset = Vector3.new(
+        math.sin(radX) * math.cos(radY),
+        -math.sin(radY),
+        math.cos(radX) * math.cos(radY)
+    ) * cameraDistance
+
+    local camPos = targetPos + offset + Vector3.new(0, cameraHeight, 0)
+
+    -- Ставим камеру
+    camera.CFrame = CFrame.new(camPos, targetPos)
+    camera.Focus = CFrame.new(targetPos)
+    camera.CameraType = Enum.CameraType.Scriptable
+
+    -- Не даём игре переключить субъект
+    if camera.CameraSubject ~= char:FindFirstChildOfClass("Humanoid") then
+        camera.CameraSubject = char:FindFirstChildOfClass("Humanoid")
     end
 end)
 
