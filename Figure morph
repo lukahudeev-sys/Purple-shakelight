@@ -1,6 +1,5 @@
 -- Figure Morph
 -- Основано на загруженном morphs.txt
--- Для среды, где доступен game:GetObjects и LocalPlayer.
 
 local function transformIntoFigure()
     local Players = game:GetService("Players")
@@ -20,7 +19,6 @@ local function transformIntoFigure()
     local footstepType = 0
     local footstepType2 = 0
     local canwalk = true
-    local isThirdPerson = true
 
     local StompAnim
     local IdleAnim
@@ -134,9 +132,6 @@ local function transformIntoFigure()
     end
 
     local function killTheCacaoBallButWhite(ahhball:Model)
-        if ahhball then
-            print("found lil bro")
-        end
         if _G.StompGigglesEnabled == false then
             warn("can't step giggle: stepping giggles is disabled")
             return
@@ -150,7 +145,6 @@ local function transformIntoFigure()
         wait(0.3)
         newBall.Root.Sound_Kill:Play()
         wait(0.6)
-        print("GiggleFunction")
         for _, GiggleThing in pairs(newBall:GetDescendants()) do
             if GiggleThing:IsA("NoCollisionConstraint") or GiggleThing:IsA("BallSocketConstraint") then
                 GiggleThing:Destroy()
@@ -173,7 +167,6 @@ local function transformIntoFigure()
         local nearestGiggle = nil
         for _, Giggle in pairs(giggles) do
             if Giggle:FindFirstChild("Root") then
-                print((figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude)
                 if (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude <= nearest then
                     nearest = (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude
                     nearestGiggle = Giggle
@@ -192,7 +185,7 @@ local function transformIntoFigure()
     local function checkIfIsAGiggleRagdoll(giggle)
         spawn(function()
             local okkkk = 0
-            repeat wait() print("trest" .. okkkk) okkkk += 1 until okkkk >= 20 or giggle:FindFirstChild("Root")
+            repeat wait() okkkk += 1 until okkkk >= 20 or giggle:FindFirstChild("Root")
             if giggle:FindFirstChild("Root") then
                 if giggle.Root:FindFirstChild("Sound_Kill") and giggle.Root:FindFirstChild("Sound_Laugh") and giggle:FindFirstChild("AnimationController") then
                     addGiggle(giggle)
@@ -203,14 +196,16 @@ local function transformIntoFigure()
 
     spawn(function()
         game:GetService("RunService").RenderStepped:Connect(function()
-            if game.Players.LocalPlayer.Character:FindFirstChild("Head") then
-                game.Players.LocalPlayer.Character:FindFirstChild("Head").Transparency = 1
+            local char = game.Players.LocalPlayer.Character
+            if not char then return end
+            if char:FindFirstChild("Head") then
+                char.Head.Transparency = 1
             end
-            if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-                game.Players.LocalPlayer.Character:FindFirstChild("Humanoid").HipHeight = 2.3
+            if char:FindFirstChild("Humanoid") then
+                char.Humanoid.HipHeight = 2.3
             end
-            figureNew:PivotTo(game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart").CFrame)
-            for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+            figureNew:PivotTo(char:WaitForChild("HumanoidRootPart").CFrame)
+            for _, v in pairs(char:GetChildren()) do
                 if v:IsA("BasePart") then
                     v.LocalTransparencyModifier = 1
                     for _, dadada in pairs(v:GetDescendants()) do
@@ -238,81 +233,84 @@ local function transformIntoFigure()
     end)
 end
 
--- === ПОЛНОСТЬЮ РУЧНАЯ КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
+-- === ТРЕТЬЕ ЛИЦО: ЖЁСТКАЯ РУЧНАЯ КАМЕРА ===
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
--- Отключаем родной CameraScript игры, чтобы он не дрался с нами
+-- Настройки
+local DISTANCE = 14
+local HEIGHT = 3
+local SENSITIVITY = 0.4
+local rotX = 0
+local rotY = 15
+
+-- Сразу включаем Scriptable — Roblox перестаёт трогать камеру
+camera.CameraType = Enum.CameraType.Scriptable
+
+-- Форсим захват мыши
 pcall(function()
-    local playerScripts = player:WaitForChild("PlayerScripts")
-    local cameraScript = playerScripts:FindFirstChild("PlayerModule")
-    if cameraScript then
-        local modules = require(cameraScript)
-        local cameras = modules:GetCameras()
-        for _, cam in pairs(cameras) do
-            if cam.SetActive then
-                pcall(function() cam:SetActive(false) end)
-            end
+    UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+    UIS.MouseIconEnabled = false
+end)
+
+-- Отключаем родной PlayerModule камеры
+pcall(function()
+    local pm = player:WaitForChild("PlayerScripts"):FindFirstChild("PlayerModule")
+    if pm then
+        local mod = require(pm)
+        for _, cam in pairs(mod:GetCameras()) do
+            if cam.SetActive then pcall(function() cam:SetActive(false) end) end
         end
     end
 end)
 
--- Настройки камеры
-local cameraDistance = 14      -- дистанция от персонажа
-local cameraHeight = 4         -- высота над тазом
-local rotationX = 0            -- горизонтальный угол (мышь)
-local rotationY = -15          -- вертикальный угол (градусы)
-local sensitivity = 0.3
-
--- Захват мыши
-UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-
--- Поворот камеры мышью
-UIS.InputChanged:Connect(function(input, gameProcessed)
+-- Ловим движение мыши (gameProcessed игнорируем — важно!)
+UIS.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
-        rotationX = rotationX - input.Delta.X * sensitivity
-        rotationY = math.clamp(rotationY - input.Delta.Y * sensitivity, -70, 60)
+        rotX = rotX - input.Delta.X * SENSITIVITY
+        rotY = math.clamp(rotY - input.Delta.Y * SENSITIVITY, -60, 70)
     end
 end)
 
--- Постоянно держим мышь в центре
-RunService.RenderStepped:Connect(function()
-    if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
-        UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+-- Периодически перебиваем MouseBehavior, если игра его сбрасывает
+task.spawn(function()
+    while task.wait(0.1) do
+        if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+            pcall(function()
+                UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+            end)
+        end
     end
+end)
 
+-- Основной цикл камеры
+RunService:BindToRenderStep("FigureCamera", Enum.RenderPriority.Camera.Value + 1, function()
     local char = player.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    -- Целевая точка — таз персонажа
-    local targetPos = hrp.Position + Vector3.new(0, 2, 0)
+    -- Всегда Scriptable
+    if camera.CameraType ~= Enum.CameraType.Scriptable then
+        camera.CameraType = Enum.CameraType.Scriptable
+    end
 
-    -- Считаем позицию камеры по сферическим координатам
-    local radX = math.rad(rotationX)
-    local radY = math.rad(rotationY)
+    local target = hrp.Position + Vector3.new(0, 2, 0)
+    local radX = math.rad(rotX)
+    local radY = math.rad(rotY)
 
     local offset = Vector3.new(
         math.sin(radX) * math.cos(radY),
-        -math.sin(radY),
+        math.sin(radY),
         math.cos(radX) * math.cos(radY)
-    ) * cameraDistance
+    ) * DISTANCE
 
-    local camPos = targetPos + offset + Vector3.new(0, cameraHeight, 0)
-
-    -- Ставим камеру
-    camera.CFrame = CFrame.new(camPos, targetPos)
-    camera.Focus = CFrame.new(targetPos)
-    camera.CameraType = Enum.CameraType.Scriptable
-
-    -- Не даём игре переключить субъект
-    if camera.CameraSubject ~= char:FindFirstChildOfClass("Humanoid") then
-        camera.CameraSubject = char:FindFirstChildOfClass("Humanoid")
-    end
+    local camPos = target + offset + Vector3.new(0, HEIGHT, 0)
+    camera.CFrame = CFrame.new(camPos, target)
+    camera.Focus = CFrame.new(target)
 end)
 
--- Запуск морфа:
+-- Запуск морфа
 transformIntoFigure()
