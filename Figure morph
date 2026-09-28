@@ -21,6 +21,7 @@ local function transformIntoFigure()
     local footstepType = 0
     local footstepType2 = 0
     local canwalk = true
+    local isThirdPerson = true
 
     local StompAnim
     local IdleAnim
