@@ -4,173 +4,172 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 -- FIX + CLEAN MODEL
-
--- Военный чёрно-зелёный цвет
-local function shiftToMilitary(color)
-	local _, _, value = color:ToHSV()
-
-	local green = Color3.fromRGB(35, 55, 30)
-	local black = Color3.fromRGB(8, 10, 8)
-
-	if value < 0.35 then
-		return black
-	end
-
-	return green
-end
-
-local function recolorObject(v)
-	if v:IsA("BasePart") then
-		v.Color = shiftToMilitary(v.Color)
-	elseif v:IsA("ParticleEmitter") then
-		local points = {}
-
-		for _, kp in ipairs(v.Color.Keypoints) do
-			table.insert(points, ColorSequenceKeypoint.new(
-				kp.Time,
-				shiftToMilitary(kp.Value)
-			))
-		end
-
-		v.Color = ColorSequence.new(points)
-	elseif v:IsA("Beam") or v:IsA("Trail") then
-		local points = {}
-
-		for _, kp in ipairs(v.Color.Keypoints) do
-			table.insert(points, ColorSequenceKeypoint.new(
-				kp.Time,
-				shiftToMilitary(kp.Value)
-			))
-		end
-
-		v.Color = ColorSequence.new(points)
-	elseif v:IsA("PointLight")
-		or v:IsA("SpotLight")
-		or v:IsA("SurfaceLight") then
-		v.Color = shiftToMilitary(v.Color)
-	end
-end
-
 local function sanitizeModel(model)
-	if not model or not model:IsA("Model") then
-		return
-	end
-
-	-- Настройка эффекта
-	local starCenter = model:FindFirstChild("StarCenter", true)
-	local itemHolder = starCenter and starCenter:FindFirstChild("ItemHolder", true)
-	local item = itemHolder and itemHolder:FindFirstChild("Item", true)
-
-	if item and item:IsA("Texture") then
-		item.Texture = "rbxassetid://120057872736949"
-	elseif item and item:IsA("Decal") then
-		item.Texture = "rbxassetid://120057872736949"
-	end
+	if not model:IsA("Model") then return end
 
 	for _, v in ipairs(model:GetDescendants()) do
-		-- Убираем старые BeamFlat / BeamGlow
+
+		workspace["weapon pentagram"].StarCenter.ItemHolder.Item.Enabled = true
+		workspace["weapon pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://120057872736949" 
+
+		-- ❌ xóa BeamFlat / BeamGlow
 		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
 			v:Destroy()
-			continue
 		end
 
+		-- 🔧 fix parts
 		if v:IsA("BasePart") then
 			v.Anchored = true
 			v.CanCollide = false
 		end
+		
+		-- 🟢 đổi mọi màu sang xanh lá nhưng giữ nguyên độ sáng
+local function shiftToMilitary(color)
+	local h, s, v = color:ToHSV()
 
-		recolorObject(v)
+	-- Đen / xanh quân đội tối
+	local green = Color3.fromRGB(35, 55, 30)
+	local black = Color3.fromRGB(8, 10, 8)
 
+	-- Màu tối hơn sẽ thành gần đen,
+	-- màu sáng hơn sẽ thành xanh quân đội
+	if v < 0.35 then
+		return black
+	else
+		return green
+	end
+end
+
+if v:IsA("BasePart") then
+	v.Color = shiftToMilitary(v.Color)
+end
+
+if v:IsA("ParticleEmitter") then
+	local seq = v.Color
+	local newKPs = {}
+
+	for _, kp in ipairs(seq.Keypoints) do
+		table.insert(newKPs, ColorSequenceKeypoint.new(
+			kp.Time,
+			shiftToMilitary(kp.Value)
+		))
+	end
+
+	v.Color = ColorSequence.new(newKPs)
+end
+
+if v:IsA("Beam") or v:IsA("Trail") then
+	local seq = v.Color
+	local newKPs = {}
+
+	for _, kp in ipairs(seq.Keypoints) do
+		table.insert(newKPs, ColorSequenceKeypoint.new(
+			kp.Time,
+			shiftToMilitary(kp.Value)
+		))
+	end
+
+	v.Color = ColorSequence.new(newKPs)
+end
+
+if v:IsA("PointLight")
+	or v:IsA("SpotLight")
+	or v:IsA("SurfaceLight") then
+	v.Color = shiftToMilitary(v.Color)
+end
+
+		-- 🔥 chỉnh prompt + connect trigger
 		if v:IsA("ProximityPrompt") then
 			v.HoldDuration = 3
 			v.MaxActivationDistance = 5
 			v:SetAttribute("CustomFrame", "Black")
 			v.Style = Enum.ProximityPromptStyle.Custom
 
+			-- debounce tránh spam
 			local triggered = false
 
 			v.Triggered:Connect(function(plr)
-				if triggered then
-					return
-				end
-
-				-- Не даём срабатывать повторно
+				if triggered then return end
 				triggered = true
-
+				
 				local function safeLoad(url)
-					task.spawn(function()
-						local ok, result = pcall(function()
-							return game:HttpGet(url)
-						end)
+    task.spawn(function()
+        local ok, result = pcall(function()
+            return game:HttpGet(url)
+        end)
 
-						if not ok then
-							warn("[Weapon Rift] HttpGet failed:", url, result)
-							return
-						end
+        if not ok then
+            warn("HttpGet failed:", url)
+            warn(result)
+            return
+        end
 
-						local success, err = pcall(function()
-							local fn = loadstring(result)
+        local success, err = pcall(function()
+            loadstring(result)()
+        end)
 
-							if not fn then
-								error("loadstring returned nil")
-							end
+        if not success then
+            warn("Loadstring failed:", url)
+            warn(err)
+        end
+    end)
+end
 
-							fn()
-						end)
+safeLoad("https://raw.githubusercontent.com/persopoiu/scripts/refs/heads/main/RocketLauncher/script.lua")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Mines-doors-script/refs/heads/main/granade%20get")
+safeLoad("https://raw.githubusercontent.com/ItzzGabbbb/AK47Fixed/refs/heads/main/Ak47ByPenguinManiackFixedByGab.lua")
 
-						if not success then
-							warn("[Weapon Rift] Loadstring failed:", url, err)
-						end
-					end)
-				end
-
-				-- Выдаём предметы
-				safeLoad("https://raw.githubusercontent.com/persopoiu/scripts/refs/heads/main/RocketLauncher/script.lua")
-				safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Mines-doors-script/refs/heads/main/granade%20get")
-				safeLoad("https://raw.githubusercontent.com/ItzzGabbbb/AK47Fixed/refs/heads/main/Ak47ByPenguinManiackFixedByGab.lua")
-
-				-- После запуска выдачи прячем сам рифт
 				local parentModel = model
-				v:Destroy()
+				v:Destroy() -- ❌ xóa prompt ngay
 
-				local particleOut = parentModel:FindFirstChild("ParticlesOut", true)
+				-- tìm ParticleOut
+				-- 🔥 HIDE ALL (EXCEPT ParticlesOut)
+local particleOut = parentModel:FindFirstChild("ParticlesOut", true)
 
-				for _, obj in ipairs(parentModel:GetDescendants()) do
-					if particleOut and obj:IsDescendantOf(particleOut) then
-						continue
-					end
+for _, obj in ipairs(parentModel:GetDescendants()) do
+	if particleOut and obj:IsDescendantOf(particleOut) then
+		continue
+	end
 
-					if obj:IsA("BasePart") then
-						obj.Transparency = 1
-						obj.CanCollide = false
-					elseif obj:IsA("PointLight")
-						or obj:IsA("SpotLight")
-						or obj:IsA("SurfaceLight") then
-						obj.Enabled = false
-					elseif obj:IsA("ParticleEmitter")
-						or obj:IsA("Beam")
-						or obj:IsA("Trail") then
-						obj.Enabled = false
-					end
-				end
+	if obj:IsA("BasePart") then
+		obj.Transparency = 1
+		obj.CanCollide = false
+	end
+
+	if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+		obj.Enabled = false
+	end
+
+	if obj:IsA("ParticleEmitter") then
+		obj.Enabled = false
+	end
+
+	if obj:IsA("Beam") or obj:IsA("Trail") then
+		obj.Enabled = false
+	end
+end
 
 				local maxLifetime = 0
 
 				if particleOut then
 					for _, pe in ipairs(particleOut:GetDescendants()) do
 						if pe:IsA("ParticleEmitter") then
+							-- play 1 lần
 							local emitCount = pe:GetAttribute("BurstAmount") or 30
 							pe:Emit(emitCount)
 							pe.Enabled = false
 
-							local lifetime = pe.Lifetime.Max
-							if lifetime > maxLifetime then
-								maxLifetime = lifetime
+							-- tính thời gian sống để wait
+							local life = pe.Lifetime
+							local t = life.Max
+							if t > maxLifetime then
+								maxLifetime = t
 							end
 						end
 					end
 				end
 
+				-- đợi particle xong rồi destroy model
 				task.delay(maxLifetime + 0.2, function()
 					if parentModel and parentModel.Parent then
 						parentModel:Destroy()
@@ -180,6 +179,7 @@ local function sanitizeModel(model)
 		end
 	end
 
+	-- set PrimaryPart
 	local pp = model:FindFirstChildWhichIsA("BasePart", true)
 	if pp then
 		model.PrimaryPart = pp
@@ -193,13 +193,13 @@ local function spawnNearRift()
 
 	local objs = game:GetObjects("rbxassetid://110852226869313")
 	local model = objs[1]
+	model.Name = "weapon pentagram" 
 
 	if not model then
 		warn("failed to load model -_-")
 		return
 	end
 
-	model.Name = "weapon pentagram"
 	model.Parent = workspace
 
 	sanitizeModel(model)
