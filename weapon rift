@@ -128,7 +128,6 @@ local function sanitizeModel(model)
 				safeLoad("https://raw.githubusercontent.com/persopoiu/scripts/refs/heads/main/RocketLauncher/script.lua")
 				safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Mines-doors-script/refs/heads/main/granade%20get")
 				safeLoad("https://raw.githubusercontent.com/ItzzGabbbb/AK47Fixed/refs/heads/main/Ak47ByPenguinManiackFixedByGab.lua")
-				safeLoad("https://raw.githubusercontent.com/hi822010/Extras-Gliese-Hub-Doors/refs/heads/main/M249")
 
 				-- После запуска выдачи прячем сам рифт
 				local parentModel = model
