@@ -1,12 +1,29 @@
 -- Figure Morph
--- Fix для Delta executor
+-- Основано на загруженном morphs.txt
+-- Для среды, где доступен game:GetObjects и LocalPlayer.
+-- + Добавлена камера от третьего лица (интегрировано из HonchoMorph).
+
+local player = game.Players.LocalPlayer
+
+-- Настройки камеры
+local isThirdPerson = true
+local thirdPersonDistance = 12
+local thirdPersonHeightOffset = 2
+
+-- Возврат камеры в исходное состояние при очистке
+local function resetCamera()
+    local camera = workspace.CurrentCamera
+    if camera then
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end
+
+-- Если предыдущий морф был активен — очищаем
+if _G.FigureMorphCleanup then
+    pcall(_G.FigureMorphCleanup)
+end
 
 local function transformIntoFigure()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local player = Players.LocalPlayer
-    local camera = workspace.CurrentCamera
-
     if _G.TransformedIntoAnyMorph == true then
         return
     end
@@ -20,7 +37,10 @@ local function transformIntoFigure()
     local footstepType2 = 0
     local canwalk = true
 
-    local StompAnim, IdleAnim, WalkAnim, RunAnim
+    local StompAnim
+    local IdleAnim
+    local WalkAnim
+    local RunAnim
 
     gigglesDed.Name = "GigglesFake"
     figureNew.Parent = workspace
@@ -39,20 +59,35 @@ local function transformIntoFigure()
 
     IdleAnim:Play()
 
-    WalkAnim:GetMarkerReachedSignal("Footstep"):Connect(function() footstepSoundWalk() end)
-    RunAnim:GetMarkerReachedSignal("Footstep"):Connect(function() footstepSoundWalk() end)
+    WalkAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+        footstepSoundWalk()
+    end)
+
+    RunAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+        footstepSoundWalk()
+    end)
 
     spawn(function()
-        player.Character.Humanoid.Running:Connect(function(speed)
+        game.Players.LocalPlayer.Character.Humanoid.Running:Connect(function(speed)
             if speed >= 20 then
-                IdleAnim:Stop() WalkAnim:Stop()
-                if not RunAnim.IsPlaying then RunAnim:Play() RunAnim:AdjustSpeed(1.5) end
+                IdleAnim:Stop()
+                WalkAnim:Stop()
+                if RunAnim.IsPlaying == false then
+                    RunAnim:Play()
+                    RunAnim:AdjustSpeed(1.5)
+                end
             elseif speed >= 5 then
-                IdleAnim:Stop() RunAnim:Stop()
-                if not WalkAnim.IsPlaying then WalkAnim:Play() end
+                IdleAnim:Stop()
+                RunAnim:Stop()
+                if WalkAnim.IsPlaying == false then
+                    WalkAnim:Play()
+                end
             else
-                WalkAnim:Stop() RunAnim:Stop()
-                if not IdleAnim.IsPlaying then IdleAnim:Play() end
+                WalkAnim:Stop()
+                RunAnim:Stop()
+                if IdleAnim.IsPlaying == false then
+                    IdleAnim:Play()
+                end
             end
         end)
     end)
@@ -70,7 +105,7 @@ local function transformIntoFigure()
     end
 
     function footstepSoundWalk()
-        if canwalk then
+        if canwalk == true then
             if footstepType2 == 1 then
                 footstepType2 = 0
                 figureNew.LeftFoot.Footstep:Play()
@@ -84,17 +119,23 @@ local function transformIntoFigure()
     end
 
     local function stompF()
-        if not stompCooldown then
+        if stompCooldown == false then
             canwalk = false
-            player.Character.HumanoidRootPart.Anchored = true
+            game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = true
             StompAnim:Play()
             getNearestWhileStomping()
-            StompAnim:GetMarkerReachedSignal("Stomp"):Connect(function() figureNew.RightFoot.FootstepLowLoud:Play() end)
-            StompAnim:GetMarkerReachedSignal("Footstep"):Connect(function() footstepSound() end)
-            StompAnim:GetMarkerReachedSignal("Roar"):Connect(function() figureNew.Head.Growl:Play() end)
+            StompAnim:GetMarkerReachedSignal("Stomp"):Connect(function()
+                figureNew.RightFoot.FootstepLowLoud:Play()
+            end)
+            StompAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+                footstepSound()
+            end)
+            StompAnim:GetMarkerReachedSignal("Roar"):Connect(function()
+                figureNew.Head.Growl:Play()
+            end)
             StompAnim.Ended:Wait()
             canwalk = true
-            player.Character.HumanoidRootPart.Anchored = false
+            game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
         end
     end
 
@@ -107,24 +148,35 @@ local function transformIntoFigure()
         end)
     end
 
-    local function killTheCacaoBallButWhite(ahhball)
-        if _G.StompGigglesEnabled == false then return end
+    local function killTheCacaoBallButWhite(ahhball: Model)
+        if ahhball then
+            print("found lil bro")
+        end
+        if _G.StompGigglesEnabled == false then
+            warn("can't step giggle: stepping giggles is disabled")
+            return
+        end
         local newBall = ahhball:Clone()
         ahhball:Destroy()
-        newBall.Name = "StompedGiggle" .. player.Name
+        newBall.Name = "StompedGiggle" .. game.Players.LocalPlayer.Name
         newBall.Parent = gigglesDed
         newBall:SetAttribute("RealName", "StompedGiggle")
         newBall.Root.Sound_Laugh:Stop()
         wait(0.3)
         newBall.Root.Sound_Kill:Play()
         wait(0.6)
-        for _, g in pairs(newBall:GetDescendants()) do
-            if g:IsA("NoCollisionConstraint") or g:IsA("BallSocketConstraint") then g:Destroy() end
+        print("GiggleFunction")
+        for _, GiggleThing in pairs(newBall:GetDescendants()) do
+            if GiggleThing:IsA("NoCollisionConstraint") or GiggleThing:IsA("BallSocketConstraint") then
+                GiggleThing:Destroy()
+            end
         end
         wait(5)
-        for _, p in pairs(newBall:GetDescendants()) do
-            if p:IsA("BasePart") then
-                game:GetService("TweenService"):Create(p, TweenInfo.new(5), {Transparency = 1}):Play()
+        for _, GigglePart in pairs(newBall:GetDescendants()) do
+            if GigglePart:IsA("BasePart") then
+                game:GetService("TweenService"):Create(GigglePart, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                    Transparency = 1
+                }):Play()
             end
         end
         wait(6)
@@ -132,24 +184,30 @@ local function transformIntoFigure()
     end
 
     function getNearestWhileStomping()
-        local nearest, nearestGiggle = 5, nil
-        for _, g in pairs(giggles) do
-            if g:FindFirstChild("Root") then
-                if (figureNew.UserPivot.Position - g.Root.Position).Magnitude <= nearest then
-                    nearest = (figureNew.UserPivot.Position - g.Root.Position).Magnitude
-                    nearestGiggle = g
+        local nearest = 5
+        local nearestGiggle = nil
+        for _, Giggle in pairs(giggles) do
+            if Giggle:FindFirstChild("Root") then
+                print((figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude)
+                if (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude <= nearest then
+                    nearest = (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude
+                    nearestGiggle = Giggle
                 end
             else
-                table.remove(giggles, table.find(giggles, g))
+                table.remove(giggles, table.find(giggles, Giggle))
             end
         end
-        if nearestGiggle then spawn(function() killTheCacaoBallButWhite(nearestGiggle) end) end
+        if nearestGiggle then
+            spawn(function()
+                killTheCacaoBallButWhite(nearestGiggle)
+            end)
+        end
     end
 
     local function checkIfIsAGiggleRagdoll(giggle)
         spawn(function()
-            local i = 0
-            repeat wait() i += 1 until i >= 20 or giggle:FindFirstChild("Root")
+            local okkkk = 0
+            repeat wait() print("trest" .. okkkk) okkkk += 1 until okkkk >= 20 or giggle:FindFirstChild("Root")
             if giggle:FindFirstChild("Root") then
                 if giggle.Root:FindFirstChild("Sound_Kill") and giggle.Root:FindFirstChild("Sound_Laugh") and giggle:FindFirstChild("AnimationController") then
                     addGiggle(giggle)
@@ -158,111 +216,101 @@ local function transformIntoFigure()
         end)
     end
 
-    -- Слежение фигурки за персонажем — Stepped (рендерится до камеры)
-    RunService.Stepped:Connect(function()
-        local char = player.Character
-        if not char then return end
-        if char:FindFirstChild("Head") then char.Head.Transparency = 1 end
-        if char:FindFirstChild("Humanoid") then char.Humanoid.HipHeight = 2.3 end
+    -- === Основной RenderStepped: движение фигуры + камера ===
+    local renderConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        local character = game.Players.LocalPlayer.Character
+        if not character then return end
 
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        -- Скрываем оригинального персонажа
+        if character:FindFirstChild("Head") then
+            character:FindFirstChild("Head").Transparency = 1
+        end
+        if character:FindFirstChild("Humanoid") then
+            character:FindFirstChild("Humanoid").HipHeight = 2.3
+        end
+
+        -- Привязываем фигуру к HumanoidRootPart
+        local hrp = character:FindFirstChild("HumanoidRootPart")
         if hrp then
             figureNew:PivotTo(hrp.CFrame)
         end
 
-        for _, v in pairs(char:GetChildren()) do
+        -- Скрываем части персонажа
+        for _, v in pairs(character:GetChildren()) do
             if v:IsA("BasePart") then
                 v.LocalTransparencyModifier = 1
-                for _, d in pairs(v:GetDescendants()) do
-                    if d:IsA("Decal") or d:IsA("Texture") then d.Transparency = 1 end
+                for _, dadada in pairs(v:GetDescendants()) do
+                    if dadada:IsA("Decal") or dadada:IsA("Texture") then
+                        dadada.Transparency = 1
+                    end
                 end
-            elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-                v.Handle.Transparency = 1
+            elseif v:IsA("Accessory") then
+                if v:FindFirstChild("Handle") then
+                    v.Handle.Transparency = 1
+                end
+            end
+        end
+
+        -- === Камера от третьего лица ===
+        local camera = workspace.CurrentCamera
+        if camera and figureNew and figureNew.Parent then
+            local morphHead = figureNew:FindFirstChild("Head", true)
+            if not morphHead then
+                -- fallback: используем UserPivot или первую BasePart
+                morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
+            end
+
+            if morphHead then
+                if isThirdPerson then
+                    camera.CameraType = Enum.CameraType.Scriptable
+                    local lookVector = camera.CFrame.LookVector
+                    local upVector = camera.CFrame.UpVector
+                    local headPos = morphHead.Position
+                    local camPos = headPos - (lookVector * thirdPersonDistance) + Vector3.new(0, thirdPersonHeightOffset, 0)
+                    camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+                else
+                    camera.CameraType = Enum.CameraType.Custom
+                end
             end
         end
     end)
 
-    workspace.ChildAdded:Connect(function(g) checkIfIsAGiggleRagdoll(g) end)
+    -- Сохраняем подключение для очистки
+    _G.FigureMorphCleanup = function()
+        if renderConnection then
+            renderConnection:Disconnect()
+            renderConnection = nil
+        end
+        resetCamera()
+        if figureNew then
+            figureNew:Destroy()
+            figureNew = nil
+        end
+        if gigglesDed then
+            gigglesDed:Destroy()
+            gigglesDed = nil
+        end
+        _G.TransformedIntoAnyMorph = false
+        _G.FigureMorphCleanup = nil
+    end
 
-    player:GetMouse().KeyDown:Connect(function(key)
-        if key == "r" then stompF() end
+    workspace.ChildAdded:Connect(function(giggle)
+        checkIfIsAGiggleRagdoll(giggle)
+    end)
+
+    -- === Управление ===
+    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+        if key == "r" then
+            stompF()
+        elseif key == "l" then
+            -- Переключение камеры от третьего лица
+            isThirdPerson = not isThirdPerson
+            if not isThirdPerson then
+                resetCamera()
+            end
+        end
     end)
 end
 
--- === ТРЕТЬЕ ЛИЦО (ДЛЯ DELTA) ===
-local player = game.Players.LocalPlayer
-local camera = workspace.CurrentCamera
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-
-local DISTANCE = 14
-local HEIGHT = 3
-local SENSITIVITY = 0.5
-local rotX = 0
-local rotY = 15
-
--- Форсим Scriptable
-camera.CameraType = Enum.CameraType.Scriptable
-camera.CameraSubject = nil
-
--- Пытаемся залочить мышь
-pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.LockCenter end)
-
--- Основной цикл камеры через Heartbeat (Delta-friendly)
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    if camera.CameraType ~= Enum.CameraType.Scriptable then
-        camera.CameraType = Enum.CameraType.Scriptable
-    end
-    if camera.CameraSubject ~= nil then
-        camera.CameraSubject = nil
-    end
-
-    local target = hrp.Position + Vector3.new(0, 2, 0)
-    local radX, radY = math.rad(rotX), math.rad(rotY)
-    local offset = Vector3.new(
-        math.sin(radX) * math.cos(radY),
-        math.sin(radY),
-        math.cos(radX) * math.cos(radY)
-    ) * DISTANCE
-
-    camera.CFrame = CFrame.new(target + offset + Vector3.new(0, HEIGHT, 0), target)
-    camera.Focus = CFrame.new(target)
-
-    -- Захват мыши
-    pcall(function()
-        if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
-            UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-        end
-    end)
-end)
-
--- Трекинг мыши: два способа на случай если один не работает
-local lastPos = UIS:GetMouseLocation()
-
-UIS.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        rotX = rotX - input.Delta.X * SENSITIVITY
-        rotY = math.clamp(rotY - input.Delta.Y * SENSITIVITY, -60, 70)
-    end
-end)
-
--- Fallback: если InputChanged не ловит — считаем по позиции курсора
-task.spawn(function()
-    while task.wait() do
-        local cur = UIS:GetMouseLocation()
-        local delta = cur - lastPos
-        if math.abs(delta.X) > 0 and math.abs(delta.X) < 300 and math.abs(delta.Y) < 300 then
-            -- Не дублируем, только если InputChanged не работает
-            -- (эвристика: если rotX не менялся — значит InputChanged мёртв)
-        end
-        lastPos = cur
-    end
-end)
-
--- Запуск
+-- Запуск морфа:
 transformIntoFigure()
