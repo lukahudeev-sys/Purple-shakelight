@@ -105,6 +105,8 @@ end
 
 safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Archive-doors-rifts/refs/heads/main/honcho%20potion")
 safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Figure%20potion")
+safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/seek%20potion")
+
 
 
 				local parentModel = model
