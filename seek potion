@@ -1,384 +1,228 @@
 -- ============================================================
--- VIRIDISLIGHT + SEEK (упрощённый, зелье выдаётся первым)
+-- VIRIDISLIGHT для Real executor
 -- ============================================================
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local InsertService = game:GetService("InsertService")
 local LocalPlayer = Players.LocalPlayer
 
-print("[1] Скрипт запущен")
+print("[1] Старт")
 
--- ============================================================
--- ЖДЁМ ПЕРСОНАЖА
--- ============================================================
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
-print("[2] Персонаж получен")
+print("[2] Персонаж OK")
 
 -- ============================================================
--- MAINUI (с таймаутом, чтобы не висло вечно)
--- ============================================================
-local MainUI = nil
-for i = 1, 50 do
-	MainUI = LocalPlayer.PlayerGui:FindFirstChild("MainUI")
-	if MainUI then break end
-	task.wait(0.1)
-end
-if not MainUI then
-	warn("[!] MainUI не найден — зелье выдадим без эффекта")
-end
-print("[3] MainUI:", MainUI ~= nil)
-
--- ============================================================
--- ЗАГРУЗКА ЗЕЛЬЯ (сначала!)
+-- ПОИСК МОДЕЛИ ЗЕЛЬЯ
 -- ============================================================
 local toolNew = nil
 
+-- Вариант 1: Moon Bottle в ReplicatedStorage
 if game.GameId == 6627207668 then
 	local mb = game.ReplicatedStorage:FindFirstChild("Moon Bottle")
 	if mb then
 		toolNew = mb:Clone()
-		print("[4] Moon Bottle склонирован")
+		print("[3] Moon Bottle из ReplicatedStorage")
 	end
 end
 
+-- Вариант 2: ищем любой похожий tool в ReplicatedStorage
+if not toolNew then
+	for _, v in pairs(game.ReplicatedStorage:GetChildren()) do
+		if v:IsA("Tool") and (v.Name:lower():find("bottle") or v.Name:lower():find("moon")) then
+			toolNew = v:Clone()
+			print("[3] Найден tool:", v.Name)
+			break
+		end
+	end
+end
+
+-- Вариант 3: ищем в StarterPack / Players.Backpack
+if not toolNew then
+	for _, v in pairs(game:GetService("StarterPack"):GetChildren()) do
+		if v:IsA("Tool") then
+			toolNew = v:Clone()
+			print("[3] Из StarterPack:", v.Name)
+			break
+		end
+	end
+end
+
+-- Вариант 4: GetObjects (последний шанс)
 if not toolNew then
 	local ok, res = pcall(function()
 		return game:GetObjects("rbxassetid://111263531009426")[1]
 	end)
 	if ok and res then
 		toolNew = res
-		print("[4] Зелье загружено через GetObjects")
+		print("[3] Через GetObjects")
 	else
-		warn("[!] Зелье НЕ загружено:", res)
+		warn("[!] GetObjects не сработал:", res)
 	end
 end
 
+-- Вариант 5: LoadAsset
 if not toolNew then
-	warn("[X] Зелье не получено — стоп")
-	return
-end
-
--- ============================================================
--- ВЫДАЁМ ЗЕЛЬЕ СРАЗУ
--- ============================================================
-toolNew.Parent = LocalPlayer.Backpack
-toolNew.Name = "Viridislight Bottle"
-
-pcall(function()
-	toolNew.TextureId = "rbxassetid://76865808847706"
-end)
-
-print("[5] ✅ ЗЕЛЬЕ ВЫДАНО В BACKPACK")
-
--- ============================================================
--- SEEK — грузим ПОСЛЕ выдачи зелья
--- ============================================================
-local figureNew = nil
-local seekLoaded = false
-
-task.spawn(function()
 	local ok, res = pcall(function()
-		return game:GetObjects("rbxassetid://86341229891935")[1]
+		return InsertService:LoadAsset(111263531009426)
 	end)
 	if ok and res then
-		figureNew = res
-		figureNew.Parent = workspace
-		figureNew:PivotTo(CFrame.new(0, -500, 0))
-		seekLoaded = true
-		print("[6] Seek загружен")
-	else
-		warn("[!] Seek не загружен — морф отключён")
-	end
-end)
-
--- ============================================================
--- ЭФФЕКТЫ
--- ============================================================
-local newCloneEffect = nil
-if MainUI and MainUI:FindFirstChild("MainFrame") then
-	local healthbar = MainUI.MainFrame:FindFirstChild("Healthbar")
-	if healthbar then
-		local effects = healthbar:FindFirstChild("Effects")
-		local herb = effects and effects:FindFirstChild("HerbGreenEffect")
-		if herb then
-			newCloneEffect = herb:Clone()
-			newCloneEffect.Name = "GuidingLightPotion"
-			newCloneEffect.Visible = false
-			newCloneEffect.Parent = effects
-			print("[7] Эффект создан")
+		local child = res:GetChildren()[1]
+		if child then
+			toolNew = child
+			print("[3] Через LoadAsset:", child.Name)
 		end
 	end
 end
 
+-- ============================================================
+-- ЕСЛИ НИЧЕГО НЕ НАШЛИ — создаём ПУСТОЙ tool сами
+-- ============================================================
+if not toolNew then
+	warn("[!] Модель не найдена — создаю tool вручную")
+
+	toolNew = Instance.new("Tool")
+	toolNew.Name = "Viridislight Bottle"
+	toolNew.RequiresHandle = false
+	toolNew.CanBeDropped = false
+	toolNew.ToolTip = "Выпить зелье"
+end
+
+-- ============================================================
+-- ВЫДАЁМ ЗЕЛЬЕ
+-- ============================================================
+local backpack = LocalPlayer:WaitForChild("Backpack")
+toolNew.Parent = backpack
+toolNew.Name = "Viridislight Bottle"
+
+print("[4] ✅ ЗЕЛЬЕ ВЫДАНО:", toolNew:GetFullName())
+print("[5] Backpack содержит:", backpack:FindFirstChild("Viridislight Bottle") ~= nil)
+
+-- ============================================================
+-- ПРОСТОЙ ЭФФЕКТ (свет + скорость + реген + таймер)
+-- ============================================================
 local drinked = false
 
-local function drinkSoundPlay()
-	local s = workspace:FindFirstChild("DrinkPotionAddonSound")
-	if not s then
-		s = Instance.new("Sound", workspace)
-		s.Name = "DrinkPotionAddonSound"
-		s.SoundId = (game.GameId == 6627207668)
-			and "rbxassetid://103799151859408"
-			or "rbxassetid://18869124055"
-	end
-	s:Play()
-end
-
-local function EffectOnScreen()
-	drinkSoundPlay()
-	if newCloneEffect then newCloneEffect.Visible = true end
-
-	if not MainUI or not MainUI:FindFirstChild("MainFrame") then return end
-	local white = MainUI.MainFrame:FindFirstChild("WhiteVignette")
-	if not white then return end
-
-	spawn(function()
-		local clone = white:Clone()
-		clone.Name = "Live"
-		clone.ImageColor3 = Color3.fromRGB(142, 255, 153)
-		clone.ImageTransparency = 1
-		clone.Parent = MainUI.MainFrame
-		clone.Visible = true
-
-		TweenService:Create(clone, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			ImageTransparency = 0
-		}):Play()
-		wait(5)
-		TweenService:Create(clone, TweenInfo.new(5, Enum.EasingStyle.Linear), {
-			Size = UDim2.new(1.5, 0, 1.5, 0)
-		}):Play()
-		wait(0.5)
-		TweenService:Create(clone, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
-			ImageTransparency = 1
-		}):Play()
-		wait(4.5)
-		clone:Destroy()
-	end)
-end
-
--- ============================================================
--- АНИМАЦИИ ИНСТРУМЕНТА
--- ============================================================
-local idleAnim, openAnim
-if toolNew:FindFirstChild("bals") then
-	pcall(function()
-		idleAnim = Humanoid:LoadAnimation(toolNew.bals.idle)
-		openAnim = Humanoid:LoadAnimation(toolNew.bals.open)
-	end)
-end
-if not openAnim and toolNew:FindFirstChild("Animations") then
-	pcall(function()
-		openAnim = Humanoid:LoadAnimation(toolNew.Animations.open)
-	end)
-end
-
-toolNew.Equipped:Connect(function()
-	if idleAnim then idleAnim:Play() end
-end)
-
-toolNew.Unequipped:Connect(function()
-	if idleAnim then idleAnim:Stop() end
-end)
-
--- ============================================================
--- ВЫПИВАНИЕ
--- ============================================================
 toolNew.Activated:Connect(function()
 	if drinked then return end
 	drinked = true
+	print("[6] Зелье выпито!")
 
-	print("[8] Зелье выпито!")
+	-- Свет
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(0, 255, 0)
+	light.Brightness = 2
+	light.Range = 0
+	light.Parent = Character:FindFirstChild("HumanoidRootPart") or Character
+	TweenService:Create(light, TweenInfo.new(2.5), { Range = 45 }):Play()
 
-	EffectOnScreen()
+	-- Звук
+	local s = Instance.new("Sound", workspace)
+	s.SoundId = "rbxassetid://140242540481244"
+	s.Volume = 1.2
+	s:Play()
+	task.delay(5, function() s:Destroy() end)
 
-	if openAnim then
-		openAnim:Play()
-		openAnim.Ended:Wait()
-	else
-		wait(2)
+	-- Скорость 17
+	local orig = Humanoid.WalkSpeed
+	local conn = RunService.Heartbeat:Connect(function()
+		if Humanoid.Parent and Humanoid.WalkSpeed ~= 17 then
+			Humanoid.WalkSpeed = 17
+		end
+	end)
+
+	-- Реген
+	local stopRegen = false
+	task.spawn(function()
+		while not stopRegen do
+			task.wait(0.5)
+			if Humanoid.Parent and Humanoid.Health > 0 then
+				Humanoid.Health = math.min(Humanoid.Health + 1, Humanoid.MaxHealth)
+			end
+		end
+	end)
+
+	-- Подсветка дверей/ключей
+	local stopH = false
+	local highlights = {}
+
+	local function addHighlight(inst)
+		if stopH then return end
+		if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
+			if not inst:FindFirstChildOfClass("Highlight") then
+				local h = Instance.new("Highlight")
+				h.FillColor = Color3.fromRGB(120, 255, 160)
+				h.OutlineColor = Color3.fromRGB(80, 255, 120)
+				h.FillTransparency = 0.4
+				h.OutlineTransparency = 0
+				h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				h.Parent = inst
+				table.insert(highlights, h)
+			end
+		end
 	end
 
-	toolNew:Destroy()
-
-	-- ЗАПУСКАЕМ ЭФФЕКТЫ ЗЕЛЬЯ
-	task.spawn(function()
-		-- свет
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(0, 255, 0)
-		light.Brightness = 2
-		light.Range = 0
-		light.Parent = Character:FindFirstChild("HumanoidRootPart") or Character
-		TweenService:Create(light, TweenInfo.new(2.5), { Range = 45 }):Play()
-
-		-- звук
-		local v = Instance.new("Sound", workspace)
-		v.SoundId = "rbxassetid://140242540481244"
-		v.Volume = 1.2
-		v:Play()
-
-		local amb = Instance.new("Sound", workspace)
-		amb.SoundId = "rbxassetid://1841950508"
-		amb.Volume = 1
-		amb.Looped = true
-		amb:Play()
-
-		-- скорость
-		local orig = Humanoid.WalkSpeed
-		local conn = RunService.Heartbeat:Connect(function()
-			if Humanoid.Parent and Humanoid.WalkSpeed ~= 17 then
-				Humanoid.WalkSpeed = 17
-			end
-		end)
-
-		-- реген
-		local regenStop = false
-		task.spawn(function()
-			while not regenStop do
-				task.wait(0.5)
-				if Humanoid.Parent and Humanoid.Health > 0 then
-					Humanoid.Health = math.min(Humanoid.Health + 1, Humanoid.MaxHealth)
-				end
-			end
-		end)
-
-		-- подсветка
-		local stopH = false
-		local hl = {}
-		local function addH(inst)
+	local rooms = workspace:FindFirstChild("CurrentRooms")
+	if rooms then
+		for _, v in ipairs(rooms:GetDescendants()) do
+			addHighlight(v)
+		end
+		rooms.DescendantAdded:Connect(function(v)
 			if stopH then return end
-			if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
-				if not inst:FindFirstChildOfClass("Highlight") then
-					local h = Instance.new("Highlight")
-					h.FillColor = Color3.fromRGB(120, 255, 160)
-					h.OutlineColor = Color3.fromRGB(80, 255, 120)
-					h.FillTransparency = 0.4
-					h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					h.Parent = inst
-					table.insert(hl, h)
-				end
-			end
-		end
+			task.wait()
+			addHighlight(v)
+		end)
+	end
 
-		local rooms = workspace:FindFirstChild("CurrentRooms")
-		if rooms then
-			for _, v in ipairs(rooms:GetDescendants()) do addH(v) end
-			rooms.DescendantAdded:Connect(function(v)
-				if stopH then return end
-				task.wait()
-				addH(v)
-			end)
-		end
+	-- Таймер
+	local gui = Instance.new("ScreenGui")
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-		-- таймер UI
-		local gui = Instance.new("ScreenGui")
-		gui.IgnoreGuiInset = true
-		gui.ResetOnSpawn = false
-		gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0, 200, 0, 40)
+	label.Position = UDim2.new(0.5, -100, 0, 10)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(170, 255, 180)
+	label.TextStrokeTransparency = 0.6
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 20
+	label.Text = "0:30"
+	label.Parent = gui
 
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(0, 200, 0, 40)
-		label.Position = UDim2.new(0.5, -100, 0, 10)
-		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.fromRGB(170, 255, 180)
-		label.TextStrokeTransparency = 0.6
-		label.Font = Enum.Font.Gotham
-		label.TextSize = 20
-		label.Text = "0:30"
-		label.Parent = gui
-
-		local t = 30
+	local t = 30
+	task.spawn(function()
 		while t >= 0 do
 			label.Text = string.format("%d:%02d", math.floor(t/60), t % 60)
-			if t == 0 then break end
+
+			if t == 0 then
+				stopRegen = true
+				stopH = true
+				if conn then conn:Disconnect() end
+				for _, h in ipairs(highlights) do
+					if h.Parent then h:Destroy() end
+				end
+
+				TweenService:Create(light, TweenInfo.new(2), { Range = 0 }):Play()
+				task.wait(2)
+				if light.Parent then light:Destroy() end
+
+				TweenService:Create(Humanoid, TweenInfo.new(2), { WalkSpeed = orig }):Play()
+				task.delay(2, function()
+					if gui then gui:Destroy() end
+				end)
+				break
+			end
+
 			t -= 1
 			task.wait(1)
 		end
-
-		-- стоп
-		regenStop = true
-		stopH = true
-		if conn then conn:Disconnect() end
-		for _, h in ipairs(hl) do if h.Parent then h:Destroy() end end
-		amb:Destroy()
-
-		TweenService:Create(light, TweenInfo.new(2), { Range = 0 }):Play()
-		task.wait(2)
-		if light.Parent then light:Destroy() end
-
-		if newCloneEffect then newCloneEffect.Visible = false end
-
-		TweenService:Create(Humanoid, TweenInfo.new(2), { WalkSpeed = orig }):Play()
-		task.delay(2, function() gui:Destroy() end)
 	end)
 
-	-- SEEK
-	task.spawn(function()
-		-- ждём загрузки Seek
-		local timeout = 0
-		while not seekLoaded and timeout < 5 do
-			task.wait(0.1)
-			timeout += 0.1
-		end
-
-		if not seekLoaded or not figureNew then
-			warn("[!] Seek не загрузился, морф пропущен")
-			return
-		end
-
-		print("[9] Морф в Seek включён")
-
-		-- скрываем тело
-		for _, v in pairs(Character:GetChildren()) do
-			if v:IsA("BasePart") then
-				v.LocalTransparencyModifier = 1
-			elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-				v.Handle.Transparency = 1
-			end
-		end
-
-		local hrp = Character:FindFirstChild("HumanoidRootPart")
-		local animRun, animWalk
-		pcall(function()
-			if game.GameId == 6627207668 then
-				animRun = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.AnimationsTest.run)
-			else
-				animRun = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.Animations.run)
-			end
-			animRun:Play()
-			animRun:AdjustSpeed(1)
-		end)
-
-		-- слежение
-		local renderConn = RunService.RenderStepped:Connect(function()
-			if hrp and figureNew.Parent then
-				figureNew:PivotTo(hrp.CFrame)
-			end
-		end)
-
-		Humanoid.Running:Connect(function(speed)
-			if animRun then
-				animRun:AdjustSpeed(speed >= 5 and 1 or 0)
-			end
-		end)
-
-		LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-			if key == "t" then
-				pcall(function() figureNew.Figure.Scream:Play() end)
-			end
-		end)
-
-		-- через 30 сек обратно
-		task.wait(30)
-		renderConn:Disconnect()
-		figureNew:PivotTo(CFrame.new(0, -500, 0))
-		for _, v in pairs(Character:GetChildren()) do
-			if v:IsA("BasePart") then
-				v.LocalTransparencyModifier = 0
-			elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-				v.Handle.Transparency = 0
-			end
-		end
-	end)
+	toolNew:Destroy()
 end)
+
+print("[7] Готово — жми на зелье в бекпаке")
