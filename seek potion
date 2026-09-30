@@ -1,6 +1,5 @@
 -- ============================================================
--- VIRIDISLIGHT BOTTLE + SEEK MORPH
--- При выпивании зелья — превращение в Seek
+-- VIRIDISLIGHT BOTTLE + SEEK MORPH (FIXED)
 -- ============================================================
 
 local TweenService_upvr = game:GetService("TweenService")
@@ -8,7 +7,13 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local LocalPlayer = game.Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+
+-- ============================================================
+-- ЖДЁМ ПЕРСОНАЖА
+-- ============================================================
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 
 -- ============================================================
 -- MAIN UI
@@ -20,208 +25,240 @@ end
 MainUI_upvr = LocalPlayer.PlayerGui.MainUI
 
 -- ============================================================
--- ЗАГРУЗКА МОДЕЛИ SEEK
+-- ЗАГРУЗКА МОДЕЛИ SEEK (безопасно)
 -- ============================================================
 local SEEK_ASSET = "rbxassetid://86341229891935"
 local DOORS_TEST_PLACE_ID = 6627207668
 
-local ok, figureNew = pcall(function()
+local figureNew = nil
+local seekLoaded = false
+
+local ok, result = pcall(function()
 	return game:GetObjects(SEEK_ASSET)[1]
 end)
 
-if not ok or not figureNew then
-	warn("[Seek Morph] Не удалось загрузить модель Seek.")
-	return
+if ok and result then
+	figureNew = result
+	figureNew.Parent = workspace
+	figureNew:PivotTo(CFrame.new(0, -500, 0))
+	seekLoaded = true
+	print("[Seek Morph] Модель Seek загружена")
+else
+	warn("[Seek Morph] Не удалось загрузить Seek, морф будет отключён")
+	seekLoaded = false
 end
 
 local isTestPlace = (game.GameId == DOORS_TEST_PLACE_ID)
-local canWalk = true
+local canWalk = false
 local introCD = false
-
-figureNew.Parent = workspace
-figureNew:PivotTo(CFrame.new(0, -500, 0)) -- временно прячем под карту
+local seekVisible = false
 
 -- ============================================================
--- АНИМАЦИИ SEEK
+-- АНИМАЦИИ SEEK (только если модель загружена)
 -- ============================================================
 local IntroAnim, PipeSlimeAnim, WalkAnim
 
-if isTestPlace then
-	figureNew.SeekMusic.Intro.SoundId = "rbxassetid://138877504428539"
-	IntroAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.AnimationsTest.minesintro)
-	WalkAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.AnimationsTest.run)
-	PipeSlimeAnim = figureNew.FullPipe._SeekCutscene.AnimationController:LoadAnimation(figureNew.FullPipe._SeekCutscene.AnimationP)
-else
-	IntroAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.Animations.minesintro)
-	WalkAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.Animations.run)
-	PipeSlimeAnim = figureNew.FullPipe._SeekCutscene.AnimationController:LoadAnimation(figureNew.FullPipe._SeekCutscene.Animation)
+if seekLoaded then
+	local animOk = pcall(function()
+		if isTestPlace then
+			figureNew.SeekMusic.Intro.SoundId = "rbxassetid://138877504428539"
+			IntroAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.AnimationsTest.minesintro)
+			WalkAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.AnimationsTest.run)
+			PipeSlimeAnim = figureNew.FullPipe._SeekCutscene.AnimationController:LoadAnimation(figureNew.FullPipe._SeekCutscene.AnimationP)
+		else
+			IntroAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.Animations.minesintro)
+			WalkAnim = figureNew.SeekRig.AnimationController.Animator:LoadAnimation(figureNew.Animations.run)
+			PipeSlimeAnim = figureNew.FullPipe._SeekCutscene.AnimationController:LoadAnimation(figureNew.FullPipe._SeekCutscene.Animation)
+		end
+		WalkAnim:Play()
+		WalkAnim:AdjustSpeed(0)
+	end)
+	
+	if not animOk then
+		warn("[Seek Morph] Ошибка загрузки анимаций Seek")
+		seekLoaded = false
+	end
 end
-
-WalkAnim:Play()
-WalkAnim:AdjustSpeed(0)
 
 -- ============================================================
 -- ШАГИ SEEK
 -- ============================================================
-spawn(function()
-	while figureNew.Parent do
-		task.wait()
-		if canWalk == false then
-			figureNew.Figure.Footsteps:Stop()
-			figureNew.Figure.FootstepsFar:Stop()
-		end
-		if figureNew.Figure.Footsteps.IsPlaying and not figureNew.Figure.FootstepsFar.IsPlaying then
-			figureNew.Figure.FootstepsFar:Play()
-		end
-		if figureNew.Figure.FootstepsFar.IsPlaying and not figureNew.Figure.Footsteps.IsPlaying then
-			figureNew.Figure.Footsteps:Play()
-		end
-	end
-end)
-
--- ============================================================
--- СИНХРОНИЗАЦИЯ SEEK С ИГРОКОМ + СКРЫТИЕ ТЕЛА
--- ============================================================
-local seekVisible = false
-
-spawn(function()
-	RunService.RenderStepped:Connect(function()
-		local char = LocalPlayer.Character
-		if not char then return end
-
-		local head = char:FindFirstChild("Head")
-		if head and seekVisible then head.Transparency = 1 end
-
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if hrp and figureNew.Parent and seekVisible then
-			figureNew:PivotTo(hrp.CFrame)
-		end
-
-		if seekVisible then
-			for _, v in pairs(char:GetChildren()) do
-				if v:IsA("BasePart") then
-					v.LocalTransparencyModifier = 1
-					for _, d in pairs(v:GetDescendants()) do
-						if d:IsA("Decal") or d:IsA("Texture") then
-							d.Transparency = 1
-						end
-					end
-				elseif v:IsA("Accessory") then
-					if v:FindFirstChild("Handle") then
-						v.Handle.Transparency = 1
-					end
-				end
-			end
-		end
-	end)
-end)
-
--- ============================================================
--- АНИМАЦИЯ SEEK ПО СКОРОСТИ
--- ============================================================
-spawn(function()
-	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	local hum = char:WaitForChild("Humanoid")
-	hum.Running:Connect(function(speed)
-		if not seekVisible then return end
-		if speed >= 5 then
-			WalkAnim:AdjustSpeed(1)
-			if canWalk and not figureNew.Figure.Footsteps.IsPlaying then
-				figureNew.Figure.Footsteps:Play()
-				figureNew.Figure.FootstepsFar:Play()
-			end
-		else
-			WalkAnim:AdjustSpeed(0)
-			if canWalk and figureNew.Figure.Footsteps.IsPlaying then
+if seekLoaded then
+	spawn(function()
+		while figureNew.Parent do
+			task.wait()
+			if canWalk == false then
 				figureNew.Figure.Footsteps:Stop()
 				figureNew.Figure.FootstepsFar:Stop()
 			end
+			if figureNew.Figure.Footsteps.IsPlaying and not figureNew.Figure.FootstepsFar.IsPlaying then
+				figureNew.Figure.FootstepsFar:Play()
+			end
+			if figureNew.Figure.FootstepsFar.IsPlaying and not figureNew.Figure.Footsteps.IsPlaying then
+				figureNew.Figure.Footsteps:Play()
+			end
 		end
 	end)
-end)
 
--- ============================================================
--- ИНТРО SEEK (вылезание из трубы)
--- ============================================================
-local function playIntro()
-	if introCD then return end
-	introCD = true
-	canWalk = false
+	-- =========================
+	-- СИНХРОНИЗАЦИЯ + СКРЫТИЕ ТЕЛА
+	-- =========================
+	spawn(function()
+		RunService.RenderStepped:Connect(function()
+			local char = LocalPlayer.Character
+			if not char then return end
 
-	local char = LocalPlayer.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then
+			if seekVisible and figureNew.Parent then
+				local hrp = char:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					figureNew:PivotTo(hrp.CFrame)
+				end
+
+				local head = char:FindFirstChild("Head")
+				if head then head.Transparency = 1 end
+
+				for _, v in pairs(char:GetChildren()) do
+					if v:IsA("BasePart") then
+						v.LocalTransparencyModifier = 1
+						for _, d in pairs(v:GetDescendants()) do
+							if d:IsA("Decal") or d:IsA("Texture") then
+								d.Transparency = 1
+							end
+						end
+					elseif v:IsA("Accessory") then
+						if v:FindFirstChild("Handle") then
+							v.Handle.Transparency = 1
+						end
+					end
+				end
+			end
+		end)
+	end)
+
+	-- =========================
+	-- АНИМАЦИЯ ПО СКОРОСТИ
+	-- =========================
+	spawn(function()
+		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+		local hum = char:WaitForChild("Humanoid")
+		hum.Running:Connect(function(speed)
+			if not seekVisible then return end
+			if speed >= 5 then
+				WalkAnim:AdjustSpeed(1)
+				if canWalk and not figureNew.Figure.Footsteps.IsPlaying then
+					figureNew.Figure.Footsteps:Play()
+					figureNew.Figure.FootstepsFar:Play()
+				end
+			else
+				WalkAnim:AdjustSpeed(0)
+				if canWalk and figureNew.Figure.Footsteps.IsPlaying then
+					figureNew.Figure.Footsteps:Stop()
+					figureNew.Figure.FootstepsFar:Stop()
+				end
+			end
+		end)
+	end)
+
+	-- =========================
+	-- ИНТРО
+	-- =========================
+	function playIntro()
+		if introCD then return end
+		introCD = true
+		canWalk = false
+
+		local char = LocalPlayer.Character
+		if not char or not char:FindFirstChild("HumanoidRootPart") then
+			introCD = false
+			return
+		end
+		char.HumanoidRootPart.Anchored = true
+
+		figureNew.FullPipe._SeekCutscene.SlimeDrip1.Transparency = 0
+		figureNew.FullPipe._SeekCutscene.SlimeDrip2.Transparency = 0
+		figureNew.FullPipe.GrateCap.Circle.Transparency = 0
+		figureNew.FullPipe.GrateCap.Grate.Transparency = 0
+		figureNew.FullPipe.FigurePipe.PipeBase.Transparency = 0
+		figureNew.SeekRig.SeekPuddle.Transparency = 0
+
+		spawn(function()
+			task.wait(8.11)
+			for _, Beam in pairs(figureNew.SeekRig:GetChildren()) do
+				if Beam:IsA("Beam") and Beam.Name == "StringCheese" then
+					Beam.Enabled = true
+				end
+			end
+		end)
+		spawn(function()
+			task.wait(10.2)
+			for _, Beam in pairs(figureNew.SeekRig:GetChildren()) do
+				if Beam:IsA("Beam") and Beam.Name == "StringCheese" then
+					Beam.Enabled = false
+				end
+			end
+		end)
+
+		IntroAnim:Play()
+		PipeSlimeAnim:Play()
+		figureNew.SeekMusic.Intro:Play()
+
+		task.wait(IntroAnim.Length - 2)
+
+		IntroAnim:Stop()
+		figureNew.FullPipe._SeekCutscene.SlimeDrip1.Transparency = 1
+		figureNew.FullPipe._SeekCutscene.SlimeDrip2.Transparency = 1
+		figureNew.FullPipe.GrateCap.Circle.Transparency = 1
+		figureNew.FullPipe.GrateCap.Grate.Transparency = 1
+		figureNew.FullPipe.FigurePipe.PipeBase.Transparency = 1
+		figureNew.SeekRig.SeekPuddle.Transparency = 1
+
+		canWalk = true
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			char.HumanoidRootPart.Anchored = false
+		end
 		introCD = false
-		return
 	end
-	char.HumanoidRootPart.Anchored = true
 
-	figureNew.FullPipe._SeekCutscene.SlimeDrip1.Transparency = 0
-	figureNew.FullPipe._SeekCutscene.SlimeDrip2.Transparency = 0
-	figureNew.FullPipe.GrateCap.Circle.Transparency = 0
-	figureNew.FullPipe.GrateCap.Grate.Transparency = 0
-	figureNew.FullPipe.FigurePipe.PipeBase.Transparency = 0
-	figureNew.SeekRig.SeekPuddle.Transparency = 0
-
-	spawn(function()
-		task.wait(8.11)
-		for _, Beam in pairs(figureNew.SeekRig:GetChildren()) do
-			if Beam:IsA("Beam") and Beam.Name == "StringCheese" then
-				Beam.Enabled = true
-			end
+	-- =========================
+	-- УПРАВЛЕНИЕ
+	-- =========================
+	LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+		if not seekVisible then return end
+		if key == "r" then
+			playIntro()
+		elseif key == "t" then
+			figureNew.Figure.Scream:Play()
 		end
 	end)
-	spawn(function()
-		task.wait(10.2)
-		for _, Beam in pairs(figureNew.SeekRig:GetChildren()) do
-			if Beam:IsA("Beam") and Beam.Name == "StringCheese" then
-				Beam.Enabled = false
-			end
-		end
-	end)
-
-	IntroAnim:Play()
-	PipeSlimeAnim:Play()
-	figureNew.SeekMusic.Intro:Play()
-
-	task.wait(IntroAnim.Length - 2)
-
-	IntroAnim:Stop()
-	figureNew.FullPipe._SeekCutscene.SlimeDrip1.Transparency = 1
-	figureNew.FullPipe._SeekCutscene.SlimeDrip2.Transparency = 1
-	figureNew.FullPipe.GrateCap.Circle.Transparency = 1
-	figureNew.FullPipe.GrateCap.Grate.Transparency = 1
-	figureNew.FullPipe.FigurePipe.PipeBase.Transparency = 1
-	figureNew.SeekRig.SeekPuddle.Transparency = 1
-
-	canWalk = true
-	if char and char:FindFirstChild("HumanoidRootPart") then
-		char.HumanoidRootPart.Anchored = false
-	end
-	introCD = false
 end
 
 -- ============================================================
--- УПРАВЛЕНИЕ SEEK (R — интро, T — крик)
--- ============================================================
-LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-	if not seekVisible then return end
-	if key == "r" then
-		playIntro()
-	elseif key == "t" then
-		figureNew.Figure.Scream:Play()
-	end
-end)
-
--- ============================================================
--- ЗЕЛЬЕ VIRIDISLIGHT
+-- ЗЕЛЬЕ
 -- ============================================================
 local toolNew = nil
+
 if game.GameId == 6627207668 then
-	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+	local moonBottle = game.ReplicatedStorage:FindFirstChild("Moon Bottle")
+	if moonBottle then
+		toolNew = moonBottle:Clone()
+	end
 else
-	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
+	local okTool, resTool = pcall(function()
+		return game:GetObjects("rbxassetid://111263531009426")[1]
+	end)
+	if okTool and resTool then
+		toolNew = resTool
+	end
 end
 
+if not toolNew then
+	warn("[Viridislight] Не удалось загрузить модель зелья")
+	return
+end
+
+-- ============================================================
+-- ЭФФЕКТ ЗЕЛЬЯ
+-- ============================================================
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
 local CollisionLoopRunning = true
@@ -230,21 +267,29 @@ newCloneEffect.Name = "GuidingLightPotion"
 newCloneEffect.Visible = false
 newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
 
-local ohhmydayz = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
-local ohhmydayz2 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
-local ohhmydayz3 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+local ohhmydayz, ohhmydayz2, ohhmydayz3
+
+if game.GameId == 6627207668 and toolNew:FindFirstChild("bals") then
+	ohhmydayz = Humanoid:LoadAnimation(toolNew.bals.idle)
+	ohhmydayz2 = Humanoid:LoadAnimation(toolNew.bals.open)
+	ohhmydayz3 = Humanoid:LoadAnimation(toolNew.Animations.open)
+end
 
 -- ============================================================
--- ГЛАВНЫЙ ЛОГИК ПОСЛЕ ВЫПИВАНИЯ
+-- ГЛАВНЫЙ ЛОГИК (выпивание)
 -- ============================================================
 spawn(function()
 	while wait() do
 		if drinked == true and ended == false then
 			ended = true
+
 			if game.GameId == 6627207668 then
-				local newTool = script.flyTest:Clone()
-				newTool.Parent = LocalPlayer.Backpack
-				newTool.Enabled = true
+				local flyTest = script:FindFirstChild("flyTest")
+				if flyTest then
+					local newTool = flyTest:Clone()
+					newTool.Parent = LocalPlayer.Backpack
+					newTool.Enabled = true
+				end
 			else
 
 				if getgenv().ViridislightRunning then
@@ -252,18 +297,22 @@ spawn(function()
 				end
 				getgenv().ViridislightRunning = true
 
-				local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-				local Humanoid = Character:WaitForChild("Humanoid")
-				local RootPart = Character:WaitForChild("HumanoidRootPart")
+				local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+				local hum = char:WaitForChild("Humanoid")
+				local RootPart = char:WaitForChild("HumanoidRootPart")
 
 				-- =========================
 				-- ✨ ВКЛЮЧАЕМ SEEK
 				-- =========================
-				seekVisible = true
-				figureNew:PivotTo(RootPart.CFrame)
+				if seekLoaded then
+					seekVisible = true
+					canWalk = true
+					figureNew:PivotTo(RootPart.CFrame)
+					if WalkAnim then WalkAnim:AdjustSpeed(1) end
+				end
 
 				-- =========================
-				-- 💡 СВЕТ ЗЕЛЬЯ
+				-- 💡 СВЕТ
 				-- =========================
 				local potionLight = Instance.new("PointLight")
 				potionLight.Name = "ViridisLight"
@@ -279,52 +328,37 @@ spawn(function()
 					{ Range = 45 }
 				):Play()
 
-				local Camera = workspace.CurrentCamera
-				local Collision
-
-				Collision = Character:FindFirstChild("CollisionPart")
+				local Collision = char:FindFirstChild("CollisionPart")
 				if not Collision then
-					for _, part in pairs(Character:GetChildren()) do
+					for _, part in pairs(char:GetChildren()) do
 						if part:IsA("BasePart") and part.Name:lower():find("collision") then
 							Collision = part
 							break
 						end
 					end
 				end
-
-				if not Collision then
-					Collision = RootPart
-				end
+				if not Collision then Collision = RootPart end
 
 				local CollisionClone = Collision:Clone()
 				CollisionClone.CanCollide = false
 				CollisionClone.Massless = true
 				CollisionClone.CanQuery = false
 				CollisionClone.Name = "CollisionClone"
-
 				if CollisionClone:FindFirstChild("CollisionCrouch") then
 					CollisionClone.CollisionCrouch:Destroy()
 				end
-
-				CollisionClone.Parent = Character
+				CollisionClone.Parent = char
 
 				task.spawn(function()
-					while Character.Parent and CollisionLoopRunning do
+					while char.Parent and CollisionLoopRunning do
 						if RootPart.Anchored then
 							CollisionClone.Massless = true
-							repeat
-								task.wait()
-							until not RootPart.Anchored or not CollisionLoopRunning
-
-							if not CollisionLoopRunning then
-								break
-							end
-
+							repeat task.wait() until not RootPart.Anchored or not CollisionLoopRunning
+							if not CollisionLoopRunning then break end
 							task.wait(0.15)
 						else
 							CollisionClone.Massless = not CollisionClone.Massless
 						end
-
 						task.wait(0.24)
 					end
 				end)
@@ -340,39 +374,14 @@ spawn(function()
 				ambience:Play()
 
 				-- =========================
-				-- 🔦 ПОДСВЕТКА ДВЕРЕЙ / КЛЮЧЕЙ
+				-- 🔦 ПОДСВЕТКА
 				-- =========================
 				local stopped = false
 				local activeHighlights = {}
 
-				local function createHighlight(inst)
-					local h = Instance.new("Highlight")
-					h.FillColor = Color3.fromRGB(120, 255, 160)
-					h.OutlineColor = Color3.fromRGB(80, 255, 120)
-					h.FillTransparency = 0.4
-					h.OutlineTransparency = 0
-					h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					h.Parent = inst
-					table.insert(activeHighlights, h)
-				end
-
 				local function process(inst)
 					if stopped then return end
-
-					if inst:IsA("Model") and inst.Name == "Door" then
-						if not inst:FindFirstChildOfClass("Highlight") then
-							local h = Instance.new("Highlight")
-							h.FillColor = Color3.fromRGB(120, 255, 160)
-							h.OutlineColor = Color3.fromRGB(80, 255, 120)
-							h.FillTransparency = 0.4
-							h.OutlineTransparency = 0
-							h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-							h.Parent = inst
-							table.insert(activeHighlights, h)
-						end
-					end
-
-					if inst:IsA("Model") and inst.Name == "KeyObtain" then
+					if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
 						if not inst:FindFirstChildOfClass("Highlight") then
 							local h = Instance.new("Highlight")
 							h.FillColor = Color3.fromRGB(120, 255, 160)
@@ -398,11 +407,13 @@ spawn(function()
 				scanRooms()
 
 				local conn
-				conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
-					if stopped then return end
-					task.wait()
-					process(v)
-				end)
+				if Workspace:FindFirstChild("CurrentRooms") then
+					conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
+						if stopped then return end
+						task.wait()
+						process(v)
+					end)
+				end
 
 				local function stopHighlights()
 					stopped = true
@@ -414,40 +425,33 @@ spawn(function()
 				end
 
 				-- =========================
-				-- 💚 РЕГЕНЕРАЦИЯ HP
+				-- 💚 РЕГЕН
 				-- =========================
 				local stoppedRegen = false
-				local humanoidRegen = Character:WaitForChild("Humanoid")
-
 				task.spawn(function()
 					while not stoppedRegen do
 						task.wait(0.5)
-						if humanoidRegen and humanoidRegen.Parent and humanoidRegen.Health > 0 then
-							humanoidRegen.Health = math.min(humanoidRegen.Health + 1, humanoidRegen.MaxHealth)
+						if hum and hum.Parent and hum.Health > 0 then
+							hum.Health = math.min(hum.Health + 1, hum.MaxHealth)
 						end
 					end
 				end)
 
-				local function stopRegen()
-					stoppedRegen = true
-				end
-
 				-- =========================
-				-- 🏃 ФИКС СКОРОСТИ 17
+				-- 🏃 СКОРОСТЬ
 				-- =========================
-				local originalWalkSpeed = Humanoid.WalkSpeed
-
+				local originalWalkSpeed = hum.WalkSpeed
 				local speedConn
 				speedConn = RunService.Heartbeat:Connect(function()
-					if Humanoid and Humanoid.Parent then
-						if Humanoid.WalkSpeed ~= 17 then
-							Humanoid.WalkSpeed = 17
+					if hum and hum.Parent then
+						if hum.WalkSpeed ~= 17 then
+							hum.WalkSpeed = 17
 						end
 					end
 				end)
 
 				-- =========================
-				-- ⏳ ТАЙМЕР UI
+				-- ⏳ ТАЙМЕР
 				-- =========================
 				local gui = Instance.new("ScreenGui")
 				gui.IgnoreGuiInset = true
@@ -473,23 +477,17 @@ spawn(function()
 					return string.format("%d:%02d", m, s)
 				end
 
-				-- =========================
-				-- 🔄 ВОССТАНОВЛЕНИЕ
-				-- =========================
 				local function restore()
-
 					getgenv().ViridislightRunning = false
 
-					-- ВЫКЛЮЧАЕМ SEEK
-					seekVisible = false
-					if figureNew and figureNew.Parent then
+					if seekLoaded then
+						seekVisible = false
+						canWalk = false
 						figureNew:PivotTo(CFrame.new(0, -500, 0))
+						figureNew.Figure.Footsteps:Stop()
+						figureNew.Figure.FootstepsFar:Stop()
 					end
-					canWalk = false
-					figureNew.Figure.Footsteps:Stop()
-					figureNew.Figure.FootstepsFar:Stop()
 
-					-- ВОЗВРАЩАЕМ ПРОЗРАЧНОСТЬ ТЕЛА
 					local c = LocalPlayer.Character
 					if c then
 						for _, v in pairs(c:GetChildren()) do
@@ -511,22 +509,17 @@ spawn(function()
 					end
 
 					if potionLight and potionLight.Parent then
-						local lightTween = TweenService:Create(
-							potionLight,
-							TweenInfo.new(2),
-							{ Range = 0 }
-						)
-						lightTween:Play()
-						lightTween.Completed:Connect(function()
+						local lt = TweenService:Create(potionLight, TweenInfo.new(2), { Range = 0 })
+						lt:Play()
+						lt.Completed:Connect(function()
 							if potionLight then potionLight:Destroy() end
 						end)
 					end
 
 					newCloneEffect.Visible = false
-
 					if speedConn then speedConn:Disconnect() end
 
-					local tween = TweenService:Create(Humanoid, TweenInfo.new(2), {
+					local tween = TweenService:Create(hum, TweenInfo.new(2), {
 						WalkSpeed = originalWalkSpeed
 					})
 					tween:Play()
@@ -541,19 +534,15 @@ spawn(function()
 					viridis:Destroy()
 				end)
 
-				-- =========================
-				-- ⏳ ОБРАТНЫЙ ОТСЧЁТ
-				-- =========================
 				task.spawn(function()
 					while timeLeft >= 0 do
 						label.Text = formatTime(timeLeft)
 
 						if timeLeft == 0 then
-							stopRegen()
+							stoppedRegen = true
 							stopHighlights()
 							restore()
 							ambience:Destroy()
-
 							CollisionLoopRunning = false
 							if CollisionClone then CollisionClone:Destroy() end
 							break
@@ -569,7 +558,7 @@ spawn(function()
 end)
 
 -- ============================================================
--- ЭФФЕКТЫ НА ЭКРАНЕ
+-- ЭФФЕКТЫ ЭКРАНА
 -- ============================================================
 local function EffectOnScreen()
 	drinkSoundPlay()
@@ -617,21 +606,23 @@ function drinkSoundPlay()
 end
 
 -- ============================================================
--- ИНСТРУМЕНТ
+-- ВЫДАЧА ЗЕЛЬЯ В ИНВЕНТАРЬ
 -- ============================================================
 toolNew.Parent = LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
 toolNew.TextureId = "rbxassetid://76865808847706"
 
+print("[Viridislight] Зелье выдано в инвентарь")
+
+-- ============================================================
+-- СОБЫТИЯ ИНСТРУМЕНТА
+-- ============================================================
 toolNew.Equipped:Connect(function()
-	if game.GameId == 6627207668 then
-		ohhmydayz:Play()
-	end
+	if ohhmydayz then ohhmydayz:Play() end
 end)
+
 toolNew.Unequipped:Connect(function()
-	if game.GameId == 6627207668 then
-		ohhmydayz:Stop()
-	end
+	if ohhmydayz then ohhmydayz:Stop() end
 end)
 
 toolNew.Activated:Connect(function()
@@ -639,21 +630,21 @@ toolNew.Activated:Connect(function()
 		drinked = true
 		EffectOnScreen()
 
-		if game.GameId == 6627207668 then
+		if ohhmydayz2 then
 			ohhmydayz2:Play()
 			ohhmydayz2.Ended:Wait()
-		else
+		elseif ohhmydayz3 then
 			ohhmydayz3:Play()
 			ohhmydayz3.Ended:Wait()
 		end
+
 		toolNew:Destroy()
 
-		-- =========================
-		-- 🎭 ВКЛЮЧАЕМ SEEK СРАЗУ ПОСЛЕ ВЫПИВАНИЯ
-		-- =========================
 		task.wait(0.5)
-		seekVisible = true
-		canWalk = true
-		WalkAnim:AdjustSpeed(1)
+		if seekLoaded then
+			seekVisible = true
+			canWalk = true
+			if WalkAnim then WalkAnim:AdjustSpeed(1) end
+		end
 	end
 end)
