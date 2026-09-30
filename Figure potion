@@ -1,0 +1,435 @@
+-- ============================================================
+-- VIRIDISLIGHT BOTTLE + FIGURE MORPH
+-- Основано на Figure morph.txt
+-- Морф запускается после выпивания зелья
+-- Без эффектов на экране
+-- ============================================================
+
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ============================================================
+-- MAIN UI
+-- ============================================================
+local MainUI_upvr = nil
+if not LocalPlayer.PlayerGui:FindFirstChild("MainUI") then
+	repeat wait() until LocalPlayer.PlayerGui:FindFirstChild("MainUI")
+end
+MainUI_upvr = LocalPlayer.PlayerGui.MainUI
+
+-- ============================================================
+-- ЗЕЛЬЕ
+-- ============================================================
+local toolNew = nil
+if game.GameId == 6627207668 then
+	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+else
+	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
+end
+
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+local drinked = false
+local ended = false
+newCloneEffect.Name = "GuidingLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+
+local ohhmydayz = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
+local ohhmydayz2 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
+local ohhmydayz3 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+
+-- ============================================================
+-- FIGURE MORPH STATE
+-- ============================================================
+local FIGURE_ASSET = 116871580020558
+local isThirdPerson = true
+local thirdPersonDistance = 12
+local thirdPersonHeightOffset = 2
+
+local figureNew = nil
+local giggles = {}
+local gigglesDed = nil
+local stompCooldown = false
+local footstepType = 0
+local footstepType2 = 0
+local canwalk = true
+
+local StompAnim, IdleAnim, WalkAnim, RunAnim
+local renderConnection = nil
+local figureActive = false
+
+-- ============================================================
+-- RESET CAMERA
+-- ============================================================
+local function resetCamera()
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.CameraType = Enum.CameraType.Custom
+	end
+end
+
+-- ============================================================
+-- CLEANUP FIGURE
+-- ============================================================
+local function cleanupFigure()
+	if renderConnection then
+		renderConnection:Disconnect()
+		renderConnection = nil
+	end
+	resetCamera()
+	if figureNew then
+		figureNew:Destroy()
+		figureNew = nil
+	end
+	if gigglesDed then
+		gigglesDed:Destroy()
+		gigglesDed = nil
+	end
+	figureActive = false
+end
+
+-- ============================================================
+-- CORE FIGURE MORPH
+-- ============================================================
+local function transformIntoFigure()
+	if figureActive then cleanupFigure() end
+
+	figureNew = game:GetObjects("rbxassetid://" .. FIGURE_ASSET)[1]
+	if not figureNew then
+		warn("[Figure Morph] Не удалось загрузить модель")
+		return
+	end
+
+	giggles = {}
+	gigglesDed = Instance.new("Folder", workspace)
+	gigglesDed.Name = "GigglesFake"
+
+	figureNew.Parent = workspace
+
+	-- Загружаем анимации
+	if game.GameId == 6627207668 then
+		StompAnim = figureNew.AnimationController.Animator:LoadAnimation(figureNew.AnimsTest.Stomp)
+		IdleAnim  = figureNew.AnimationController.Animator:LoadAnimation(figureNew.AnimsTest.Idle)
+		WalkAnim  = figureNew.AnimationController.Animator:LoadAnimation(figureNew.AnimsTest.Walk)
+		RunAnim   = figureNew.AnimationController.Animator:LoadAnimation(figureNew.AnimsTest.Run)
+	else
+		StompAnim = figureNew.AnimationController.Animator:LoadAnimation(figureNew.Anims.Stomp)
+		IdleAnim  = figureNew.AnimationController.Animator:LoadAnimation(figureNew.Anims.Idle)
+		WalkAnim  = figureNew.AnimationController.Animator:LoadAnimation(figureNew.Anims.Walk)
+		RunAnim   = figureNew.AnimationController.Animator:LoadAnimation(figureNew.Anims.Run)
+	end
+
+	IdleAnim:Play()
+
+	-- Звуки шагов
+	WalkAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+		footstepSoundWalk()
+	end)
+	RunAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+		footstepSoundWalk()
+	end)
+
+	-- Анимации по скорости
+	spawn(function()
+		local char = LocalPlayer.Character
+		if char and char:FindFirstChild("Humanoid") then
+			char.Humanoid.Running:Connect(function(speed)
+				if speed >= 20 then
+					IdleAnim:Stop()
+					WalkAnim:Stop()
+					if RunAnim.IsPlaying == false then
+						RunAnim:Play()
+						RunAnim:AdjustSpeed(1.5)
+					end
+				elseif speed >= 5 then
+					IdleAnim:Stop()
+					RunAnim:Stop()
+					if WalkAnim.IsPlaying == false then
+						WalkAnim:Play()
+					end
+				else
+					WalkAnim:Stop()
+					RunAnim:Stop()
+					if IdleAnim.IsPlaying == false then
+						IdleAnim:Play()
+					end
+				end
+			end)
+		end
+	end)
+
+	-- Функции шагов
+	function footstepSound()
+		if footstepType == 1 then
+			footstepType = 0
+			figureNew.LeftFoot.Footstep:Play()
+			figureNew.LeftFoot.FootstepLow:Play()
+		else
+			footstepType = 1
+			figureNew.RightFoot.Footstep:Play()
+			figureNew.RightFoot.FootstepLow:Play()
+		end
+	end
+
+	function footstepSoundWalk()
+		if canwalk == true then
+			if footstepType2 == 1 then
+				footstepType2 = 0
+				figureNew.LeftFoot.Footstep:Play()
+				figureNew.LeftFoot.FootstepLow:Play()
+			else
+				footstepType2 = 1
+				figureNew.RightFoot.Footstep:Play()
+				figureNew.RightFoot.FootstepLow:Play()
+			end
+		end
+	end
+
+	-- Стомп
+	local function stompF()
+		if stompCooldown == false then
+			canwalk = false
+			LocalPlayer.Character.HumanoidRootPart.Anchored = true
+			StompAnim:Play()
+			getNearestWhileStomping()
+			StompAnim:GetMarkerReachedSignal("Stomp"):Connect(function()
+				figureNew.RightFoot.FootstepLowLoud:Play()
+			end)
+			StompAnim:GetMarkerReachedSignal("Footstep"):Connect(function()
+				footstepSound()
+			end)
+			StompAnim:GetMarkerReachedSignal("Roar"):Connect(function()
+				figureNew.Head.Growl:Play()
+			end)
+			StompAnim.Ended:Wait()
+			canwalk = true
+			LocalPlayer.Character.HumanoidRootPart.Anchored = false
+		end
+	end
+
+	-- Giggle логика
+	local function addGiggle(giggle)
+		table.insert(giggles, giggle)
+		workspace.ChildRemoved:Connect(function(what)
+			if what == giggle then
+				local idx = table.find(giggles, giggle)
+				if idx then table.remove(giggles, idx) end
+			end
+		end)
+	end
+
+	local function killTheCacaoBallButWhite(ahhball)
+		if ahhball then
+			print("found lil bro")
+		end
+		if _G.StompGigglesEnabled == false then
+			warn("can't step giggle: stepping giggles is disabled")
+			return
+		end
+		local newBall = ahhball:Clone()
+		ahhball:Destroy()
+		newBall.Name = "StompedGiggle" .. LocalPlayer.Name
+		newBall.Parent = gigglesDed
+		newBall:SetAttribute("RealName", "StompedGiggle")
+		newBall.Root.Sound_Laugh:Stop()
+		wait(0.3)
+		newBall.Root.Sound_Kill:Play()
+		wait(0.6)
+		print("GiggleFunction")
+		for _, GiggleThing in pairs(newBall:GetDescendants()) do
+			if GiggleThing:IsA("NoCollisionConstraint") or GiggleThing:IsA("BallSocketConstraint") then
+				GiggleThing:Destroy()
+			end
+		end
+		wait(5)
+		for _, GigglePart in pairs(newBall:GetDescendants()) do
+			if GigglePart:IsA("BasePart") then
+				TweenService:Create(GigglePart, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+					Transparency = 1
+				}):Play()
+			end
+		end
+		wait(6)
+		newBall:Destroy()
+	end
+
+	function getNearestWhileStomping()
+		local nearest = 5
+		local nearestGiggle = nil
+		for _, Giggle in pairs(giggles) do
+			if Giggle:FindFirstChild("Root") then
+				if (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude <= nearest then
+					nearest = (figureNew.UserPivot.Position - Giggle.Root.Position).Magnitude
+					nearestGiggle = Giggle
+				end
+			else
+				local idx = table.find(giggles, Giggle)
+				if idx then table.remove(giggles, idx) end
+			end
+		end
+		if nearestGiggle then
+			spawn(function()
+				killTheCacaoBallButWhite(nearestGiggle)
+			end)
+		end
+	end
+
+	local function checkIfIsAGiggleRagdoll(giggle)
+		spawn(function()
+			local okkkk = 0
+			repeat wait() print("trest" .. okkkk) okkkk += 1 until okkkk >= 20 or giggle:FindFirstChild("Root")
+			if giggle:FindFirstChild("Root") then
+				if giggle.Root:FindFirstChild("Sound_Kill") and giggle.Root:FindFirstChild("Sound_Laugh") and giggle:FindFirstChild("AnimationController") then
+					addGiggle(giggle)
+				end
+			end
+		end)
+	end
+
+	-- ============================================================
+	-- ОСНОВНОЙ RENDER LOOP
+	-- ============================================================
+	renderConnection = RunService.RenderStepped:Connect(function()
+		local character = LocalPlayer.Character
+		if not character then return end
+
+		if character:FindFirstChild("Head") then
+			character.Head.Transparency = 1
+		end
+		if character:FindFirstChild("Humanoid") then
+			character.Humanoid.HipHeight = 2.3
+		end
+
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if hrp and figureNew and figureNew.Parent then
+			figureNew:PivotTo(hrp.CFrame)
+		end
+
+		-- Скрываем части персонажа
+		for _, v in pairs(character:GetChildren()) do
+			if v:IsA("BasePart") then
+				v.LocalTransparencyModifier = 1
+				for _, dadada in pairs(v:GetDescendants()) do
+					if dadada:IsA("Decal") or dadada:IsA("Texture") then
+						dadada.Transparency = 1
+					end
+				end
+			elseif v:IsA("Accessory") then
+				if v:FindFirstChild("Handle") then
+					v.Handle.Transparency = 1
+				end
+			end
+		end
+
+		-- Камера от третьего лица
+		local camera = workspace.CurrentCamera
+		if camera and figureNew and figureNew.Parent then
+			local morphHead = figureNew:FindFirstChild("Head", true)
+			if not morphHead then
+				morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
+			end
+
+			if morphHead then
+				if isThirdPerson then
+					camera.CameraType = Enum.CameraType.Scriptable
+					local lookVector = camera.CFrame.LookVector
+					local upVector = camera.CFrame.UpVector
+					local headPos = morphHead.Position
+					local camPos = headPos - (lookVector * thirdPersonDistance) + Vector3.new(0, thirdPersonHeightOffset, 0)
+					camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+				else
+					camera.CameraType = Enum.CameraType.Custom
+				end
+			end
+		end
+	end)
+
+	-- Отслеживаем появление Giggle
+	workspace.ChildAdded:Connect(function(giggle)
+		checkIfIsAGiggleRagdoll(giggle)
+	end)
+
+	-- Управление
+	LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+		if key == "r" then
+			stompF()
+		elseif key == "l" then
+			isThirdPerson = not isThirdPerson
+			if not isThirdPerson then
+				resetCamera()
+			end
+		end
+	end)
+
+	figureActive = true
+	print("[Figure Morph] ✅ Фигура привязана к игроку")
+end
+
+-- ============================================================
+-- ЗВУК ВЫПИВАНИЯ (без визуальных эффектов)
+-- ============================================================
+local function EffectOnScreen()
+	drinkSoundPlay()
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkPotionAddonSound") then
+		newSound = Instance.new("Sound", workspace)
+		newSound.Name = "DrinkPotionAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://103799151859408"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkPotionAddonSound")
+	end
+	newSound:Play()
+end
+
+-- ============================================================
+-- ВЫДАЧА ЗЕЛЬЯ
+-- ============================================================
+toolNew.Parent = LocalPlayer.Backpack
+toolNew.Name = "Viridislight Bottle"
+toolNew.TextureId = "rbxassetid://76865808847706"
+
+toolNew.Equipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Play()
+	end
+end)
+toolNew.Unequipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Stop()
+	end
+end)
+
+-- ============================================================
+-- ВЫПИВАНИЕ → МОРФ В FIGURE
+-- ============================================================
+toolNew.Activated:Connect(function()
+	if drinked == false then
+		drinked = true
+		EffectOnScreen()
+
+		if game.GameId == 6627207668 then
+			ohhmydayz2:Play()
+			ohhmydayz2.Ended:Wait()
+		else
+			ohhmydayz3:Play()
+			ohhmydayz3.Ended:Wait()
+		end
+
+		-- 🎭 МОРФ В FIGURE
+		task.defer(function()
+			pcall(transformIntoFigure)
+		end)
+
+		toolNew:Destroy()
+	end
+end)
