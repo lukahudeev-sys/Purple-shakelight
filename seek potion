@@ -25,7 +25,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://70922560617067")[1]
+	toolNew = game:GetObjects("rbxassetid://90654406864975")[1]
 end
 
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
