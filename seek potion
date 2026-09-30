@@ -1,6 +1,6 @@
 -- ============================================================
 -- VIRIDISLIGHT BOTTLE + SEEK MORPH
--- Полная версия. Seek движется через PivotTo.
+-- Без эффектов на экране
 -- ============================================================
 
 local TweenService_upvr = game:GetService("TweenService")
@@ -301,35 +301,11 @@ local function applyMorph()
 end
 
 -- ============================================================
--- ЭФФЕКТ НА ЭКРАНЕ
+-- ЗВУК ВЫПИВАНИЯ (без визуальных эффектов)
 -- ============================================================
 local function EffectOnScreen()
 	drinkSoundPlay()
-	newCloneEffect.Visible = true
-	spawn(function()
-		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
-		if clone then
-			local clone_2 = clone:Clone()
-			clone_2.Name = "Live"
-			clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
-			clone_2.ImageTransparency = 1
-			clone_2.Parent = MainUI_upvr.MainFrame
-			clone_2.Visible = true
-			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-				ImageTransparency = 0
-			}):Play()
-			wait(5)
-			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-				Size = UDim2.new(1.5, 0, 1.5, 0)
-			}):Play()
-			wait(0.5)
-			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
-				ImageTransparency = 1
-			}):Play()
-			wait(4.5)
-			clone_2:Destroy()
-		end
-	end)
+	-- Визуальные эффекты убраны: листик и зелёный вигнет отключены
 end
 
 function drinkSoundPlay()
