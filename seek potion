@@ -1,6 +1,6 @@
 -- ============================================================
 -- VIRIDISLIGHT BOTTLE + SEEK MORPH
--- По образцу honcho potion.txt
+-- Полная версия. Seek движется через PivotTo.
 -- ============================================================
 
 local TweenService_upvr = game:GetService("TweenService")
@@ -19,7 +19,7 @@ end
 MainUI_upvr = LocalPlayer.PlayerGui.MainUI
 
 -- ============================================================
--- ЗЕЛЬЕ (как в оригинале)
+-- ЗЕЛЬЕ
 -- ============================================================
 local toolNew = nil
 if game.GameId == 6627207668 then
@@ -50,21 +50,15 @@ local isTestPlace = (game.GameId == 6627207668)
 local morphActive = false
 local movementEnabled = false
 local currentAmbience = nil
-local lastLandingTime = 0
-local landingCooldown = 10
 local isThirdPerson = true
 
 local morph = nil
-local rootWeld, headWeld = nil, nil
 local originalCharacter, originalRootPart, originalHumanoid, originalHeadPart = nil, nil, nil, nil
 local originalWalkSpeed, originalJumpPower, originalJumpHeight = 16, 50, 7.2
-local morphRootPart, morphHeadPart = nil, nil
 local animator = nil
 local enforceLoop, movementLoop, inputConnection = nil, nil, nil
 
 local introTrack, walkTrack, pipeSlimeTrack = nil, nil, nil
-local runTrack, idleTrack, landingTrack = nil, nil, nil
-local lastMoveState = nil
 
 -- ============================================================
 -- CLEANUP
@@ -76,9 +70,6 @@ local function cleanupMorph()
 	if currentAmbience then currentAmbience:Stop() currentAmbience = nil end
 	if introTrack then introTrack:Stop() introTrack = nil end
 	if walkTrack then walkTrack:Stop() walkTrack = nil end
-	if runTrack then runTrack:Stop() runTrack = nil end
-	if idleTrack then idleTrack:Stop() idleTrack = nil end
-	if landingTrack then landingTrack:Stop() landingTrack = nil end
 	if pipeSlimeTrack then pipeSlimeTrack:Stop() pipeSlimeTrack = nil end
 
 	local camera = workspace.CurrentCamera
@@ -88,7 +79,15 @@ local function cleanupMorph()
 		for _, part in ipairs(originalCharacter:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.Transparency = 0
+				part.LocalTransparencyModifier = 0
 				part.CanCollide = true
+			elseif part:IsA("Decal") or part:IsA("Texture") then
+				part.Transparency = 0
+			end
+		end
+		for _, v in pairs(originalCharacter:GetChildren()) do
+			if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+				v.Handle.Transparency = 0
 			end
 		end
 	end
@@ -118,20 +117,8 @@ local function loadModel()
 	return objects and objects[1]
 end
 
-local function createAnimation(animationId)
-	local animation = Instance.new("Animation")
-	animation.AnimationId = "rbxassetid://" .. animationId
-	return animation
-end
-
-local function playSound(soundObject)
-	if not soundObject then return end
-	soundObject.Parent = morph or workspace
-	soundObject:Play()
-end
-
 -- ============================================================
--- CORE MORPH ENGINE
+-- CORE MORPH ENGINE (через PivotTo)
 -- ============================================================
 local function applyMorph()
 	if morphActive then cleanupMorph() end
@@ -156,17 +143,10 @@ local function applyMorph()
 	originalJumpPower = originalHumanoid.JumpPower
 	originalJumpHeight = originalHumanoid.JumpHeight
 
-	-- Скрываем тело
-	for _, part in ipairs(originalCharacter:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.Transparency = 1
-			part.CanCollide = false
-		elseif part:IsA("Decal") or part:IsA("Texture") then
-			part.Transparency = 1
-		end
-	end
+	-- Морф в мир
+	morph.Parent = workspace
 
-	-- Настраиваем Seek
+	-- Убираем Humanoid если есть
 	local morphHumanoid = morph:FindFirstChildWhichIsA("Humanoid")
 	if morphHumanoid then morphHumanoid:Destroy() end
 
@@ -177,53 +157,37 @@ local function applyMorph()
 		end
 	end
 
-	morphRootPart = morph:FindFirstChild("HumanoidRootPart", true) or morph:FindFirstChild("RootPart", true)
-	if not morphRootPart then
-		morphRootPart = Instance.new("Part")
-		morphRootPart.Name = "HumanoidRootPart"
-		morphRootPart.Size = Vector3.new(2, 1, 1)
-		morphRootPart.Anchored = false
-		morphRootPart.CanCollide = false
-		morphRootPart.Parent = morph
+	-- Ставим Seek на игрока СРАЗУ
+	morph:PivotTo(originalRootPart.CFrame)
+
+	-- Скрываем тело игрока
+	for _, part in ipairs(originalCharacter:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.LocalTransparencyModifier = 1
+			part.Transparency = 1
+			part.CanCollide = false
+		elseif part:IsA("Decal") or part:IsA("Texture") then
+			part.Transparency = 1
+		end
 	end
-	morph.PrimaryPart = morphRootPart
-
-	morphHeadPart = morph:FindFirstChild("Head", true)
-	if not morphHeadPart then
-		morphHeadPart = Instance.new("Part")
-		morphHeadPart.Name = "Head"
-		morphHeadPart.Size = Vector3.new(1, 1, 1)
-		morphHeadPart.Anchored = false
-		morphHeadPart.CanCollide = false
-		morphHeadPart.Parent = morph
+	for _, v in pairs(originalCharacter:GetChildren()) do
+		if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+			v.Handle.Transparency = 1
+		end
 	end
-
-	morph.Parent = workspace
-
-	-- Велды
-	rootWeld = Instance.new("Weld")
-	rootWeld.Part0 = originalRootPart
-	rootWeld.Part1 = morphRootPart
-	rootWeld.C0 = CFrame.new(0, heightOffset, 0)
-	rootWeld.Parent = originalRootPart
-
-	headWeld = Instance.new("Weld")
-	headWeld.Part0 = originalHeadPart or originalRootPart
-	headWeld.Part1 = morphHeadPart
-	local headWeldOffset = morphHeadPart.Position - (originalHeadPart and originalHeadPart.Position or originalRootPart.Position)
-	headWeld.C0 = CFrame.new(headWeldOffset)
-	headWeld.Parent = headWeld.Part0
 
 	-- Камера
 	local camera = workspace.CurrentCamera
 	if camera then camera.CameraType = Enum.CameraType.Scriptable end
 
 	-- Аниматор
-	local animationController = morph:FindFirstChildWhichIsA("AnimationController") or morph:FindFirstChild("AnimationController", true)
+	local animationController = morph:FindFirstChildWhichIsA("AnimationController")
+		or morph:FindFirstChild("AnimationController", true)
 	if not animationController then
 		animationController = Instance.new("AnimationController", morph)
 	end
-	animator = morph:FindFirstChildWhichIsA("Animator") or (animationController and animationController:FindFirstChildWhichIsA("Animator"))
+	animator = morph:FindFirstChildWhichIsA("Animator")
+		or animationController:FindFirstChildWhichIsA("Animator")
 	if not animator then
 		animator = Instance.new("Animator", animationController)
 	end
@@ -237,62 +201,78 @@ local function applyMorph()
 		return track
 	end
 
-	-- =========================
-	-- АНИМАЦИИ SEEK
-	-- =========================
+	-- Анимации
 	if isTestPlace then
-		morph.SeekMusic.Intro.SoundId = "rbxassetid://138877504428539"
+		if morph:FindFirstChild("SeekMusic") and morph.SeekMusic:FindFirstChild("Intro") then
+			morph.SeekMusic.Intro.SoundId = "rbxassetid://138877504428539"
+		end
 		introTrack = playAnimation(morph.AnimationsTest.minesintro, false)
 		walkTrack = playAnimation(morph.AnimationsTest.run, true)
 	else
 		introTrack = playAnimation(morph.Animations.minesintro, false)
 		walkTrack = playAnimation(morph.Animations.run, true)
 	end
+	walkTrack:AdjustSpeed(0)
 
 	-- =========================
-	-- ENFORCE LOOP (слежение + камера)
+	-- ENFORCE LOOP — PivotTo каждый кадр
 	-- =========================
 	enforceLoop = RunService.RenderStepped:Connect(function()
-		if rootWeld and rootWeld.Parent then
-			rootWeld.C0 = CFrame.new(0, heightOffset, 0)
+		local char = LocalPlayer.Character
+		if not char then return end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+
+		if morph and morph.Parent then
+			morph:PivotTo(hrp.CFrame)
 		end
 
-		if morphHeadPart and morphHeadPart:IsDescendantOf(workspace) and camera then
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.LocalTransparencyModifier = 1
+			elseif part:IsA("Decal") or part:IsA("Texture") then
+				part.Transparency = 1
+			end
+		end
+		for _, v in pairs(char:GetChildren()) do
+			if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+				v.Handle.Transparency = 1
+			end
+		end
+
+		if camera then
+			local headPos = hrp.Position + Vector3.new(0, 1.5, 0)
 			local lookVector = camera.CFrame.LookVector
 			local upVector = camera.CFrame.UpVector
-			local headPos = morphHeadPart.Position
 
 			if isThirdPerson then
 				local camPos = headPos - (lookVector * 12) + Vector3.new(0, 2, 0)
 				camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
 			else
-				local offset = Vector3.new(0, 0.2, -0.5)
-				local targetPosition = morphHeadPart.CFrame:PointToWorldSpace(offset)
-				camera.CFrame = CFrame.lookAt(targetPosition, targetPosition + lookVector, upVector)
+				local camPos = headPos + lookVector * 0.5
+				camera.CFrame = CFrame.lookAt(camPos, camPos + lookVector, upVector)
 			end
 		end
 	end)
 
 	-- =========================
-	-- INPUT
+	-- INPUT (T — Scream, L — 1st/3rd person)
 	-- =========================
 	local UserInputService = game:GetService("UserInputService")
 	inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		if input.UserInputType == Enum.UserInputType.Keyboard then
-			local key = input.KeyCode
-			if key == Enum.KeyCode.T then
+			if input.KeyCode == Enum.KeyCode.T then
 				pcall(function() morph.Figure.Scream:Play() end)
-			elseif key == Enum.KeyCode.L then
+			elseif input.KeyCode == Enum.KeyCode.L then
 				isThirdPerson = not isThirdPerson
 			end
 		end
 	end)
 
 	-- =========================
-	-- MOVEMENT LOOP
+	-- MOVEMENT LOOP — анимация ходьбы
 	-- =========================
-	walkTrack:AdjustSpeed(0)
 	movementEnabled = true
 
 	movementLoop = RunService.RenderStepped:Connect(function()
@@ -303,20 +283,21 @@ local function applyMorph()
 
 		if moving then
 			if walkTrack then walkTrack:AdjustSpeed(1) end
-			if morph.Figure.Footsteps and not morph.Figure.Footsteps.IsPlaying then
-				morph.Figure.Footsteps:Play()
-				morph.Figure.FootstepsFar:Play()
-			end
+			local fs = morph:FindFirstChild("Footsteps", true)
+			local fsf = morph:FindFirstChild("FootstepsFar", true)
+			if fs and not fs.IsPlaying then fs:Play() end
+			if fsf and not fsf.IsPlaying then fsf:Play() end
 		else
 			if walkTrack then walkTrack:AdjustSpeed(0) end
-			if morph.Figure.Footsteps and morph.Figure.Footsteps.IsPlaying then
-				morph.Figure.Footsteps:Stop()
-				morph.Figure.FootstepsFar:Stop()
-			end
+			local fs = morph:FindFirstChild("Footsteps", true)
+			local fsf = morph:FindFirstChild("FootstepsFar", true)
+			if fs and fs.IsPlaying then fs:Stop() end
+			if fsf and fsf.IsPlaying then fsf:Stop() end
 		end
 	end)
 
 	morphActive = true
+	print("[Seek Morph] ✅ Seek привязан к игроку")
 end
 
 -- ============================================================
@@ -401,7 +382,6 @@ toolNew.Activated:Connect(function()
 			ohhmydayz3.Ended:Wait()
 		end
 
-		-- 🎭 ЗАПУСКАЕМ МОРФ (как в honcho)
 		task.defer(function()
 			pcall(applyMorph)
 		end)
