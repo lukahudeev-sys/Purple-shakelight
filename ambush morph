@@ -1,149 +1,71 @@
 local function transformIntoAmbush()
     if _G.TransformedIntoAnyMorph == true then
-        return
+	   return
     end
     _G.TransformedIntoAnyMorph = true
 
-    -- загрузка модели через InsertService (GetObjects не работает в игре)
-    local InsertService = game:GetService("InsertService")
-    local success, model = pcall(function()
-        return InsertService:LoadAsset(98266611233960)
-    end)
-    if not success or not model or not model:GetChildren()[1] then
-        warn("Не удалось загрузить модель Ambush! ID: 98266611233960")
-        _G.TransformedIntoAnyMorph = false
-        return
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
+
+    -- делаем персонажа "Ambush" — красноватый, дёрганый
+    for _, v in pairs(char:GetDescendants()) do
+	   if v:IsA("BasePart") then
+		  v.Material = Enum.Material.Neon
+		  v.Color = Color3.fromRGB(120, 0, 0)
+	   elseif v:IsA("Decal") or v:IsA("Texture") then
+		  v.Transparency = 1
+	   end
     end
 
-    local figureNew = model:GetChildren()[1]
-    local testingPlace = false
+    -- звуки (создаём сами)
+    local roarSound = Instance.new("Sound", hrp)
+    roarSound.SoundId = "rbxassetid://9114386356"
+    roarSound.Volume = 5
+
+    local footstepSound = Instance.new("Sound", hrp)
+    footstepSound.SoundId = "rbxassetid://9114386356"
+    footstepSound.Volume = 2
+
     local dashCooldown = false
 
-    figureNew.Parent = workspace
-
-    if game.GameId == 6627207668 then
-        testingPlace = true
-    end
-
-    -- ==== ЗВУКИ ====
-    if testingPlace then
-        for _, s in pairs(figureNew.Main.Sounds["test game"]:GetChildren()) do
-            s:Clone().Parent = figureNew.Main
-        end
-    else
-        for _, s in pairs(figureNew.Main.Sounds["DOORS"]:GetChildren()) do
-            s:Clone().Parent = figureNew.Main
-        end
-    end
-    figureNew.Main.Sounds:Destroy()
-
-    -- ==== АНИМАЦИИ ====
-    local IdleAnim, DashAnim, HeadTwitchAnim
-    local animator = figureNew:FindFirstChild("Animator", true)
-
-    if animator then
-        local idleObj = figureNew:FindFirstChild("Idle", true)
-        local dashObj = figureNew:FindFirstChild("Dash", true)
-        local twitchObj = figureNew:FindFirstChild("HeadTwitch", true)
-
-        if idleObj then IdleAnim = animator:LoadAnimation(idleObj) end
-        if dashObj then DashAnim = animator:LoadAnimation(dashObj) end
-        if twitchObj then HeadTwitchAnim = animator:LoadAnimation(twitchObj) end
-    end
-
-    if IdleAnim then IdleAnim:Play() end
-
-    -- ==== ФОНОВЫЕ ЗВУКИ ====
-    figureNew.Main.Footsteps:Play()
-    figureNew.Main.PlaySound:Play()
-
-    -- ==== СЛЕЖЕНИЕ ЗА ИГРОКОМ (прозрачность) ====
-    spawn(function()
-        game:GetService("RunService").RenderStepped:Connect(function()
-            local char = game.Players.LocalPlayer.Character
-            if not char then return end
-            if char:FindFirstChild("Head") then
-                char.Head.Transparency = 1
-            end
-            figureNew:PivotTo(char:WaitForChild("HumanoidRootPart").CFrame)
-            for _, v in pairs(char:GetChildren()) do
-                if v:IsA("BasePart") then
-                    v.LocalTransparencyModifier = 1
-                    for _, d in pairs(v:GetDescendants()) do
-                        if d:IsA("Decal") or d:IsA("Texture") then
-                            d.Transparency = 1
-                        end
-                    end
-                elseif v:IsA("Accessory") then
-                    if v:FindFirstChild("Handle") then
-                        v.Handle.Transparency = 1
-                    end
-                end
-            end
-        end)
-    end)
-
-    -- ==== ФУНКЦИЯ РЫВКА (фишка Ambush) ====
+    -- ФУНКЦИЯ РЫВКА (фишка Ambush)
     local function ambushDash()
-        if dashCooldown then return end
-        dashCooldown = true
+	   if dashCooldown then return end
+	   dashCooldown = true
 
-        local hrp = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+	   -- мечемся в стороны
+	   for i = 1, 6 do
+		  local side = (i % 2 == 0) and 1 or -1
+		  hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
+		  wait(0.05)
+	   end
+	   -- рывок вперёд
+	   for i = 1, 8 do
+		  hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
+		  wait(0.03)
+	   end
 
-        -- рывок в стороны
-        for i = 1, 6 do
-            local side = (i % 2 == 0) and 1 or -1
-            hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
-            wait(0.05)
-        end
+	   roarSound.PlaybackSpeed = math.random(90, 130) / 100
+	   roarSound:Play()
 
-        -- рывок вперёд
-        for i = 1, 8 do
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
-            wait(0.03)
-        end
-
-        -- твитч головы
-        if HeadTwitchAnim then
-            HeadTwitchAnim:Play()
-        end
-
-        -- случайный рёв
-        local roars = {
-            figureNew.Main:FindFirstChild("SoundRoar1"),
-            figureNew.Main:FindFirstChild("SoundRoar2"),
-            figureNew.Main:FindFirstChild("Scream"),
-        }
-        for _, s in pairs(roars) do
-            if s then
-                s.PlaybackSpeed = math.random(90, 130) / 100
-                s:Play()
-                break
-            end
-        end
-
-        wait(2)
-        dashCooldown = false
+	   wait(2)
+	   dashCooldown = false
     end
 
-    -- ==== УПРАВЛЕНИЕ ====
+    -- управление
     game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-        if key == "r" then
-            if figureNew.Main.Footsteps.IsPlaying then
-                figureNew.Main.Footsteps:Stop()
-            else
-                figureNew.Main.Footsteps:Play()
-            end
-            if figureNew.Main.PlaySound.IsPlaying then
-                figureNew.Main.PlaySound:Stop()
-            else
-                figureNew.Main.PlaySound:Play()
-            end
-        elseif key == "q" then
-            ambushDash()
-        elseif key == "e" then
-            local s = figureNew.Main:FindFirstChild("SoundRoar1") or figureNew.Main:FindFirstChild("Scream")
-            if s then s:Play() end
-        end
+	   if key == "r" then
+		  if footstepSound.IsPlaying then
+			 footstepSound:Stop()
+		  else
+			 footstepSound:Play()
+		  end
+	   elseif key == "q" then
+		  ambushDash()
+	   elseif key == "e" then
+		  roarSound:Play()
+	   end
     end)
 end
