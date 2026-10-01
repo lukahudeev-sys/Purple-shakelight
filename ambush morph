@@ -1,4 +1,3 @@
-```lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -83,4 +82,3 @@ Player:GetMouse().KeyDown:Connect(function(Key)
 		Ambush.Main.PlaySound:Play()
 	end
 end)
-```
