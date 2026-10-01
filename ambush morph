@@ -1,8 +1,9 @@
 --[[
-    Ambush Morph для Doors (с камерой от третьего лица)
+    Ambush Morph для Doors (камера как в Honcho морфе)
     
     Управление:
-      Мышь     — вращение камеры (вверх/вниз/влево/вправо)
+      Мышь     — вращение камеры (влево/вправо/вверх/вниз)
+      L        — переключить 1-е / 3-е лицо
       R        — переключить фоновые звуки (Footsteps + PlaySound)
       T        — крик (Scream)
       Q        — рывок (Ambush мечется + рёв)
@@ -45,11 +46,7 @@ figureNew.Parent = workspace
 -- ============================================================
 -- ПОИСК MAIN И ЗВУКОВ
 -- ============================================================
-local Main = figureNew:FindFirstChild("Main")
-if not Main then
-    Main = figureNew
-    warn("[Ambush Morph] Main не найден, использую саму модель")
-end
+local Main = figureNew:FindFirstChild("Main") or figureNew
 
 local Footsteps = Main:FindFirstChild("Footsteps")
 local PlaySound  = Main:FindFirstChild("PlaySound")
@@ -57,13 +54,6 @@ local Scream     = Main:FindFirstChild("Scream")
 local Repent     = Main:FindFirstChild("Repent")
 local Knock      = Main:FindFirstChild("Knock")
 
-print("[Ambush Morph] Footsteps:", Footsteps)
-print("[Ambush Morph] PlaySound:", PlaySound)
-print("[Ambush Morph] Scream:", Scream)
-print("[Ambush Morph] Repent:", Repent)
-print("[Ambush Morph] Knock:", Knock)
-
--- Запускаем фоновые звуки
 if Footsteps then Footsteps:Play() end
 if PlaySound  then PlaySound:Play()  end
 
@@ -103,21 +93,21 @@ spawn(function()
 end)
 
 -- ============================================================
--- КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА (с вращением вверх/вниз)
+-- КАМЕРА (как в Honcho морфе + вращение мышью)
 -- ============================================================
 local camera = workspace.CurrentCamera
 
-local CAMERA_DISTANCE = 12      -- дальность камеры
-local CAMERA_HEIGHT = 2         -- высота над моделью
-local CAMERA_SMOOTH = 0.2       -- плавность (0 = мгновенно, 0.9 = очень плавно)
+local CAMERA_DISTANCE = 12      -- дальность камеры (3-е лицо)
+local CAMERA_HEIGHT = 2         -- высота камеры
 local MOUSE_SENSITIVITY = 0.3   -- чувствительность мыши
+local isThirdPerson = true      -- старт в 3-м лице
 
-LocalPlayer.CameraMode = Enum.CameraMode.Classic
-camera.CameraSubject = nil
+-- Отключаем стандартную камеру (как в Honcho)
+camera.CameraType = Enum.CameraType.Scriptable
 
-local yaw = 0       -- горизонтальный угол (лево/право)
-local pitch = -0.2  -- вертикальный угол (верх/вниз), старт чуть сверху
-local lastCamPos = nil
+-- Углы вращения мышью
+local yaw = 0
+local pitch = -0.2
 
 -- Ловим движение мыши
 UserInputService.InputChanged:Connect(function(input, processed)
@@ -131,31 +121,37 @@ RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
 
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    -- Целимся на голову модели (как в Honcho)
+    local head = figureNew:FindFirstChild("Head", true)
+    if not head then
+        head = figureNew:FindFirstChildWhichIsA("BasePart", true)
+    end
+    if not head then return end
 
-    -- Целевая позиция: вокруг модели, с учётом yaw и pitch
-    local basePos = hrp.Position + Vector3.new(0, CAMERA_HEIGHT, 0)
+    local headPos = head.Position
+    local upVector = Vector3.new(0, 1, 0)
 
-    local offset = Vector3.new(
-        math.sin(yaw) * CAMERA_DISTANCE * math.cos(pitch),
-        math.sin(pitch) * CAMERA_DISTANCE,
-        math.cos(yaw) * CAMERA_DISTANCE * math.cos(pitch)
-    )
+    if isThirdPerson then
+        -- 3-е лицо: камера вокруг головы с учётом yaw/pitch
+        local offset = Vector3.new(
+            math.sin(yaw) * CAMERA_DISTANCE * math.cos(pitch),
+            math.sin(pitch) * CAMERA_DISTANCE + CAMERA_HEIGHT,
+            math.cos(yaw) * CAMERA_DISTANCE * math.cos(pitch)
+        )
 
-    local targetPos = basePos + offset
-    local lookAt = basePos + Vector3.new(0, 0.5, 0)
-
-    -- Плавное следование позиции
-    if lastCamPos then
-        lastCamPos = lastCamPos:Lerp(targetPos, CAMERA_SMOOTH)
+        local camPos = headPos + offset
+        camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
     else
-        lastCamPos = targetPos
+        -- 1-е лицо: камера в голове, смотрит туда же, куда повёрнута модель
+        local lookDir = Vector3.new(
+            math.sin(yaw) * math.cos(pitch),
+            math.sin(pitch),
+            math.cos(yaw) * math.cos(pitch)
+        )
+        camera.CFrame = CFrame.lookAt(headPos, headPos + lookDir, upVector)
     end
 
-    -- Следим за целью
-    camera.CFrame = CFrame.new(lastCamPos, lookAt)
-    camera.Focus = CFrame.new(lookAt)
+    camera.Focus = CFrame.new(headPos)
 end)
 
 -- ============================================================
@@ -172,19 +168,16 @@ local function ambushDash()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then dashCooldown = false return end
 
-    -- мечемся в стороны
     for i = 1, 6 do
         local side = (i % 2 == 0) and 1 or -1
         hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
         task.wait(0.05)
     end
-    -- рывок вперёд
     for i = 1, 8 do
         hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
         task.wait(0.03)
     end
 
-    -- рёв
     local roar = math.random(1, 2)
     if roar == 1 and Scream then
         Scream.PlaybackSpeed = math.random(90, 130) / 100
@@ -201,23 +194,31 @@ end
 -- ============================================================
 -- УПРАВЛЕНИЕ
 -- ============================================================
-LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-    if key == "r" then
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    local key = input.KeyCode
+
+    if key == Enum.KeyCode.L then
+        -- переключение 1-е / 3-е лицо (как в Honcho)
+        isThirdPerson = not isThirdPerson
+    elseif key == Enum.KeyCode.R then
         if Footsteps then
             if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
         end
         if PlaySound then
             if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
         end
-    elseif key == "t" then
+    elseif key == Enum.KeyCode.T then
         if Scream then Scream:Play() end
-    elseif key == "q" then
+    elseif key == Enum.KeyCode.Q then
         ambushDash()
-    elseif key == "f" then
+    elseif key == Enum.KeyCode.F then
         if Knock then Knock:Play() end
-    elseif key == "e" then
+    elseif key == Enum.KeyCode.E then
         if Repent then Repent:Play() end
     end
 end)
 
-print("[Ambush Morph] Загружен с камерой от третьего лица! Q — рывок, T — scream, F — knock, E — repent, R — звуки")
+print("[Ambush Morph] Загружен! L — 1/3 лицо, Q — рывок, T — scream, F — knock, E — repent, R — звуки")
