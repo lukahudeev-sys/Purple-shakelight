@@ -1,123 +1,86 @@
-local function transformIntoAmbush()
-    if _G.TransformedIntoAnyMorph == true then
-	   return
-    end
-    _G.TransformedIntoAnyMorph = true
+```lua
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
-    -- Загрузка модели через InsertService (работает в игре)
-    local InsertService = game:GetService("InsertService")
-    local success, model = pcall(function()
-	   return InsertService:LoadAsset(113981726565681)
-    end)
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
 
-    if not success or not model then
-	   warn("[Ambush] Не удалось загрузить модель! ID: 113981726565681")
-	   _G.TransformedIntoAnyMorph = false
-	   return
-    end
+local MORPH_ID = "rbxassetid://98266611233960"
 
-    local figureNew = model:GetChildren()[1]
-    if not figureNew then
-	   warn("[Ambush] Модель пустая!")
-	   _G.TransformedIntoAnyMorph = false
-	   return
-    end
-
-    figureNew.Parent = workspace
-
-    local main = figureNew:FindFirstChild("Main")
-    if not main then
-	   warn("[Ambush] Не найдена папка Main в модели!")
-    end
-
-    -- ===== ЗВУКИ =====
-    local footsteps = main and main:FindFirstChild("Footsteps")
-    local playSound  = main and main:FindFirstChild("PlaySound")
-    local scream     = main and main:FindFirstChild("Scream")
-    local repent     = main and main:FindFirstChild("Repent")
-    local knock      = main and main:FindFirstChild("Knock")
-
-    if footsteps then footsteps:Play() end
-    if playSound  then playSound:Play()  end
-
-    -- ===== СЛЕЖЕНИЕ ЗА ИГРОКОМ =====
-    spawn(function()
-	   game:GetService("RunService").RenderStepped:Connect(function()
-		  local char = game.Players.LocalPlayer.Character
-		  if not char then return end
-		  if char:FindFirstChild("Head") then
-			 char.Head.Transparency = 1
-		  end
-		  local hrp = char:FindFirstChild("HumanoidRootPart")
-		  if hrp then
-			 figureNew:PivotTo(hrp.CFrame)
-		  end
-		  for _, v in pairs(char:GetChildren()) do
-			 if v:IsA("BasePart") then
-				v.LocalTransparencyModifier = 1
-				for _, d in pairs(v:GetDescendants()) do
-				    if d:IsA("Decal") or d:IsA("Texture") then
-					   d.Transparency = 1
-				    end
-			    end
-			 elseif v:IsA("Accessory") then
-				if v:FindFirstChild("Handle") then
-				    v.Handle.Transparency = 1
-				end
-			 end
-		  end
-	   end)
-    end)
-
-    -- ===== РЫВОК (фишка Ambush) =====
-    local dashCooldown = false
-    local function ambushDash()
-	   if dashCooldown then return end
-	   dashCooldown = true
-
-	   local hrp = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
-
-	   -- мечемся в стороны
-	   for i = 1, 6 do
-		  local side = (i % 2 == 0) and 1 or -1
-		  hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
-		  wait(0.05)
-	   end
-	   -- рывок вперёд
-	   for i = 1, 8 do
-		  hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
-		  wait(0.03)
-	   end
-
-	   -- звук: рандомно Scream или Repent
-	   local roar = math.random(1, 2)
-	   if roar == 1 and scream then
-		  scream.PlaybackSpeed = math.random(90, 130) / 100
-		  scream:Play()
-	   elseif repent then
-		  repent.PlaybackSpeed = math.random(90, 130) / 100
-		  repent:Play()
-	   end
-
-	   wait(2)
-	   dashCooldown = false
-    end
-
-    -- ===== УПРАВЛЕНИЕ =====
-    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-	   if key == "r" then
-		  if footsteps then
-			 if footsteps.IsPlaying then footsteps:Stop() else footsteps:Play() end
-		  end
-		  if playSound then
-			 if playSound.IsPlaying then playSound:Stop() else playSound:Play() end
-		  end
-	   elseif key == "q" then
-		  ambushDash()
-	   elseif key == "e" then
-		  if scream then scream:Play() end
-	   elseif key == "f" then
-		  if knock then knock:Play() end
-	   end
-    end)
+if _G.TransformedIntoAnyMorph then
+	return
 end
+
+_G.TransformedIntoAnyMorph = true
+
+local Ambush = game:GetObjects(MORPH_ID)[1]
+Ambush.Parent = workspace
+
+-- Запускаем основные звуки Ambush
+Ambush.Main.Footsteps:Play()
+Ambush.Main.PlaySound:Play()
+
+-- Прячем настоящего персонажа и двигаем морф вместе с ним
+RunService.RenderStepped:Connect(function()
+	Character = Player.Character
+
+	if not Character then
+		return
+	end
+
+	local RootPart = Character:FindFirstChild("HumanoidRootPart")
+
+	if not RootPart then
+		return
+	end
+
+	-- Скрываем голову
+	local Head = Character:FindFirstChild("Head")
+
+	if Head then
+		Head.Transparency = 1
+	end
+
+	-- Перемещаем Ambush за игроком
+	Ambush:PivotTo(RootPart.CFrame)
+
+	-- Скрываем тело
+	for _, Object in ipairs(Character:GetChildren()) do
+		if Object:IsA("BasePart") then
+			Object.LocalTransparencyModifier = 1
+
+			for _, Child in ipairs(Object:GetDescendants()) do
+				if Child:IsA("Decal") or Child:IsA("Texture") then
+					Child.Transparency = 1
+				end
+			end
+
+		elseif Object:IsA("Accessory") then
+			local Handle = Object:FindFirstChild("Handle")
+
+			if Handle then
+				Handle.Transparency = 1
+			end
+		end
+	end
+end)
+
+-- R включает/выключает звуки Ambush
+Player:GetMouse().KeyDown:Connect(function(Key)
+	if Key ~= "r" then
+		return
+	end
+
+	if Ambush.Main.Footsteps.IsPlaying then
+		Ambush.Main.Footsteps:Stop()
+	else
+		Ambush.Main.Footsteps:Play()
+	end
+
+	if Ambush.Main.PlaySound.IsPlaying then
+		Ambush.Main.PlaySound:Stop()
+	else
+		Ambush.Main.PlaySound:Play()
+	end
+end)
+```
