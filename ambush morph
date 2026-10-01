@@ -1,3 +1,5 @@
+local InsertService = game:GetService("InsertService")
+
 local function transformIntoAmbush()
     -- Сбрасываем старый флаг, чтобы морф мог запуститься
     _G.TransformedIntoAnyMorph = false
@@ -10,20 +12,18 @@ local function transformIntoAmbush()
 
     -- Загружаем модель Ambush
     local Success, Objects = pcall(function()
-        return game:GetObjects("rbxassetid://98266611233960")
+        return InsertService:LoadAsset(113981726565681)
     end)
 
     if not Success or not Objects or not Objects[1] then
-        warn("Не удалось загрузить модель Ambush")
+        warn("Не удалось загрузить модель Ambush: " .. tostring(Objects))
         return
     end
 
     local Ambush = Objects[1]
-
     Ambush.Parent = workspace
 
     local Main = Ambush:FindFirstChild("Main")
-
     if not Main then
         warn("У Ambush не найден объект Main")
         Ambush:Destroy()
@@ -36,31 +36,18 @@ local function transformIntoAmbush()
     local Footsteps = Main:FindFirstChild("Footsteps")
     local PlaySound = Main:FindFirstChild("PlaySound")
 
-    if Footsteps then
-        Footsteps:Play()
-    end
-
-    if PlaySound then
-        PlaySound:Play()
-    end
+    if Footsteps then Footsteps:Play() end
+    if PlaySound  then PlaySound:Play()  end
 
     -- Следим за персонажем
     RunService.RenderStepped:Connect(function()
-        if not Ambush or not Ambush.Parent then
-            return
-        end
+        if not Ambush or not Ambush.Parent then return end
 
         Character = Player.Character
-
-        if not Character then
-            return
-        end
+        if not Character then return end
 
         local RootPart = Character:FindFirstChild("HumanoidRootPart")
-
-        if not RootPart then
-            return
-        end
+        if not RootPart then return end
 
         -- Перемещаем Ambush вместе с игроком
         pcall(function()
@@ -80,7 +67,6 @@ local function transformIntoAmbush()
 
             elseif Object:IsA("Accessory") then
                 local Handle = Object:FindFirstChild("Handle")
-
                 if Handle then
                     Handle.LocalTransparencyModifier = 1
                 end
@@ -90,9 +76,7 @@ local function transformIntoAmbush()
 
     -- R переключает звуки Ambush
     Player:GetMouse().KeyDown:Connect(function(Key)
-        if Key ~= "r" then
-            return
-        end
+        if Key ~= "r" then return end
 
         if Footsteps then
             if Footsteps.IsPlaying then
@@ -113,17 +97,6 @@ local function transformIntoAmbush()
 
     print("Ambush morph activated!")
 end
-```
 
-И кнопка должна остаться такой:
-
-```lua
-mspaint.Groupbox:AddButton({
-    Text = "Ambush",
-    Tooltip = "Transforms you into Ambush",
-    Func = transformIntoAmbush,
-})
-
-Главное отличие — я убрал проблему с `_G.TransformedIntoAnyMorph` и добавил проверки загрузки модели и `Main`. В твоём оригинале модель Ambush действительно имеет ID `98266611233960`, а `Main.Footsteps` и `Main.PlaySound` используются именно для этого морфа.
-
-Если **после нажатия кнопки вообще ничего не появляется**, скажи — тогда я переделаю его под тот же способ загрузки, который используется в твоём `morph menu.lua`, потому что проблема может быть именно в загрузке модели.
+-- Запускаем морф сразу
+transformIntoAmbush()
