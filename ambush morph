@@ -4,36 +4,78 @@ local function transformIntoAmbush()
     end
     _G.TransformedIntoAnyMorph = true
 
-    local player = game.Players.LocalPlayer
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local hum = char:WaitForChild("Humanoid")
+    -- Загрузка модели через InsertService (работает в игре)
+    local InsertService = game:GetService("InsertService")
+    local success, model = pcall(function()
+	   return InsertService:LoadAsset(113981726565681)
+    end)
 
-    -- делаем персонажа "Ambush" — красноватый, дёрганый
-    for _, v in pairs(char:GetDescendants()) do
-	   if v:IsA("BasePart") then
-		  v.Material = Enum.Material.Neon
-		  v.Color = Color3.fromRGB(120, 0, 0)
-	   elseif v:IsA("Decal") or v:IsA("Texture") then
-		  v.Transparency = 1
-	   end
+    if not success or not model then
+	   warn("[Ambush] Не удалось загрузить модель! ID: 113981726565681")
+	   _G.TransformedIntoAnyMorph = false
+	   return
     end
 
-    -- звуки (создаём сами)
-    local roarSound = Instance.new("Sound", hrp)
-    roarSound.SoundId = "rbxassetid://9114386356"
-    roarSound.Volume = 5
+    local figureNew = model:GetChildren()[1]
+    if not figureNew then
+	   warn("[Ambush] Модель пустая!")
+	   _G.TransformedIntoAnyMorph = false
+	   return
+    end
 
-    local footstepSound = Instance.new("Sound", hrp)
-    footstepSound.SoundId = "rbxassetid://9114386356"
-    footstepSound.Volume = 2
+    figureNew.Parent = workspace
 
+    local main = figureNew:FindFirstChild("Main")
+    if not main then
+	   warn("[Ambush] Не найдена папка Main в модели!")
+    end
+
+    -- ===== ЗВУКИ =====
+    local footsteps = main and main:FindFirstChild("Footsteps")
+    local playSound  = main and main:FindFirstChild("PlaySound")
+    local scream     = main and main:FindFirstChild("Scream")
+    local repent     = main and main:FindFirstChild("Repent")
+    local knock      = main and main:FindFirstChild("Knock")
+
+    if footsteps then footsteps:Play() end
+    if playSound  then playSound:Play()  end
+
+    -- ===== СЛЕЖЕНИЕ ЗА ИГРОКОМ =====
+    spawn(function()
+	   game:GetService("RunService").RenderStepped:Connect(function()
+		  local char = game.Players.LocalPlayer.Character
+		  if not char then return end
+		  if char:FindFirstChild("Head") then
+			 char.Head.Transparency = 1
+		  end
+		  local hrp = char:FindFirstChild("HumanoidRootPart")
+		  if hrp then
+			 figureNew:PivotTo(hrp.CFrame)
+		  end
+		  for _, v in pairs(char:GetChildren()) do
+			 if v:IsA("BasePart") then
+				v.LocalTransparencyModifier = 1
+				for _, d in pairs(v:GetDescendants()) do
+				    if d:IsA("Decal") or d:IsA("Texture") then
+					   d.Transparency = 1
+				    end
+			    end
+			 elseif v:IsA("Accessory") then
+				if v:FindFirstChild("Handle") then
+				    v.Handle.Transparency = 1
+				end
+			 end
+		  end
+	   end)
+    end)
+
+    -- ===== РЫВОК (фишка Ambush) =====
     local dashCooldown = false
-
-    -- ФУНКЦИЯ РЫВКА (фишка Ambush)
     local function ambushDash()
 	   if dashCooldown then return end
 	   dashCooldown = true
+
+	   local hrp = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 
 	   -- мечемся в стороны
 	   for i = 1, 6 do
@@ -47,25 +89,35 @@ local function transformIntoAmbush()
 		  wait(0.03)
 	   end
 
-	   roarSound.PlaybackSpeed = math.random(90, 130) / 100
-	   roarSound:Play()
+	   -- звук: рандомно Scream или Repent
+	   local roar = math.random(1, 2)
+	   if roar == 1 and scream then
+		  scream.PlaybackSpeed = math.random(90, 130) / 100
+		  scream:Play()
+	   elseif repent then
+		  repent.PlaybackSpeed = math.random(90, 130) / 100
+		  repent:Play()
+	   end
 
 	   wait(2)
 	   dashCooldown = false
     end
 
-    -- управление
+    -- ===== УПРАВЛЕНИЕ =====
     game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
 	   if key == "r" then
-		  if footstepSound.IsPlaying then
-			 footstepSound:Stop()
-		  else
-			 footstepSound:Play()
+		  if footsteps then
+			 if footsteps.IsPlaying then footsteps:Stop() else footsteps:Play() end
+		  end
+		  if playSound then
+			 if playSound.IsPlaying then playSound:Stop() else playSound:Play() end
 		  end
 	   elseif key == "q" then
 		  ambushDash()
 	   elseif key == "e" then
-		  roarSound:Play()
+		  if scream then scream:Play() end
+	   elseif key == "f" then
+		  if knock then knock:Play() end
 	   end
     end)
 end
