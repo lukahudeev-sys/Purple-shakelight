@@ -91,6 +91,9 @@ end)
 -- ============================================================
 -- КАМЕРА (мгновенная, мышь в правильную сторону)
 -- ============================================================
+-- ============================================================
+-- КАМЕРА (напрямую через camera.CFrame, без yaw/pitch)
+-- ============================================================
 local camera = workspace.CurrentCamera
 
 local CAMERA_DISTANCE = 12
@@ -100,14 +103,13 @@ local isThirdPerson = true
 
 camera.CameraType = Enum.CameraType.Scriptable
 
-local yaw = 0
-local pitch = -0.2
-
 UserInputService.InputChanged:Connect(function(input, processed)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
-        -- ИСПРАВЛЕНО: минус вместо плюса
-        yaw = yaw - input.Delta.X * MOUSE_SENSITIVITY * 0.01
-        pitch = math.clamp(pitch - input.Delta.Y * MOUSE_SENSITIVITY * 0.01, -1.2, 1.2)
+        local currentCF = camera.CFrame
+        local rotX = math.rad(-input.Delta.X * MOUSE_SENSITIVITY)
+        local rotY = math.rad(-input.Delta.Y * MOUSE_SENSITIVITY)
+        -- Вращаем камеру вокруг своей оси
+        camera.CFrame = currentCF * CFrame.Angles(0, rotX, 0) * CFrame.Angles(rotY, 0, 0)
     end
 end)
 
@@ -121,23 +123,21 @@ RunService:BindToRenderStep("AmbushCamera", Enum.RenderPriority.Camera.Value + 1
     local head = figureNew:FindFirstChild("Head", true)
     local targetPos = head and head.Position or hrp.Position
 
-    local lookDir = Vector3.new(
-        math.sin(yaw) * math.cos(pitch),
-        math.sin(pitch),
-        math.cos(yaw) * math.cos(pitch)
-    )
+    -- Направление взгляда берём ИЗ КАМЕРЫ напрямую
+    local lookDir = camera.CFrame.LookVector
 
-    -- Модель смотрит туда же, куда камера (по горизонтали)
+    -- Поворачиваем модель туда же, куда смотрит камера (по горизонтали)
     local modelLook = Vector3.new(lookDir.X, 0, lookDir.Z)
     if modelLook.Magnitude > 0.01 then
         hrp.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + modelLook)
     end
 
     if isThirdPerson then
+        -- Ставим камеру сзади цели, сохраняя ТЕКУЩЕЕ вращение камеры
         local camPos = targetPos - lookDir * CAMERA_DISTANCE + Vector3.new(0, CAMERA_HEIGHT, 0)
-        camera.CFrame = CFrame.lookAt(camPos, targetPos, Vector3.new(0, 1, 0))
+        camera.CFrame = CFrame.new(camPos) * (camera.CFrame - camera.CFrame.Position)
     else
-        camera.CFrame = CFrame.lookAt(targetPos, targetPos + lookDir, Vector3.new(0, 1, 0))
+        camera.CFrame = CFrame.new(targetPos) * (camera.CFrame - camera.CFrame.Position)
     end
 
     camera.Focus = CFrame.new(targetPos)
