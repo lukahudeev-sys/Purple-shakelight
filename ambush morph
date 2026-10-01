@@ -4,9 +4,19 @@ local function transformIntoAmbush()
     end
     _G.TransformedIntoAnyMorph = true
 
-    local figureNew = game:GetObjects("rbxassetid://98266611233960")[1]
+    -- загрузка модели через InsertService (GetObjects не работает в игре)
+    local InsertService = game:GetService("InsertService")
+    local success, model = pcall(function()
+        return InsertService:LoadAsset(98266611233960)
+    end)
+    if not success or not model or not model:GetChildren()[1] then
+        warn("Не удалось загрузить модель Ambush! ID: 98266611233960")
+        _G.TransformedIntoAnyMorph = false
+        return
+    end
+
+    local figureNew = model:GetChildren()[1]
     local testingPlace = false
-    local canMove = true
     local dashCooldown = false
 
     figureNew.Parent = workspace
@@ -29,11 +39,9 @@ local function transformIntoAmbush()
 
     -- ==== АНИМАЦИИ ====
     local IdleAnim, DashAnim, HeadTwitchAnim
-    local animator = figureNew:FindFirstChild("AnimationController", true)
+    local animator = figureNew:FindFirstChild("Animator", true)
 
     if animator then
-        animator = animator:FindFirstChild("Animator") or animator
-        -- если у модели есть AnimSaves/Animations — грузим
         local idleObj = figureNew:FindFirstChild("Idle", true)
         local dashObj = figureNew:FindFirstChild("Dash", true)
         local twitchObj = figureNew:FindFirstChild("HeadTwitch", true)
@@ -49,7 +57,7 @@ local function transformIntoAmbush()
     figureNew.Main.Footsteps:Play()
     figureNew.Main.PlaySound:Play()
 
-    -- ==== СЛЕЖЕНИЕ ЗА ИГРОКОМ ====
+    -- ==== СЛЕЖЕНИЕ ЗА ИГРОКОМ (прозрачность) ====
     spawn(function()
         game:GetService("RunService").RenderStepped:Connect(function()
             local char = game.Players.LocalPlayer.Character
@@ -75,27 +83,27 @@ local function transformIntoAmbush()
         end)
     end)
 
-    -- ==== ФУНКЦИЯ РЫВКА (главная фишка Ambush) ====
+    -- ==== ФУНКЦИЯ РЫВКА (фишка Ambush) ====
     local function ambushDash()
         if dashCooldown then return end
         dashCooldown = true
 
         local hrp = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 
-        -- рывок вбок (вправо-влево), как Ambush "кидает" себя в стороны
+        -- рывок в стороны
         for i = 1, 6 do
             local side = (i % 2 == 0) and 1 or -1
             hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
             wait(0.05)
         end
 
-        -- быстрый рывок вперёд
+        -- рывок вперёд
         for i = 1, 8 do
             hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
             wait(0.03)
         end
 
-        -- случайный поворот головы (twitch)
+        -- твитч головы
         if HeadTwitchAnim then
             HeadTwitchAnim:Play()
         end
@@ -121,7 +129,6 @@ local function transformIntoAmbush()
     -- ==== УПРАВЛЕНИЕ ====
     game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
         if key == "r" then
-            -- toggle footstep/playsound (как было)
             if figureNew.Main.Footsteps.IsPlaying then
                 figureNew.Main.Footsteps:Stop()
             else
@@ -135,7 +142,6 @@ local function transformIntoAmbush()
         elseif key == "q" then
             ambushDash()
         elseif key == "e" then
-            -- просто рёв без рывка
             local s = figureNew.Main:FindFirstChild("SoundRoar1") or figureNew.Main:FindFirstChild("Scream")
             if s then s:Play() end
         end
