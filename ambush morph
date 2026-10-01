@@ -1,84 +1,129 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local function transformIntoAmbush()
+    -- Сбрасываем старый флаг, чтобы морф мог запуститься
+    _G.TransformedIntoAnyMorph = false
 
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
 
-local MORPH_ID = "rbxassetid://98266611233960"
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
 
-if _G.TransformedIntoAnyMorph then
-	return
+    -- Загружаем модель Ambush
+    local Success, Objects = pcall(function()
+        return game:GetObjects("rbxassetid://98266611233960")
+    end)
+
+    if not Success or not Objects or not Objects[1] then
+        warn("Не удалось загрузить модель Ambush")
+        return
+    end
+
+    local Ambush = Objects[1]
+
+    Ambush.Parent = workspace
+
+    local Main = Ambush:FindFirstChild("Main")
+
+    if not Main then
+        warn("У Ambush не найден объект Main")
+        Ambush:Destroy()
+        return
+    end
+
+    _G.TransformedIntoAnyMorph = true
+
+    -- Запускаем звуки
+    local Footsteps = Main:FindFirstChild("Footsteps")
+    local PlaySound = Main:FindFirstChild("PlaySound")
+
+    if Footsteps then
+        Footsteps:Play()
+    end
+
+    if PlaySound then
+        PlaySound:Play()
+    end
+
+    -- Следим за персонажем
+    RunService.RenderStepped:Connect(function()
+        if not Ambush or not Ambush.Parent then
+            return
+        end
+
+        Character = Player.Character
+
+        if not Character then
+            return
+        end
+
+        local RootPart = Character:FindFirstChild("HumanoidRootPart")
+
+        if not RootPart then
+            return
+        end
+
+        -- Перемещаем Ambush вместе с игроком
+        pcall(function()
+            Ambush:PivotTo(RootPart.CFrame)
+        end)
+
+        -- Скрываем обычного персонажа
+        for _, Object in ipairs(Character:GetChildren()) do
+            if Object:IsA("BasePart") then
+                Object.LocalTransparencyModifier = 1
+
+                for _, Child in ipairs(Object:GetDescendants()) do
+                    if Child:IsA("Decal") or Child:IsA("Texture") then
+                        Child.Transparency = 1
+                    end
+                end
+
+            elseif Object:IsA("Accessory") then
+                local Handle = Object:FindFirstChild("Handle")
+
+                if Handle then
+                    Handle.LocalTransparencyModifier = 1
+                end
+            end
+        end
+    end)
+
+    -- R переключает звуки Ambush
+    Player:GetMouse().KeyDown:Connect(function(Key)
+        if Key ~= "r" then
+            return
+        end
+
+        if Footsteps then
+            if Footsteps.IsPlaying then
+                Footsteps:Stop()
+            else
+                Footsteps:Play()
+            end
+        end
+
+        if PlaySound then
+            if PlaySound.IsPlaying then
+                PlaySound:Stop()
+            else
+                PlaySound:Play()
+            end
+        end
+    end)
+
+    print("Ambush morph activated!")
 end
+```
 
-_G.TransformedIntoAnyMorph = true
+И кнопка должна остаться такой:
 
-local Ambush = game:GetObjects(MORPH_ID)[1]
-Ambush.Parent = workspace
+```lua
+mspaint.Groupbox:AddButton({
+    Text = "Ambush",
+    Tooltip = "Transforms you into Ambush",
+    Func = transformIntoAmbush,
+})
 
--- Запускаем основные звуки Ambush
-Ambush.Main.Footsteps:Play()
-Ambush.Main.PlaySound:Play()
+Главное отличие — я убрал проблему с `_G.TransformedIntoAnyMorph` и добавил проверки загрузки модели и `Main`. В твоём оригинале модель Ambush действительно имеет ID `98266611233960`, а `Main.Footsteps` и `Main.PlaySound` используются именно для этого морфа.
 
--- Прячем настоящего персонажа и двигаем морф вместе с ним
-RunService.RenderStepped:Connect(function()
-	Character = Player.Character
-
-	if not Character then
-		return
-	end
-
-	local RootPart = Character:FindFirstChild("HumanoidRootPart")
-
-	if not RootPart then
-		return
-	end
-
-	-- Скрываем голову
-	local Head = Character:FindFirstChild("Head")
-
-	if Head then
-		Head.Transparency = 1
-	end
-
-	-- Перемещаем Ambush за игроком
-	Ambush:PivotTo(RootPart.CFrame)
-
-	-- Скрываем тело
-	for _, Object in ipairs(Character:GetChildren()) do
-		if Object:IsA("BasePart") then
-			Object.LocalTransparencyModifier = 1
-
-			for _, Child in ipairs(Object:GetDescendants()) do
-				if Child:IsA("Decal") or Child:IsA("Texture") then
-					Child.Transparency = 1
-				end
-			end
-
-		elseif Object:IsA("Accessory") then
-			local Handle = Object:FindFirstChild("Handle")
-
-			if Handle then
-				Handle.Transparency = 1
-			end
-		end
-	end
-end)
-
--- R включает/выключает звуки Ambush
-Player:GetMouse().KeyDown:Connect(function(Key)
-	if Key ~= "r" then
-		return
-	end
-
-	if Ambush.Main.Footsteps.IsPlaying then
-		Ambush.Main.Footsteps:Stop()
-	else
-		Ambush.Main.Footsteps:Play()
-	end
-
-	if Ambush.Main.PlaySound.IsPlaying then
-		Ambush.Main.PlaySound:Stop()
-	else
-		Ambush.Main.PlaySound:Play()
-	end
-end)
+Если **после нажатия кнопки вообще ничего не появляется**, скажи — тогда я переделаю его под тот же способ загрузки, который используется в твоём `morph menu.lua`, потому что проблема может быть именно в загрузке модели.
