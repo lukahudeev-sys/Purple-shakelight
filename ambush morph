@@ -1,102 +1,169 @@
-local InsertService = game:GetService("InsertService")
+--[[
+    Ambush Morph для Doors
+    Использование:
+      - LocalScript в StarterPlayerScripts
+      - Или через executor: loadstring(game:HttpGet("URL"))()
+    
+    Управление:
+      R — переключить фоновые звуки (Footsteps + PlaySound)
+      T — крик (Scream)
+      Q — рывок (Ambush мечется)
+      F — стук (Knock)
+      E — Repent (звук "раскаяния")
+--]]
 
-local function transformIntoAmbush()
-    -- Сбрасываем старый флаг, чтобы морф мог запуститься
-    _G.TransformedIntoAnyMorph = false
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
+-- Защита от повторного морфа
+if _G.AmbushMorphActive then
+    warn("[Ambush Morph] Уже активен!")
+    return
+end
+_G.AmbushMorphActive = true
 
-    local Player = Players.LocalPlayer
-    local Character = Player.Character or Player.CharacterAdded:Wait()
+-- ============================================================
+-- НАСТРОЙКА
+-- ============================================================
+local AMBUSH_ASSET = "rbxassetid://113981726565681" -- модель Ambush
 
-    -- Загружаем модель Ambush
-    local Success, Objects = pcall(function()
-        return InsertService:LoadAsset(113981726565681)
-    end)
+-- ============================================================
+-- ЗАГРУЗКА МОДЕЛИ (как в Seek морфе)
+-- ============================================================
+local ok, figureNew = pcall(function()
+    return game:GetObjects(AMBUSH_ASSET)[1]
+end)
 
-    if not Success or not Objects or not Objects[1] then
-        warn("Не удалось загрузить модель Ambush: " .. tostring(Objects))
-        return
-    end
-
-    local Ambush = Objects[1]
-    Ambush.Parent = workspace
-
-    local Main = Ambush:FindFirstChild("Main")
-    if not Main then
-        warn("У Ambush не найден объект Main")
-        Ambush:Destroy()
-        return
-    end
-
-    _G.TransformedIntoAnyMorph = true
-
-    -- Запускаем звуки
-    local Footsteps = Main:FindFirstChild("Footsteps")
-    local PlaySound = Main:FindFirstChild("PlaySound")
-
-    if Footsteps then Footsteps:Play() end
-    if PlaySound  then PlaySound:Play()  end
-
-    -- Следим за персонажем
-    RunService.RenderStepped:Connect(function()
-        if not Ambush or not Ambush.Parent then return end
-
-        Character = Player.Character
-        if not Character then return end
-
-        local RootPart = Character:FindFirstChild("HumanoidRootPart")
-        if not RootPart then return end
-
-        -- Перемещаем Ambush вместе с игроком
-        pcall(function()
-            Ambush:PivotTo(RootPart.CFrame)
-        end)
-
-        -- Скрываем обычного персонажа
-        for _, Object in ipairs(Character:GetChildren()) do
-            if Object:IsA("BasePart") then
-                Object.LocalTransparencyModifier = 1
-
-                for _, Child in ipairs(Object:GetDescendants()) do
-                    if Child:IsA("Decal") or Child:IsA("Texture") then
-                        Child.Transparency = 1
-                    end
-                end
-
-            elseif Object:IsA("Accessory") then
-                local Handle = Object:FindFirstChild("Handle")
-                if Handle then
-                    Handle.LocalTransparencyModifier = 1
-                end
-            end
-        end
-    end)
-
-    -- R переключает звуки Ambush
-    Player:GetMouse().KeyDown:Connect(function(Key)
-        if Key ~= "r" then return end
-
-        if Footsteps then
-            if Footsteps.IsPlaying then
-                Footsteps:Stop()
-            else
-                Footsteps:Play()
-            end
-        end
-
-        if PlaySound then
-            if PlaySound.IsPlaying then
-                PlaySound:Stop()
-            else
-                PlaySound:Play()
-            end
-        end
-    end)
-
-    print("Ambush morph activated!")
+if not ok or not figureNew then
+    warn("[Ambush Morph] Не удалось загрузить модель Ambush. Проверь asset id: " .. AMBUSH_ASSET)
+    _G.AmbushMorphActive = false
+    return
 end
 
--- Запускаем морф сразу
-transformIntoAmbush()
+figureNew.Parent = workspace
+
+-- ============================================================
+-- ПОИСК MAIN И ЗВУКОВ
+-- ============================================================
+local Main = figureNew:FindFirstChild("Main")
+if not Main then
+    -- если Main нет — ищем по всей модели
+    Main = figureNew
+    warn("[Ambush Morph] Main не найден, использую саму модель")
+end
+
+local Footsteps = Main:FindFirstChild("Footsteps")
+local PlaySound  = Main:FindFirstChild("PlaySound")
+local Scream     = Main:FindFirstChild("Scream")
+local Repent     = Main:FindFirstChild("Repent")
+local Knock      = Main:FindFirstChild("Knock")
+
+print("[Ambush Morph] Footsteps:", Footsteps)
+print("[Ambush Morph] PlaySound:", PlaySound)
+print("[Ambush Morph] Scream:", Scream)
+print("[Ambush Morph] Repent:", Repent)
+print("[Ambush Morph] Knock:", Knock)
+
+-- Запускаем фоновые звуки
+if Footsteps then Footsteps:Play() end
+if PlaySound  then PlaySound:Play()  end
+
+-- ============================================================
+-- СИНХРОНИЗАЦИЯ + СКРЫТИЕ ИГРОКА (как в Seek морфе)
+-- ============================================================
+spawn(function()
+    RunService.RenderStepped:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local head = char:FindFirstChild("Head")
+        if head then head.Transparency = 1 end
+
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp and figureNew.Parent then
+            pcall(function()
+                figureNew:PivotTo(hrp.CFrame)
+            end)
+        end
+
+        for _, v in pairs(char:GetChildren()) do
+            if v:IsA("BasePart") then
+                v.LocalTransparencyModifier = 1
+                for _, d in pairs(v:GetDescendants()) do
+                    if d:IsA("Decal") or d:IsA("Texture") then
+                        d.Transparency = 1
+                    end
+                end
+            elseif v:IsA("Accessory") then
+                if v:FindFirstChild("Handle") then
+                    v.Handle.Transparency = 1
+                end
+            end
+        end
+    end)
+end)
+
+-- ============================================================
+-- РЫВОК (фишка Ambush)
+-- ============================================================
+local dashCooldown = false
+
+local function ambushDash()
+    if dashCooldown then return end
+    dashCooldown = true
+
+    local char = LocalPlayer.Character
+    if not char then dashCooldown = false return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then dashCooldown = false return end
+
+    -- мечемся в стороны
+    for i = 1, 6 do
+        local side = (i % 2 == 0) and 1 or -1
+        hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
+        task.wait(0.05)
+    end
+    -- рывок вперёд
+    for i = 1, 8 do
+        hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
+        task.wait(0.03)
+    end
+
+    -- рёв
+    local roar = math.random(1, 2)
+    if roar == 1 and Scream then
+        Scream.PlaybackSpeed = math.random(90, 130) / 100
+        Scream:Play()
+    elseif Repent then
+        Repent.PlaybackSpeed = math.random(90, 130) / 100
+        Repent:Play()
+    end
+
+    task.wait(2)
+    dashCooldown = false
+end
+
+-- ============================================================
+-- УПРАВЛЕНИЕ
+-- ============================================================
+LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+    if key == "r" then
+        if Footsteps then
+            if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+        end
+        if PlaySound then
+            if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+        end
+    elseif key == "t" then
+        if Scream then Scream:Play() end
+    elseif key == "q" then
+        ambushDash()
+    elseif key == "f" then
+        if Knock then Knock:Play() end
+    elseif key == "e" then
+        if Repent then Repent:Play() end
+    end
+end)
+
+print("[Ambush Morph] Загружен! R — звуки, Q — рывок, T — scream, F — knock, E — repent")
