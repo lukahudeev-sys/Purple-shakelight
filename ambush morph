@@ -1,42 +1,35 @@
 --[[
-    Ambush Morph для Doors
-    Использование:
-      - LocalScript в StarterPlayerScripts
-      - Или через executor: loadstring(game:HttpGet("URL"))()
+    Ambush Morph для Doors (с камерой от третьего лица)
     
     Управление:
-      R — переключить фоновые звуки (Footsteps + PlaySound)
+      R — переключить фоновые звуки
       T — крик (Scream)
       Q — рывок (Ambush мечется)
       F — стук (Knock)
-      E — Repent (звук "раскаяния")
+      E — Repent
 --]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Защита от повторного морфа
 if _G.AmbushMorphActive then
     warn("[Ambush Morph] Уже активен!")
     return
 end
 _G.AmbushMorphActive = true
 
--- ============================================================
--- НАСТРОЙКА
--- ============================================================
-local AMBUSH_ASSET = "rbxassetid://113981726565681" -- модель Ambush
+local AMBUSH_ASSET = "rbxassetid://113981726565681"
 
 -- ============================================================
--- ЗАГРУЗКА МОДЕЛИ (как в Seek морфе)
+-- ЗАГРУЗКА МОДЕЛИ
 -- ============================================================
 local ok, figureNew = pcall(function()
     return game:GetObjects(AMBUSH_ASSET)[1]
 end)
 
 if not ok or not figureNew then
-    warn("[Ambush Morph] Не удалось загрузить модель Ambush. Проверь asset id: " .. AMBUSH_ASSET)
+    warn("[Ambush Morph] Не удалось загрузить модель Ambush.")
     _G.AmbushMorphActive = false
     return
 end
@@ -44,14 +37,9 @@ end
 figureNew.Parent = workspace
 
 -- ============================================================
--- ПОИСК MAIN И ЗВУКОВ
+-- ПОИСК ЗВУКОВ
 -- ============================================================
-local Main = figureNew:FindFirstChild("Main")
-if not Main then
-    -- если Main нет — ищем по всей модели
-    Main = figureNew
-    warn("[Ambush Morph] Main не найден, использую саму модель")
-end
+local Main = figureNew:FindFirstChild("Main") or figureNew
 
 local Footsteps = Main:FindFirstChild("Footsteps")
 local PlaySound  = Main:FindFirstChild("PlaySound")
@@ -59,18 +47,11 @@ local Scream     = Main:FindFirstChild("Scream")
 local Repent     = Main:FindFirstChild("Repent")
 local Knock      = Main:FindFirstChild("Knock")
 
-print("[Ambush Morph] Footsteps:", Footsteps)
-print("[Ambush Morph] PlaySound:", PlaySound)
-print("[Ambush Morph] Scream:", Scream)
-print("[Ambush Morph] Repent:", Repent)
-print("[Ambush Morph] Knock:", Knock)
-
--- Запускаем фоновые звуки
 if Footsteps then Footsteps:Play() end
 if PlaySound  then PlaySound:Play()  end
 
 -- ============================================================
--- СИНХРОНИЗАЦИЯ + СКРЫТИЕ ИГРОКА (как в Seek морфе)
+-- СИНХРОНИЗАЦИЯ + СКРЫТИЕ ИГРОКА
 -- ============================================================
 spawn(function()
     RunService.RenderStepped:Connect(function()
@@ -105,7 +86,40 @@ spawn(function()
 end)
 
 -- ============================================================
--- РЫВОК (фишка Ambush)
+-- КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
+-- ============================================================
+local camera = workspace.CurrentCamera
+local CAMERA_DISTANCE = 12
+local CAMERA_HEIGHT = 4
+local CAMERA_SMOOTH = 0.2
+
+LocalPlayer.CameraMode = Enum.CameraMode.Classic
+camera.CameraSubject = nil
+
+local lastCamPos = nil
+
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local targetPos = hrp.CFrame * CFrame.new(0, CAMERA_HEIGHT, CAMERA_DISTANCE)
+    local lookAt = hrp.Position + Vector3.new(0, CAMERA_HEIGHT / 2, 0)
+
+    if lastCamPos then
+        lastCamPos = lastCamPos:Lerp(targetPos, CAMERA_SMOOTH)
+    else
+        lastCamPos = targetPos
+    end
+
+    camera.CFrame = CFrame.new(lastCamPos.Position, lookAt)
+    camera.Focus = CFrame.new(lookAt)
+end)
+
+-- ============================================================
+-- РЫВОК
 -- ============================================================
 local dashCooldown = false
 
@@ -118,19 +132,16 @@ local function ambushDash()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then dashCooldown = false return end
 
-    -- мечемся в стороны
     for i = 1, 6 do
         local side = (i % 2 == 0) and 1 or -1
         hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
         task.wait(0.05)
     end
-    -- рывок вперёд
     for i = 1, 8 do
         hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
         task.wait(0.03)
     end
 
-    -- рёв
     local roar = math.random(1, 2)
     if roar == 1 and Scream then
         Scream.PlaybackSpeed = math.random(90, 130) / 100
@@ -166,4 +177,4 @@ LocalPlayer:GetMouse().KeyDown:Connect(function(key)
     end
 end)
 
-print("[Ambush Morph] Загружен! R — звуки, Q — рывок, T — scream, F — knock, E — repent")
+print("[Ambush Morph] Загружен с камерой от третьего лица! Q — рывок, T — scream, F — knock, E — repent, R — звуки")
