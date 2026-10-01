@@ -1,0 +1,143 @@
+local function transformIntoAmbush()
+    if _G.TransformedIntoAnyMorph == true then
+        return
+    end
+    _G.TransformedIntoAnyMorph = true
+
+    local figureNew = game:GetObjects("rbxassetid://98266611233960")[1]
+    local testingPlace = false
+    local canMove = true
+    local dashCooldown = false
+
+    figureNew.Parent = workspace
+
+    if game.GameId == 6627207668 then
+        testingPlace = true
+    end
+
+    -- ==== ЗВУКИ ====
+    if testingPlace then
+        for _, s in pairs(figureNew.Main.Sounds["test game"]:GetChildren()) do
+            s:Clone().Parent = figureNew.Main
+        end
+    else
+        for _, s in pairs(figureNew.Main.Sounds["DOORS"]:GetChildren()) do
+            s:Clone().Parent = figureNew.Main
+        end
+    end
+    figureNew.Main.Sounds:Destroy()
+
+    -- ==== АНИМАЦИИ ====
+    local IdleAnim, DashAnim, HeadTwitchAnim
+    local animator = figureNew:FindFirstChild("AnimationController", true)
+
+    if animator then
+        animator = animator:FindFirstChild("Animator") or animator
+        -- если у модели есть AnimSaves/Animations — грузим
+        local idleObj = figureNew:FindFirstChild("Idle", true)
+        local dashObj = figureNew:FindFirstChild("Dash", true)
+        local twitchObj = figureNew:FindFirstChild("HeadTwitch", true)
+
+        if idleObj then IdleAnim = animator:LoadAnimation(idleObj) end
+        if dashObj then DashAnim = animator:LoadAnimation(dashObj) end
+        if twitchObj then HeadTwitchAnim = animator:LoadAnimation(twitchObj) end
+    end
+
+    if IdleAnim then IdleAnim:Play() end
+
+    -- ==== ФОНОВЫЕ ЗВУКИ ====
+    figureNew.Main.Footsteps:Play()
+    figureNew.Main.PlaySound:Play()
+
+    -- ==== СЛЕЖЕНИЕ ЗА ИГРОКОМ ====
+    spawn(function()
+        game:GetService("RunService").RenderStepped:Connect(function()
+            local char = game.Players.LocalPlayer.Character
+            if not char then return end
+            if char:FindFirstChild("Head") then
+                char.Head.Transparency = 1
+            end
+            figureNew:PivotTo(char:WaitForChild("HumanoidRootPart").CFrame)
+            for _, v in pairs(char:GetChildren()) do
+                if v:IsA("BasePart") then
+                    v.LocalTransparencyModifier = 1
+                    for _, d in pairs(v:GetDescendants()) do
+                        if d:IsA("Decal") or d:IsA("Texture") then
+                            d.Transparency = 1
+                        end
+                    end
+                elseif v:IsA("Accessory") then
+                    if v:FindFirstChild("Handle") then
+                        v.Handle.Transparency = 1
+                    end
+                end
+            end
+        end)
+    end)
+
+    -- ==== ФУНКЦИЯ РЫВКА (главная фишка Ambush) ====
+    local function ambushDash()
+        if dashCooldown then return end
+        dashCooldown = true
+
+        local hrp = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+        -- рывок вбок (вправо-влево), как Ambush "кидает" себя в стороны
+        for i = 1, 6 do
+            local side = (i % 2 == 0) and 1 or -1
+            hrp.CFrame = hrp.CFrame * CFrame.new(side * 3, 0, 0)
+            wait(0.05)
+        end
+
+        -- быстрый рывок вперёд
+        for i = 1, 8 do
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
+            wait(0.03)
+        end
+
+        -- случайный поворот головы (twitch)
+        if HeadTwitchAnim then
+            HeadTwitchAnim:Play()
+        end
+
+        -- случайный рёв
+        local roars = {
+            figureNew.Main:FindFirstChild("SoundRoar1"),
+            figureNew.Main:FindFirstChild("SoundRoar2"),
+            figureNew.Main:FindFirstChild("Scream"),
+        }
+        for _, s in pairs(roars) do
+            if s then
+                s.PlaybackSpeed = math.random(90, 130) / 100
+                s:Play()
+                break
+            end
+        end
+
+        wait(2)
+        dashCooldown = false
+    end
+
+    -- ==== УПРАВЛЕНИЕ ====
+    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+        if key == "r" then
+            -- toggle footstep/playsound (как было)
+            if figureNew.Main.Footsteps.IsPlaying then
+                figureNew.Main.Footsteps:Stop()
+            else
+                figureNew.Main.Footsteps:Play()
+            end
+            if figureNew.Main.PlaySound.IsPlaying then
+                figureNew.Main.PlaySound:Stop()
+            else
+                figureNew.Main.PlaySound:Play()
+            end
+        elseif key == "q" then
+            ambushDash()
+        elseif key == "e" then
+            -- просто рёв без рывка
+            local s = figureNew.Main:FindFirstChild("SoundRoar1") or figureNew.Main:FindFirstChild("Scream")
+            if s then s:Play() end
+        end
+    end)
+end
