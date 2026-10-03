@@ -1,5 +1,5 @@
 -- ============================================================
--- AMBUSH BOTTLE + MORPH (минимальная, без MainUI)
+-- AMBUSH BOTTLE + MORPH (не падает, не исчезает)
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -12,7 +12,7 @@ local LocalPlayer = Players.LocalPlayer
 local backpack = LocalPlayer:WaitForChild("Backpack", 10)
 if not backpack then warn("[Ambush] ❌ Backpack") return end
 
--- Бутылка (пробуем оба ID по очереди)
+-- Бутылка
 local toolNew
 for _, id in ipairs({70922560617067, 111263531009426}) do
     local ok, objs = pcall(function()
@@ -20,19 +20,12 @@ for _, id in ipairs({70922560617067, 111263531009426}) do
     end)
     if ok and objs and objs[1] then
         toolNew = objs[1]
-        print("[Ambush] ✅ Бутылка загружена с ID:", id)
+        print("[Ambush] ✅ Бутылка:", id)
         break
-    else
-        warn("[Ambush] ❌ ID не сработал:", id)
     end
 end
+if not toolNew then warn("[Ambush] ❌ Нет бутылки") return end
 
-if not toolNew then
-    warn("[Ambush] ❌ Ни один ID бутылки не сработал")
-    return
-end
-
--- Выдаём
 toolNew.Parent = backpack
 toolNew.Name = "Ambush Bottle"
 toolNew.TextureId = "rbxassetid://139716715049853"
@@ -45,9 +38,12 @@ local AMBUSH_ASSET = 98266611233960
 local MORPH_DURATION = 60
 
 local morph, morphActive = nil, false
+local morphParts = {}   -- все BasePart модели, которые двигаем вручную
+local morphPrimary = nil -- главная часть (HumanoidRootPart или Main)
 local originalCharacter, originalRootPart, originalHumanoid
 local originalWalkSpeed, originalJumpPower, originalJumpHeight
 local enforceLoop, inputConnection, morphTimer
+local savedOffsets = {} -- смещения каждой части относительно primary
 
 local function cleanupMorph()
     if inputConnection then inputConnection:Disconnect() inputConnection = nil end
@@ -81,6 +77,9 @@ local function cleanupMorph()
     end
 
     if morph then morph:Destroy() morph = nil end
+    morphParts = {}
+    morphPrimary = nil
+    savedOffsets = {}
     morphActive = false
     print("[Ambush] 🔄 Морф снят")
 end
@@ -91,16 +90,17 @@ local function applyMorph()
     local ok, objs = pcall(function()
         return game:GetObjects("rbxassetid://" .. AMBUSH_ASSET)
     end)
-
     if not ok or not objs or not objs[1] then
-        warn("[Ambush] ❌ Ambush модель не загрузилась")
+        warn("[Ambush] ❌ Ambush не загрузился")
         return
     end
 
     morph = objs[1]
+    print("[Ambush] ✅ Ambush загружен:", morph.Name)
+
     local Main = morph:FindFirstChild("Main")
     if not Main then
-        warn("[Ambush] ❌ Нет Main у Ambush")
+        warn("[Ambush] ❌ Нет Main")
         morph:Destroy() morph = nil return
     end
 
@@ -119,12 +119,44 @@ local function applyMorph()
     local mh = morph:FindFirstChildWhichIsA("Humanoid")
     if mh then mh:Destroy() end
 
+    -- ============================================================
+    -- СОБИРАЕМ ВСЕ ЧАСТИ И ЗААНКЕРИВАЕМ ИХ
+    -- ============================================================
+    morphParts = {}
     for _, p in ipairs(morph:GetDescendants()) do
-        if p:IsA("BasePart") then p.Anchored = false p.CanCollide = false end
+        if p:IsA("BasePart") then
+            p.Anchored = true          -- ⬅️ ГЛАВНОЕ: анкорим, чтобы не падал
+            p.CanCollide = false
+            table.insert(morphParts, p)
+        end
     end
 
-    morph:PivotTo(originalRootPart.CFrame)
+    -- Определяем primary часть (HumanoidRootPart или Main или первая)
+    morphPrimary = morph:FindFirstChild("HumanoidRootPart")
+        or morph:FindFirstChild("Main")
+        or morphParts[1]
 
+    if not morphPrimary then
+        warn("[Ambush] ❌ Не нашёл primary часть")
+        return
+    end
+
+    -- Сохраняем смещения каждой части относительно primary
+    savedOffsets = {}
+    for _, p in ipairs(morphParts) do
+        savedOffsets[p] = morphPrimary.CFrame:ToObjectSpace(p.CFrame)
+    end
+
+    -- Ставим морф на игрока
+    local baseCFrame = originalRootPart.CFrame
+    morphPrimary.CFrame = baseCFrame
+    for _, p in ipairs(morphParts) do
+        if p ~= morphPrimary then
+            p.CFrame = baseCFrame * savedOffsets[p]
+        end
+    end
+
+    -- Скрываем тело игрока
     for _, p in ipairs(originalCharacter:GetDescendants()) do
         if p:IsA("BasePart") then
             p.LocalTransparencyModifier = 1
@@ -148,14 +180,26 @@ local function applyMorph()
     if Footsteps then Footsteps:Play() end
     if PlaySound then PlaySound:Play() end
 
+    -- ============================================================
+    -- ENFORCE LOOP — двигаем морф вручную через CFrame
+    -- ============================================================
     enforceLoop = RunService.RenderStepped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        if morph and morph.Parent then morph:PivotTo(hrp.CFrame) end
+        if morph and morph.Parent and morphPrimary and morphPrimary.Parent then
+            local baseCFrame = hrp.CFrame
+            morphPrimary.CFrame = baseCFrame
+            for _, p in ipairs(morphParts) do
+                if p and p.Parent and p ~= morphPrimary then
+                    p.CFrame = baseCFrame * savedOffsets[p]
+                end
+            end
+        end
 
+        -- Скрываем тело игрока каждый кадр
         for _, p in ipairs(char:GetDescendants()) do
             if p:IsA("BasePart") then p.LocalTransparencyModifier = 1
             elseif p:IsA("Decal") or p:IsA("Texture") then p.Transparency = 1 end
@@ -166,6 +210,7 @@ local function applyMorph()
             end
         end
 
+        -- Камера от 3-го лица
         if camera then
             local headPos = hrp.Position + Vector3.new(0, 1.5, 0)
             local lv = camera.CFrame.LookVector
@@ -175,6 +220,7 @@ local function applyMorph()
         end
     end)
 
+    -- R — звуки
     inputConnection = UserInputService.InputBegan:Connect(function(input, gp)
         if gp then return end
         if input.KeyCode == Enum.KeyCode.R then
@@ -188,7 +234,7 @@ local function applyMorph()
     end)
 
     morphActive = true
-    print("[Ambush] ✅ Морф активен на " .. MORPH_DURATION .. " сек")
+    print("[Ambush] ✅ Морф активен " .. MORPH_DURATION .. " сек")
 
     morphTimer = task.delay(MORPH_DURATION, cleanupMorph)
 end
