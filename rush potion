@@ -1,24 +1,33 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH
+-- VIRIDIS BOTTLE → RUSH MORPH (третье лицо, без эффектов)
 -- Бутылка: 140419135012621
 -- Rush:    100327482330650
+-- L — toggle камеры, R — toggle звуков, T — крик
 -- ============================================================
 
-local TweenService_upvr = game:GetService("TweenService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 print("[Potion] === Скрипт загружается ===")
 
-local MainUI_upvr = nil
-if not LocalPlayer.PlayerGui:FindFirstChild("MainUI") then
-    repeat wait() until LocalPlayer.PlayerGui:FindFirstChild("MainUI")
+-- ============================================================
+-- НАСТРОЙКИ КАМЕРЫ
+-- ============================================================
+local isThirdPerson = true
+local thirdPersonDistance = 12
+local thirdPersonHeightOffset = 2
+
+local function resetCamera()
+    local camera = workspace.CurrentCamera
+    if camera then
+        camera.CameraType = Enum.CameraType.Custom
+    end
 end
-MainUI_upvr = LocalPlayer.PlayerGui.MainUI
 
 -- ============================================================
--- БУТЫЛКА: ID 140419135012621
+-- ЗАГРУЗКА БУТЫЛКИ: 140419135012621
 -- ============================================================
 local toolNew = nil
 if game.GameId == 6627207668 then
@@ -29,36 +38,14 @@ else
         return game:GetObjects("rbxassetid://140419135012621")
     end)
     if not ok or not objs or not objs[1] then
-        warn("[Potion] ❌ Не удалось загрузить бутылку 140419135012621")
-        print("[Potion] ok =", ok, "| count =", objs and #objs or "nil")
+        warn("[Potion] ❌ Не удалось загрузить бутылку")
         return
     end
     toolNew = objs[1]
     print("[Potion] ✅ Бутылка загружена:", toolNew.Name)
 end
 
--- ============================================================
--- ЭФФЕКТ (безопасно)
--- ============================================================
-local newCloneEffect
-do
-    local hb = MainUI_upvr.MainFrame
-                   and MainUI_upvr.MainFrame:FindFirstChild("Healthbar")
-    local eff = hb and hb:FindFirstChild("Effects")
-    local herb = eff and eff:FindFirstChild("HerbGreenEffect")
-    if herb then
-        newCloneEffect = herb:Clone()
-        newCloneEffect.Name = "GuidingLightPotion"
-        newCloneEffect.Visible = false
-        newCloneEffect.Parent = eff
-    else
-        warn("[Potion] HerbGreenEffect не найден — эффект отключён")
-    end
-end
-
 local drinked = false
-local CollisionLoopRunning = true
-local ended = false
 
 -- ============================================================
 -- АНИМАЦИИ ПИТЬЯ (безопасно)
@@ -74,7 +61,6 @@ local ohhmydayz, ohhmydayz2, ohhmydayz3
 do
     local bals = toolNew:FindFirstChild("bals")
     local anims = toolNew:FindFirstChild("Animations")
-
     if bals then
         if bals:FindFirstChild("idle") then
             ohhmydayz = hum0:LoadAnimation(bals.idle)
@@ -83,27 +69,21 @@ do
             ohhmydayz2 = hum0:LoadAnimation(bals.open)
         end
     end
-
     if anims and anims:FindFirstChild("open") then
         ohhmydayz3 = hum0:LoadAnimation(anims.open)
     end
-
-    print("[Potion] Анимации: idle =", ohhmydayz ~= nil, "| open =", ohhmydayz2 ~= nil, "| anims.open =", ohhmydayz3 ~= nil)
 end
 
 -- ============================================================
--- RUSH MORPH FUNCTION (из рабочего rush morph.txt)
+-- RUSH MORPH + КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
 -- ============================================================
 local function transformIntoRush()
     print("[Rush] === transformIntoRush() ===")
     _G.TransformedIntoAnyMorph = false
 
-    print("[Rush] Загружаю модель: 100327482330650")
     local ok, objs = pcall(function()
         return game:GetObjects("rbxassetid://100327482330650")
     end)
-
-    print("[Rush] ok =", ok, "| count =", objs and #objs or "nil")
 
     if not ok or not objs or not objs[1] then
         warn("[Rush] ❌ Модель Rush не загрузилась")
@@ -118,11 +98,11 @@ local function transformIntoRush()
 
     local Main = figureNew:FindFirstChild("Main")
     if not Main then
-        warn("[Rush] Нет Main в модели Rush")
+        warn("[Rush] Нет Main")
         return
     end
 
-    -- Звуки
+    -- Звуки (копируем)
     local Sounds = Main:FindFirstChild("Sounds")
     if Sounds then
         local soundFolder = testingPlace and Sounds:FindFirstChild("test game")
@@ -135,7 +115,7 @@ local function transformIntoRush()
         Sounds:Destroy()
     end
 
-    -- Анимация
+    -- Анимация бега
     local RunAnim
     local animator = figureNew:FindFirstChild("AnimationController")
                      and figureNew.AnimationController:FindFirstChild("Animator")
@@ -154,7 +134,7 @@ local function transformIntoRush()
     if Footsteps then Footsteps:Play() end
     if PlaySound then PlaySound:Play() end
 
-    -- Скорость
+    -- Скорость шагов
     spawn(function()
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hum = char:WaitForChild("Humanoid")
@@ -173,18 +153,23 @@ local function transformIntoRush()
         end)
     end)
 
-    -- Слежка + скрытие тела
+    -- ============================================================
+    -- СЛЕЖКА + СКРЫТИЕ + КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
+    -- ============================================================
     spawn(function()
-        game:GetService("RunService").RenderStepped:Connect(function()
+        RunService.RenderStepped:Connect(function()
             local char = LocalPlayer.Character
             if not char then return end
+
             if char:FindFirstChild("Head") then
                 char.Head.Transparency = 1
             end
+
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 pcall(function() figureNew:PivotTo(hrp.CFrame) end)
             end
+
             for _, v in pairs(char:GetChildren()) do
                 if v:IsA("BasePart") then
                     v.LocalTransparencyModifier = 1
@@ -195,6 +180,29 @@ local function transformIntoRush()
                     end
                 elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
                     v.Handle.Transparency = 1
+                end
+            end
+
+            -- === КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
+            local camera = workspace.CurrentCamera
+            if camera and figureNew.Parent then
+                local morphHead = figureNew:FindFirstChild("Head", true)
+                if not morphHead then
+                    morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
+                end
+
+                if morphHead then
+                    if isThirdPerson then
+                        camera.CameraType = Enum.CameraType.Scriptable
+                        local lookVector = camera.CFrame.LookVector
+                        local upVector = camera.CFrame.UpVector
+                        local headPos = morphHead.Position
+                        local camPos = headPos - (lookVector * thirdPersonDistance)
+                                       + Vector3.new(0, thirdPersonHeightOffset, 0)
+                        camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+                    else
+                        camera.CameraType = Enum.CameraType.Custom
+                    end
                 end
             end
         end)
@@ -212,281 +220,21 @@ local function transformIntoRush()
         elseif key == "t" then
             local scream = Main:FindFirstChild("Scream")
             if scream then scream:Play() end
+        elseif key == "l" then
+            isThirdPerson = not isThirdPerson
+            if not isThirdPerson then resetCamera() end
         end
     end)
 
-    print("[Rush] ✅ Морф Rush активирован!")
+    print("[Rush] ✅ Морф Rush активирован! L — камера, R — звуки, T — крик")
 end
 
 -- ============================================================
--- ОСНОВНОЙ ЦИКЛ ЗЕЛЬЯ
+-- ЭФФЕКТ НА ЭКРАНЕ (только звук питья)
 -- ============================================================
-spawn(function()
-    while wait() do
-        if drinked == true and ended == false then
-            ended = true
-            if game.GameId == 6627207668 then
-                local newTool = script.flyTest:Clone()
-                newTool.Parent = LocalPlayer.Backpack
-                newTool.Enabled = true
-            else
-                if getgenv().ViridislightRunning then
-                    return
-                end
-                getgenv().ViridislightRunning = true
-
-                -- === ПРЕВРАЩЕНИЕ В RUSH ===
-                spawn(function()
-                    task.wait(1.5)
-                    transformIntoRush()
-                end)
-                -- ==========================
-
-                local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                local Humanoid = Character:WaitForChild("Humanoid")
-                local RootPart = Character:WaitForChild("HumanoidRootPart")
-
-                local potionLight = Instance.new("PointLight")
-                potionLight.Name = "ViridisLight"
-                potionLight.Color = Color3.fromRGB(0,255,0)
-                potionLight.Brightness = 2
-                potionLight.Range = 0
-                potionLight.Shadows = false
-                potionLight.Parent = RootPart
-
-                TweenService:Create(
-                    potionLight,
-                    TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { Range = 45 }
-                ):Play()
-
-                local Collision = Character:FindFirstChild("CollisionPart")
-                if not Collision then
-                    for _, part in pairs(Character:GetChildren()) do
-                        if part:IsA("BasePart") and part.Name:lower():find("collision") then
-                            Collision = part
-                            break
-                        end
-                    end
-                end
-                if not Collision then Collision = RootPart end
-
-                local CollisionClone = Collision:Clone()
-                CollisionClone.CanCollide = false
-                CollisionClone.Massless = true
-                CollisionClone.CanQuery = false
-                CollisionClone.Name = "CollisionClone"
-                if CollisionClone:FindFirstChild("CollisionCrouch") then
-                    CollisionClone.CollisionCrouch:Destroy()
-                end
-                CollisionClone.Parent = Character
-
-                task.spawn(function()
-                    while Character.Parent and CollisionLoopRunning do
-                        if RootPart.Anchored then
-                            CollisionClone.Massless = true
-                            repeat task.wait() until not RootPart.Anchored or not CollisionLoopRunning
-                            if not CollisionLoopRunning then break end
-                            task.wait(0.15)
-                        else
-                            CollisionClone.Massless = not CollisionClone.Massless
-                        end
-                        task.wait(0.24)
-                    end
-                end)
-
-                local viridis = Instance.new("Sound", workspace)
-                viridis.SoundId = "rbxassetid://140242540481244"
-                viridis.Volume = 1.2
-
-                local ambience = Instance.new("Sound", workspace)
-                ambience.SoundId = "rbxassetid://1841950508"
-                ambience.Volume = 1
-                ambience.Looped = true
-                ambience:Play()
-
-                local Workspace = game:GetService("Workspace")
-                local stopped = false
-                local activeHighlights = {}
-
-                local function process(inst)
-                    if stopped then return end
-                    if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
-                        if not inst:FindFirstChildOfClass("Highlight") then
-                            local h = Instance.new("Highlight")
-                            h.FillColor = Color3.fromRGB(120, 255, 160)
-                            h.OutlineColor = Color3.fromRGB(80, 255, 120)
-                            h.FillTransparency = 0.4
-                            h.OutlineTransparency = 0
-                            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            h.Parent = inst
-                            table.insert(activeHighlights, h)
-                        end
-                    end
-                end
-
-                local function scanRooms()
-                    if stopped then return end
-                    local rooms = Workspace:FindFirstChild("CurrentRooms")
-                    if not rooms then return end
-                    for _, v in ipairs(rooms:GetDescendants()) do
-                        process(v)
-                    end
-                end
-
-                scanRooms()
-
-                local conn
-                conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
-                    if stopped then return end
-                    task.wait()
-                    process(v)
-                end)
-
-                local function stopHighlights()
-                    stopped = true
-                    if conn then conn:Disconnect() end
-                    for _, h in ipairs(activeHighlights) do
-                        if h and h.Parent then h:Destroy() end
-                    end
-                    activeHighlights = {}
-                end
-
-                local RunService = game:GetService("RunService")
-                local player = game.Players.LocalPlayer
-                local humanoid2 = player.Character or player.CharacterAdded:Wait()
-                humanoid2 = humanoid2:WaitForChild("Humanoid")
-                local stopped2 = false
-                local function startRegen()
-                    task.spawn(function()
-                        while not stopped2 do
-                            task.wait(0.5)
-                            if humanoid2 and humanoid2.Parent and humanoid2.Health > 0 then
-                                humanoid2.Health = math.min(humanoid2.Health + 1, humanoid2.MaxHealth)
-                            end
-                        end
-                    end)
-                end
-                startRegen()
-
-                local originalWalkSpeed = humanoid2.WalkSpeed
-                local speedConn = RunService.Heartbeat:Connect(function()
-                    if humanoid2 and humanoid2.Parent and humanoid2.WalkSpeed ~= 17 then
-                        humanoid2.WalkSpeed = 17
-                    end
-                end)
-
-                local gui = Instance.new("ScreenGui")
-                gui.IgnoreGuiInset = true
-                gui.ResetOnSpawn = false
-                gui.Parent = player:WaitForChild("PlayerGui")
-
-                local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(0, 200, 0, 40)
-                label.Position = UDim2.new(0.5, -100, 0, 10)
-                label.BackgroundTransparency = 1
-                label.TextColor3 = Color3.fromRGB(170, 255, 180)
-                label.TextStrokeTransparency = 0.6
-                label.Font = Enum.Font.Gotham
-                label.TextSize = 20
-                label.Text = "1:00"
-                label.Parent = gui
-
-                local timeLeft = 30
-                local function formatTime(t)
-                    local m = math.floor(t / 60)
-                    local s = t % 60
-                    return string.format("%d:%02d", m, s)
-                end
-
-                local function restore()
-                    getgenv().ViridislightRunning = false
-                    if potionLight and potionLight.Parent then
-                        local lightTween = TweenService:Create(
-                            potionLight,
-                            TweenInfo.new(2),
-                            { Range = 0 }
-                        )
-                        lightTween:Play()
-                        lightTween.Completed:Connect(function()
-                            if potionLight then potionLight:Destroy() end
-                        end)
-                    end
-                    if newCloneEffect then newCloneEffect.Visible = false end
-                    if speedConn then speedConn:Disconnect() end
-
-                    local tween = TweenService:Create(humanoid2, TweenInfo.new(2), {
-                        WalkSpeed = originalWalkSpeed
-                    })
-                    tween:Play()
-
-                    task.delay(2, function()
-                        if gui then gui:Destroy() end
-                    end)
-                end
-
-                viridis:Play()
-                viridis.Ended:Connect(function()
-                    viridis:Destroy()
-                end)
-
-                task.spawn(function()
-                    while timeLeft >= 0 do
-                        label.Text = formatTime(timeLeft)
-                        if timeLeft == 0 then
-                            stopped2 = true
-                            stopHighlights()
-                            restore()
-                            ambience:Destroy()
-                            CollisionLoopRunning = false
-                            if CollisionClone then CollisionClone:Destroy() end
-                            break
-                        end
-                        timeLeft -= 1
-                        task.wait(1)
-                    end
-                end)
-            end
-        end
-    end
-end)
-
--- ============================================================
--- ЭФФЕКТ НА ЭКРАНЕ
--- ============================================================
-local function EffectOnScreen()
-    drinkSoundPlay()
-    if newCloneEffect then newCloneEffect.Visible = true end
-
-    spawn(function()
-        local whiteVig = MainUI_upvr.MainFrame:FindFirstChild("WhiteVignette")
-        if not whiteVig then return end
-        local clone = whiteVig:Clone()
-        local clone_2 = clone:Clone()
-        clone_2.Name = clone_2.Name .. "Live"
-        clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
-        clone_2.ImageTransparency = 1
-        clone_2.Parent = MainUI_upvr.MainFrame
-        clone_2.Visible = true
-        TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            ImageTransparency = 0;
-        }):Play()
-        wait(5)
-        TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-            Size = UDim2.new(1.5, 0, 1.5, 0);
-        }):Play()
-        wait(0.5)
-        TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
-            ImageTransparency = 1;
-        }):Play()
-        wait(4.5)
-        clone_2:Destroy()
-    end)
-end
-
 function drinkSoundPlay()
-    local newSound = nil
-    if not workspace:FindFirstChild("DrinkPotionAddonSound") then
+    local newSound = workspace:FindFirstChild("DrinkPotionAddonSound")
+    if not newSound then
         newSound = Instance.new("Sound", workspace)
         newSound.Name = "DrinkPotionAddonSound"
         if game.GameId == 6627207668 then
@@ -494,8 +242,6 @@ function drinkSoundPlay()
         else
             newSound.SoundId = "rbxassetid://18869124055"
         end
-    else
-        newSound = workspace:WaitForChild("DrinkPotionAddonSound")
     end
     newSound:Play()
 end
@@ -525,8 +271,10 @@ toolNew.Activated:Connect(function()
     print("[Potion] Activated! drinked =", drinked)
     if drinked == false then
         drinked = true
-        EffectOnScreen()
 
+        drinkSoundPlay()
+
+        -- Анимация питья
         if game.GameId == 6627207668 and ohhmydayz2 then
             ohhmydayz2:Play()
             ohhmydayz2.Ended:Wait()
@@ -534,7 +282,12 @@ toolNew.Activated:Connect(function()
             ohhmydayz3:Play()
             ohhmydayz3.Ended:Wait()
         end
+
         toolNew:Destroy()
+
+        -- Превращение в Rush
+        task.wait(0.5)
+        transformIntoRush()
     end
 end)
 
