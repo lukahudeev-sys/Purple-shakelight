@@ -1,10 +1,12 @@
 --// ============================================================
---// ЛОББИ-ЗВУК (CourtSound)
---// Создаёт невидимую точку в центре лобби (комната 0)
---// и проигрывает музыку с привязкой к ней
+--// ЛОББИ-ЗВУК (CourtSound) — с новым треком
+--// Трек: nico's nextbots OST (Menu Halloween in-game version)
 --// ============================================================
 
 local Workspace = game:GetService("Workspace")
+
+--// ---------- НОВЫЙ URL ЗВУКА ----------
+local SOUND_URL = "https://github.com/lukahudeev-sys/Purple-shakelight/raw/refs/heads/main/nico_s-nextbots-ost-menu-_halloween-in-game-version_.mp3"
 
 --// ---------- Функция загрузки звука с GitHub ----------
 local function GetGitSound(GithubSnd)
@@ -43,7 +45,7 @@ part.CFrame = cf
 part.Parent = Workspace
 
 --// ---------- Создаём и запускаем звук ----------
-local sound = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/nico_s-nextbots-ost-menu-_halloween-in-game-version_.mp3")
+local sound = GetGitSound(SOUND_URL)
 sound.Name = "CourtSound"
 sound.Volume = 1.5
 sound.RollOffMaxDistance = 55   -- слышно в радиусе 55 стадов
