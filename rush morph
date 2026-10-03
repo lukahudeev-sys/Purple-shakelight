@@ -1,0 +1,95 @@
+local function transformIntoRush()
+    if _G.TransformedIntoAnyMorph == true then return end
+    _G.TransformedIntoAnyMorph = true
+
+    local figureNew = game:GetObjects("rbxassetid://100327482330650")[1]
+    local testingPlace = (game.GameId == 6627207668)
+
+    figureNew.Parent = workspace
+
+    -- Копируем звуки под игру
+    local soundFolder = testingPlace and figureNew.Main.Sounds["test game"]
+                                        or figureNew.Main.Sounds["DOORS"]
+    for _, Sounds in pairs(soundFolder:GetChildren()) do
+        Sounds:Clone().Parent = figureNew.Main
+    end
+    figureNew.Main.Sounds:Destroy()
+
+    -- Загружаем анимацию бега (если есть Anim внутри Rush)
+    local RunAnim
+    if figureNew:FindFirstChild("Animations") then
+        RunAnim = figureNew.AnimationController.Animator:LoadAnimation(
+            testingPlace and figureNew.AnimationsTest.run or figureNew.Animations.run
+        )
+        RunAnim:Play()
+        RunAnim:AdjustSpeed(0)
+    end
+
+    -- Базовые звуки
+    figureNew.Main.Footsteps:Play()
+    figureNew.Main.PlaySound:Play()
+
+    -- Привязка скорости шагов к скорости игрока
+    spawn(function()
+        game.Players.LocalPlayer.Character.Humanoid.Running:Connect(function(speed)
+            if RunAnim then
+                if speed >= 20 then
+                    RunAnim:AdjustSpeed(1.5)
+                elseif speed >= 5 then
+                    RunAnim:AdjustSpeed(1)
+                else
+                    RunAnim:AdjustSpeed(0)
+                end
+            end
+            -- Ускорение шагов
+            if figureNew.Main.Footsteps.IsPlaying then
+                figureNew.Main.Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+            end
+            if figureNew.Main.PlaySound.IsPlaying then
+                figureNew.Main.PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+            end
+        end)
+    end)
+
+    -- Слежка за игроком + невидимость тела
+    spawn(function()
+        game:GetService("RunService").RenderStepped:Connect(function()
+            local char = game.Players.LocalPlayer.Character
+            if not char then return end
+            if char:FindFirstChild("Head") then
+                char.Head.Transparency = 1
+            end
+            figureNew:PivotTo(char:WaitForChild("HumanoidRootPart").CFrame)
+            for _, v in pairs(char:GetChildren()) do
+                if v:IsA("BasePart") then
+                    v.LocalTransparencyModifier = 1
+                    for _, d in pairs(v:GetDescendants()) do
+                        if d:IsA("Decal") or d:IsA("Texture") then
+                            d.Transparency = 1
+                        end
+                    end
+                elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
+                    v.Handle.Transparency = 1
+                end
+            end
+        end)
+    end)
+
+    -- Управление: R — toggle звуков, T — "крик" Rush
+    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+        if key == "r" then
+            if figureNew.Main.Footsteps.IsPlaying then
+                figureNew.Main.Footsteps:Stop()
+                figureNew.Main.PlaySound:Stop()
+            else
+                figureNew.Main.Footsteps:Play()
+                figureNew.Main.PlaySound:Play()
+            end
+        elseif key == "t" then
+            -- Если есть звук Scream — играем
+            if figureNew.Main:FindFirstChild("Scream") then
+                figureNew.Main.Scream:Play()
+            end
+        end
+    end)
+end
