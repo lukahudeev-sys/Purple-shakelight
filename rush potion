@@ -1,112 +1,190 @@
 -- ============================================================
 -- VIRIDIS BOTTLE → RUSH MORPH
 -- Бутылка: 140419135012621
--- Rush:    100327482330650 (из рабочего rush morph.txt)
+-- Rush:    100327482330650
 -- ============================================================
 
 local TweenService_upvr = game:GetService("TweenService")
 local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+print("[Potion] === Скрипт загружается ===")
+
 local MainUI_upvr = nil
-if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
-MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
+if not LocalPlayer.PlayerGui:FindFirstChild("MainUI") then
+    repeat wait() until LocalPlayer.PlayerGui:FindFirstChild("MainUI")
+end
+MainUI_upvr = LocalPlayer.PlayerGui.MainUI
 
 -- ============================================================
 -- БУТЫЛКА: ID 140419135012621
 -- ============================================================
 local toolNew = nil
 if game.GameId == 6627207668 then
-	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+    toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://140419135012621")[1]
+    print("[Potion] Загружаю бутылку: 140419135012621")
+    local ok, objs = pcall(function()
+        return game:GetObjects("rbxassetid://140419135012621")
+    end)
+    if not ok or not objs or not objs[1] then
+        warn("[Potion] ❌ Не удалось загрузить бутылку 140419135012621")
+        print("[Potion] ok =", ok, "| count =", objs and #objs or "nil")
+        return
+    end
+    toolNew = objs[1]
+    print("[Potion] ✅ Бутылка загружена:", toolNew.Name)
 end
 
-local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+-- ============================================================
+-- ЭФФЕКТ (безопасно)
+-- ============================================================
+local newCloneEffect
+do
+    local hb = MainUI_upvr.MainFrame
+                   and MainUI_upvr.MainFrame:FindFirstChild("Healthbar")
+    local eff = hb and hb:FindFirstChild("Effects")
+    local herb = eff and eff:FindFirstChild("HerbGreenEffect")
+    if herb then
+        newCloneEffect = herb:Clone()
+        newCloneEffect.Name = "GuidingLightPotion"
+        newCloneEffect.Visible = false
+        newCloneEffect.Parent = eff
+    else
+        warn("[Potion] HerbGreenEffect не найден — эффект отключён")
+    end
+end
+
 local drinked = false
 local CollisionLoopRunning = true
 local ended = false
-newCloneEffect.Name = "GuidingLightPotion"
-newCloneEffect.Visible = false
-newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
-
-local ohhmydayz = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
-local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
-local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
 
 -- ============================================================
--- RUSH MORPH FUNCTION (из твоего рабочего rush morph.txt)
+-- АНИМАЦИИ ПИТЬЯ (безопасно)
+-- ============================================================
+local hum0 = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if not hum0 then
+    LocalPlayer.CharacterAdded:Wait()
+    hum0 = LocalPlayer.Character:WaitForChild("Humanoid")
+end
+
+local ohhmydayz, ohhmydayz2, ohhmydayz3
+
+do
+    local bals = toolNew:FindFirstChild("bals")
+    local anims = toolNew:FindFirstChild("Animations")
+
+    if bals then
+        if bals:FindFirstChild("idle") then
+            ohhmydayz = hum0:LoadAnimation(bals.idle)
+        end
+        if bals:FindFirstChild("open") then
+            ohhmydayz2 = hum0:LoadAnimation(bals.open)
+        end
+    end
+
+    if anims and anims:FindFirstChild("open") then
+        ohhmydayz3 = hum0:LoadAnimation(anims.open)
+    end
+
+    print("[Potion] Анимации: idle =", ohhmydayz ~= nil, "| open =", ohhmydayz2 ~= nil, "| anims.open =", ohhmydayz3 ~= nil)
+end
+
+-- ============================================================
+-- RUSH MORPH FUNCTION (из рабочего rush morph.txt)
 -- ============================================================
 local function transformIntoRush()
-    -- Сбрасываем флаг чтобы можно было вызвать морф
+    print("[Rush] === transformIntoRush() ===")
     _G.TransformedIntoAnyMorph = false
 
-    local figureNew = game:GetObjects("rbxassetid://100327482330650")[1]
-    if not figureNew then
-        warn("[Rush] Модель Rush не загрузилась")
+    print("[Rush] Загружаю модель: 100327482330650")
+    local ok, objs = pcall(function()
+        return game:GetObjects("rbxassetid://100327482330650")
+    end)
+
+    print("[Rush] ok =", ok, "| count =", objs and #objs or "nil")
+
+    if not ok or not objs or not objs[1] then
+        warn("[Rush] ❌ Модель Rush не загрузилась")
         return
     end
 
-    local testingPlace = (game.GameId == 6627207668)
+    local figureNew = objs[1]
+    print("[Rush] ✅ Модель:", figureNew.Name)
 
+    local testingPlace = (game.GameId == 6627207668)
     figureNew.Parent = workspace
 
-    -- Копируем звуки под игру
     local Main = figureNew:FindFirstChild("Main")
     if not Main then
         warn("[Rush] Нет Main в модели Rush")
         return
     end
 
-    local soundFolder = testingPlace and Main.Sounds["test game"]
-                                        or Main.Sounds["DOORS"]
-    for _, Sounds in pairs(soundFolder:GetChildren()) do
-        Sounds:Clone().Parent = Main
+    -- Звуки
+    local Sounds = Main:FindFirstChild("Sounds")
+    if Sounds then
+        local soundFolder = testingPlace and Sounds:FindFirstChild("test game")
+                                            or Sounds:FindFirstChild("DOORS")
+        if soundFolder then
+            for _, s in pairs(soundFolder:GetChildren()) do
+                s:Clone().Parent = Main
+            end
+        end
+        Sounds:Destroy()
     end
-    Main.Sounds:Destroy()
 
-    -- Загружаем анимацию бега
+    -- Анимация
     local RunAnim
-    if figureNew:FindFirstChild("Animations") then
-        RunAnim = figureNew.AnimationController.Animator:LoadAnimation(
-            testingPlace and figureNew.AnimationsTest.run or figureNew.Animations.run
-        )
-        RunAnim:Play()
-        RunAnim:AdjustSpeed(0)
+    local animator = figureNew:FindFirstChild("AnimationController")
+                     and figureNew.AnimationController:FindFirstChild("Animator")
+    if animator then
+        local animsFolder = figureNew:FindFirstChild(testingPlace and "AnimationsTest" or "Animations")
+        local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
+        if runAnimObj then
+            RunAnim = animator:LoadAnimation(runAnimObj)
+            RunAnim:Play()
+            RunAnim:AdjustSpeed(0)
+        end
     end
 
-    -- Базовые звуки
-    Main.Footsteps:Play()
-    Main.PlaySound:Play()
+    local Footsteps = Main:FindFirstChild("Footsteps")
+    local PlaySound = Main:FindFirstChild("PlaySound")
+    if Footsteps then Footsteps:Play() end
+    if PlaySound then PlaySound:Play() end
 
-    -- Привязка скорости шагов к скорости игрока
+    -- Скорость
     spawn(function()
-        game.Players.LocalPlayer.Character.Humanoid.Running:Connect(function(speed)
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hum = char:WaitForChild("Humanoid")
+        hum.Running:Connect(function(speed)
             if RunAnim then
-                if speed >= 20 then
-                    RunAnim:AdjustSpeed(1.5)
-                elseif speed >= 5 then
-                    RunAnim:AdjustSpeed(1)
-                else
-                    RunAnim:AdjustSpeed(0)
-                end
+                if speed >= 20 then RunAnim:AdjustSpeed(1.5)
+                elseif speed >= 5 then RunAnim:AdjustSpeed(1)
+                else RunAnim:AdjustSpeed(0) end
             end
-            if Main.Footsteps.IsPlaying then
-                Main.Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+            if Footsteps and Footsteps.IsPlaying then
+                Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
             end
-            if Main.PlaySound.IsPlaying then
-                Main.PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+            if PlaySound and PlaySound.IsPlaying then
+                PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
             end
         end)
     end)
 
-    -- Слежка за игроком + невидимость тела
+    -- Слежка + скрытие тела
     spawn(function()
         game:GetService("RunService").RenderStepped:Connect(function()
-            local char = game.Players.LocalPlayer.Character
+            local char = LocalPlayer.Character
             if not char then return end
             if char:FindFirstChild("Head") then
                 char.Head.Transparency = 1
             end
-            figureNew:PivotTo(char:WaitForChild("HumanoidRootPart").CFrame)
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function() figureNew:PivotTo(hrp.CFrame) end)
+            end
             for _, v in pairs(char:GetChildren()) do
                 if v:IsA("BasePart") then
                     v.LocalTransparencyModifier = 1
@@ -122,20 +200,18 @@ local function transformIntoRush()
         end)
     end)
 
-    -- Управление: R — toggle звуков, T — крик
-    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+    -- Управление
+    LocalPlayer:GetMouse().KeyDown:Connect(function(key)
         if key == "r" then
-            if Main.Footsteps.IsPlaying then
-                Main.Footsteps:Stop()
-                Main.PlaySound:Stop()
-            else
-                Main.Footsteps:Play()
-                Main.PlaySound:Play()
+            if Footsteps then
+                if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+            end
+            if PlaySound then
+                if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
             end
         elseif key == "t" then
-            if Main:FindFirstChild("Scream") then
-                Main.Scream:Play()
-            end
+            local scream = Main:FindFirstChild("Scream")
+            if scream then scream:Play() end
         end
     end)
 
@@ -143,410 +219,323 @@ local function transformIntoRush()
 end
 
 -- ============================================================
--- ОСНОВНОЙ ЦИКЛ ЗЕЛЬЯ (эффекты + превращение в Rush)
+-- ОСНОВНОЙ ЦИКЛ ЗЕЛЬЯ
 -- ============================================================
 spawn(function()
-	while wait() do
-		if drinked == true and ended == false then
-				ended = true
-				if game.GameId == 6627207668 then
-					local newTool = script.flyTest:Clone()
-					newTool.Parent = game.Players.LocalPlayer.Backpack
-					newTool.Enabled = true
-				else
-				
-				if getgenv().ViridislightRunning then
-	return
-end
-getgenv().ViridislightRunning = true
+    while wait() do
+        if drinked == true and ended == false then
+            ended = true
+            if game.GameId == 6627207668 then
+                local newTool = script.flyTest:Clone()
+                newTool.Parent = LocalPlayer.Backpack
+                newTool.Enabled = true
+            else
+                if getgenv().ViridislightRunning then
+                    return
+                end
+                getgenv().ViridislightRunning = true
 
--- === ПРЕВРАЩЕНИЕ В RUSH ===
-spawn(function()
-    task.wait(1.5)
-    transformIntoRush()
-end)
--- ==========================
+                -- === ПРЕВРАЩЕНИЕ В RUSH ===
+                spawn(function()
+                    task.wait(1.5)
+                    transformIntoRush()
+                end)
+                -- ==========================
 
-				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
+                local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local Humanoid = Character:WaitForChild("Humanoid")
+                local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-local potionLight = Instance.new("PointLight")
-potionLight.Name = "ViridisLight"
-potionLight.Color = Color3.fromRGB(0,255,0)
-potionLight.Brightness = 2
-potionLight.Range = 0
-potionLight.Shadows = false
-potionLight.Parent = RootPart
+                local potionLight = Instance.new("PointLight")
+                potionLight.Name = "ViridisLight"
+                potionLight.Color = Color3.fromRGB(0,255,0)
+                potionLight.Brightness = 2
+                potionLight.Range = 0
+                potionLight.Shadows = false
+                potionLight.Parent = RootPart
 
-TweenService:Create(
-	potionLight,
-	TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-	{
-		Range = 45
-	}
-):Play()
+                TweenService:Create(
+                    potionLight,
+                    TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { Range = 45 }
+                ):Play()
 
-local Camera = workspace.CurrentCamera
-local Collision
+                local Collision = Character:FindFirstChild("CollisionPart")
+                if not Collision then
+                    for _, part in pairs(Character:GetChildren()) do
+                        if part:IsA("BasePart") and part.Name:lower():find("collision") then
+                            Collision = part
+                            break
+                        end
+                    end
+                end
+                if not Collision then Collision = RootPart end
 
-Collision = Character:FindFirstChild("CollisionPart")
-    if not Collision then
-        for _, part in pairs(Character:GetChildren()) do
-            if part:IsA("BasePart") and part.Name:lower():find("collision") then
-                Collision = part
-                break
+                local CollisionClone = Collision:Clone()
+                CollisionClone.CanCollide = false
+                CollisionClone.Massless = true
+                CollisionClone.CanQuery = false
+                CollisionClone.Name = "CollisionClone"
+                if CollisionClone:FindFirstChild("CollisionCrouch") then
+                    CollisionClone.CollisionCrouch:Destroy()
+                end
+                CollisionClone.Parent = Character
+
+                task.spawn(function()
+                    while Character.Parent and CollisionLoopRunning do
+                        if RootPart.Anchored then
+                            CollisionClone.Massless = true
+                            repeat task.wait() until not RootPart.Anchored or not CollisionLoopRunning
+                            if not CollisionLoopRunning then break end
+                            task.wait(0.15)
+                        else
+                            CollisionClone.Massless = not CollisionClone.Massless
+                        end
+                        task.wait(0.24)
+                    end
+                end)
+
+                local viridis = Instance.new("Sound", workspace)
+                viridis.SoundId = "rbxassetid://140242540481244"
+                viridis.Volume = 1.2
+
+                local ambience = Instance.new("Sound", workspace)
+                ambience.SoundId = "rbxassetid://1841950508"
+                ambience.Volume = 1
+                ambience.Looped = true
+                ambience:Play()
+
+                local Workspace = game:GetService("Workspace")
+                local stopped = false
+                local activeHighlights = {}
+
+                local function process(inst)
+                    if stopped then return end
+                    if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
+                        if not inst:FindFirstChildOfClass("Highlight") then
+                            local h = Instance.new("Highlight")
+                            h.FillColor = Color3.fromRGB(120, 255, 160)
+                            h.OutlineColor = Color3.fromRGB(80, 255, 120)
+                            h.FillTransparency = 0.4
+                            h.OutlineTransparency = 0
+                            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            h.Parent = inst
+                            table.insert(activeHighlights, h)
+                        end
+                    end
+                end
+
+                local function scanRooms()
+                    if stopped then return end
+                    local rooms = Workspace:FindFirstChild("CurrentRooms")
+                    if not rooms then return end
+                    for _, v in ipairs(rooms:GetDescendants()) do
+                        process(v)
+                    end
+                end
+
+                scanRooms()
+
+                local conn
+                conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
+                    if stopped then return end
+                    task.wait()
+                    process(v)
+                end)
+
+                local function stopHighlights()
+                    stopped = true
+                    if conn then conn:Disconnect() end
+                    for _, h in ipairs(activeHighlights) do
+                        if h and h.Parent then h:Destroy() end
+                    end
+                    activeHighlights = {}
+                end
+
+                local RunService = game:GetService("RunService")
+                local player = game.Players.LocalPlayer
+                local humanoid2 = player.Character or player.CharacterAdded:Wait()
+                humanoid2 = humanoid2:WaitForChild("Humanoid")
+                local stopped2 = false
+                local function startRegen()
+                    task.spawn(function()
+                        while not stopped2 do
+                            task.wait(0.5)
+                            if humanoid2 and humanoid2.Parent and humanoid2.Health > 0 then
+                                humanoid2.Health = math.min(humanoid2.Health + 1, humanoid2.MaxHealth)
+                            end
+                        end
+                    end)
+                end
+                startRegen()
+
+                local originalWalkSpeed = humanoid2.WalkSpeed
+                local speedConn = RunService.Heartbeat:Connect(function()
+                    if humanoid2 and humanoid2.Parent and humanoid2.WalkSpeed ~= 17 then
+                        humanoid2.WalkSpeed = 17
+                    end
+                end)
+
+                local gui = Instance.new("ScreenGui")
+                gui.IgnoreGuiInset = true
+                gui.ResetOnSpawn = false
+                gui.Parent = player:WaitForChild("PlayerGui")
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(0, 200, 0, 40)
+                label.Position = UDim2.new(0.5, -100, 0, 10)
+                label.BackgroundTransparency = 1
+                label.TextColor3 = Color3.fromRGB(170, 255, 180)
+                label.TextStrokeTransparency = 0.6
+                label.Font = Enum.Font.Gotham
+                label.TextSize = 20
+                label.Text = "1:00"
+                label.Parent = gui
+
+                local timeLeft = 30
+                local function formatTime(t)
+                    local m = math.floor(t / 60)
+                    local s = t % 60
+                    return string.format("%d:%02d", m, s)
+                end
+
+                local function restore()
+                    getgenv().ViridislightRunning = false
+                    if potionLight and potionLight.Parent then
+                        local lightTween = TweenService:Create(
+                            potionLight,
+                            TweenInfo.new(2),
+                            { Range = 0 }
+                        )
+                        lightTween:Play()
+                        lightTween.Completed:Connect(function()
+                            if potionLight then potionLight:Destroy() end
+                        end)
+                    end
+                    if newCloneEffect then newCloneEffect.Visible = false end
+                    if speedConn then speedConn:Disconnect() end
+
+                    local tween = TweenService:Create(humanoid2, TweenInfo.new(2), {
+                        WalkSpeed = originalWalkSpeed
+                    })
+                    tween:Play()
+
+                    task.delay(2, function()
+                        if gui then gui:Destroy() end
+                    end)
+                end
+
+                viridis:Play()
+                viridis.Ended:Connect(function()
+                    viridis:Destroy()
+                end)
+
+                task.spawn(function()
+                    while timeLeft >= 0 do
+                        label.Text = formatTime(timeLeft)
+                        if timeLeft == 0 then
+                            stopped2 = true
+                            stopHighlights()
+                            restore()
+                            ambience:Destroy()
+                            CollisionLoopRunning = false
+                            if CollisionClone then CollisionClone:Destroy() end
+                            break
+                        end
+                        timeLeft -= 1
+                        task.wait(1)
+                    end
+                end)
             end
         end
     end
-    
-    if not Collision then
-        Collision = RootPart
-    end
-    
-    local CollisionClone = Collision:Clone()
-    CollisionClone.CanCollide = false
-    CollisionClone.Massless = true
-    CollisionClone.CanQuery = false
-    CollisionClone.Name = "CollisionClone"
-    
-    if CollisionClone:FindFirstChild("CollisionCrouch") then
-        CollisionClone.CollisionCrouch:Destroy()
-    end
-    
-    CollisionClone.Parent = Character
-    
-    task.spawn(function()
-	while Character.Parent and CollisionLoopRunning do
-		if RootPart.Anchored then
-			CollisionClone.Massless = true
-			repeat
-				task.wait()
-			until not RootPart.Anchored or not CollisionLoopRunning
-
-			if not CollisionLoopRunning then
-				break
-			end
-
-			task.wait(0.15)
-		else
-			CollisionClone.Massless = not CollisionClone.Massless
-		end
-
-		task.wait(0.24)
-	end
-end)
-    
-    local viridis = Instance.new("Sound", workspace) 
-    viridis.SoundId = "rbxassetid://140242540481244" 
-    viridis.Volume = 1.2
-    
-    local ambience = Instance.new("Sound", workspace) 
-    ambience.SoundId = "rbxassetid://1841950508" 
-    ambience.Volume = 1
-    ambience.Looped = true
-    ambience:Play()
-    
-					local Workspace = game:GetService("Workspace")
-
-local stopped = false
-local activeHighlights = {}
-
-local function createHighlight(inst)
-	local h = Instance.new("Highlight")
-	h.FillColor = Color3.fromRGB(120, 255, 160)
-	h.OutlineColor = Color3.fromRGB(80, 255, 120)
-	h.FillTransparency = 0.4
-	h.OutlineTransparency = 0
-	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	h.Parent = inst
-
-	table.insert(activeHighlights, h)
-end
-
-local function process(inst)
-	if stopped then return end
-
-	if inst:IsA("Model") and inst.Name == "Door" then
-		if not inst:FindFirstChildOfClass("Highlight") then
-			local h = Instance.new("Highlight")
-			h.FillColor = Color3.fromRGB(120, 255, 160)
-			h.OutlineColor = Color3.fromRGB(80, 255, 120)
-			h.FillTransparency = 0.4
-			h.OutlineTransparency = 0
-			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-			h.Parent = inst
-
-			table.insert(activeHighlights, h)
-		end
-	end
-
-	if inst:IsA("Model") and inst.Name == "KeyObtain" then
-		if not inst:FindFirstChildOfClass("Highlight") then
-			local h = Instance.new("Highlight")
-			h.FillColor = Color3.fromRGB(120, 255, 160)
-			h.OutlineColor = Color3.fromRGB(80, 255, 120)
-			h.FillTransparency = 0.4
-			h.OutlineTransparency = 0
-			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-			h.Parent = inst
-
-			table.insert(activeHighlights, h)
-		end
-	end
-end
-
-local function scanRooms()
-	if stopped then return end
-
-	local rooms = Workspace:FindFirstChild("CurrentRooms")
-	if not rooms then return end
-
-	for _, v in ipairs(rooms:GetDescendants()) do
-		process(v)
-	end
-end
-
-scanRooms()
-
-local conn
-conn = Workspace.CurrentRooms.DescendantAdded:Connect(function(v)
-	if stopped then return end
-	task.wait()
-	process(v)
 end)
 
-local function stopHighlights()
-	stopped = true
-
-	if conn then
-		conn:Disconnect()
-	end
-
-	for _, h in ipairs(activeHighlights) do
-		if h and h.Parent then
-			h:Destroy()
-		end
-	end
-
-	activeHighlights = {}
-end
-
-local RunService = game:GetService("RunService")
-local player = game.Players.LocalPlayer
-
-local humanoid = player.Character or player.CharacterAdded:Wait()
-humanoid = humanoid:WaitForChild("Humanoid")
-
-local stopped = false
-local hpConn
-
-local function startRegen()
-	hpConn = task.spawn(function()
-		while not stopped do
-			task.wait(0.5)
-
-			if humanoid and humanoid.Parent and humanoid.Health > 0 then
-				humanoid.Health = math.min(humanoid.Health + 1, humanoid.MaxHealth)
-			end
-		end
-	end)
-end
-
-local function stopRegen()
-	stopped = true
-end
-
-startRegen()
-
-local Players = game:GetService("Players")
-local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local humanoid = char:WaitForChild("Humanoid")
-
-local originalWalkSpeed = humanoid.WalkSpeed
-
-local speedConn
-speedConn = RunService.Heartbeat:Connect(function()
-	if humanoid and humanoid.Parent then
-		if humanoid.WalkSpeed ~= 17 then
-			humanoid.WalkSpeed = 17
-		end
-	end
-end)
-
-local gui = Instance.new("ScreenGui")
-gui.IgnoreGuiInset = true
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local label = Instance.new("TextLabel")
-label.Size = UDim2.new(0, 200, 0, 40)
-label.Position = UDim2.new(0.5, -100, 0, 10)
-label.BackgroundTransparency = 1
-label.TextColor3 = Color3.fromRGB(170, 255, 180)
-label.TextStrokeTransparency = 0.6
-label.Font = Enum.Font.Gotham
-label.TextSize = 20
-label.Text = "1:00"
-label.Parent = gui
-
-local timeLeft = 30
-
-local function formatTime(t)
-	local m = math.floor(t / 60)
-	local s = t % 60
-	return string.format("%d:%02d", m, s)
-end
-
-local function restore()
-	
-	getgenv().ViridislightRunning = false
-	
-	if potionLight and potionLight.Parent then
-	local lightTween = TweenService:Create(
-		potionLight,
-		TweenInfo.new(2),
-		{
-			Range = 0
-		}
-	)
-
-	lightTween:Play()
-
-	lightTween.Completed:Connect(function()
-		if potionLight then
-			potionLight:Destroy()
-		end
-	end)
-end
-	
-	newCloneEffect.Visible = false
-	
-	if speedConn then
-	speedConn:Disconnect()
-end
-
-	local tween = TweenService:Create(humanoid, TweenInfo.new(2), {
-		WalkSpeed = originalWalkSpeed
-	})
-	tween:Play()
-
-	task.delay(2, function()
-		if gui then gui:Destroy() end
-	end)
-end
-
-viridis:Play() 
-    
-    viridis.Ended:Connect(function()
-    viridis:Destroy() 
-    end) 
-
-task.spawn(function()
-	while timeLeft >= 0 do
-		label.Text = formatTime(timeLeft)
-
-		if timeLeft == 0 then
-		stopRegen()
-		stopHighlights() 
-			restore()
-ambience:Destroy() 
-			
-			CollisionLoopRunning = false
-
-if CollisionClone then
-	CollisionClone:Destroy()
-end
-
-			break
-		end
-
-		timeLeft -= 1
-		task.wait(1)
-	end
-end)
-				end
-		end
-	end
-end)
-
+-- ============================================================
+-- ЭФФЕКТ НА ЭКРАНЕ
+-- ============================================================
 local function EffectOnScreen()
-	drinkSoundPlay()
-	newCloneEffect.Visible = true
-	spawn(function()
-		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
-		if clone then
-			local clone_2 = clone:Clone()
-			clone_2.Name ..= "Live"
-			clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
-			clone_2.ImageTransparency = 1
-			clone_2.Parent = MainUI_upvr.MainFrame
-			clone_2.Visible = true
-			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-				ImageTransparency = 0;
-			}):Play()
-			wait(5)
-			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-				Size = UDim2.new(1.5, 0, 1.5, 0);
-			}):Play()
-			wait(0.5)
-			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
-				ImageTransparency = 1;
-			}):Play()
-			wait(4.5)
-			clone_2:Destroy()
-		end
-	end)
+    drinkSoundPlay()
+    if newCloneEffect then newCloneEffect.Visible = true end
+
+    spawn(function()
+        local whiteVig = MainUI_upvr.MainFrame:FindFirstChild("WhiteVignette")
+        if not whiteVig then return end
+        local clone = whiteVig:Clone()
+        local clone_2 = clone:Clone()
+        clone_2.Name = clone_2.Name .. "Live"
+        clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
+        clone_2.ImageTransparency = 1
+        clone_2.Parent = MainUI_upvr.MainFrame
+        clone_2.Visible = true
+        TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            ImageTransparency = 0;
+        }):Play()
+        wait(5)
+        TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1.5, 0, 1.5, 0);
+        }):Play()
+        wait(0.5)
+        TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+            ImageTransparency = 1;
+        }):Play()
+        wait(4.5)
+        clone_2:Destroy()
+    end)
 end
 
 function drinkSoundPlay()
-	local newSound = nil
-	if not workspace:FindFirstChild("DrinkPotionAddonSound") then
-		newSound = Instance.new("Sound",workspace)
-		newSound.Name = "DrinkPotionAddonSound"
-		if game.GameId == 6627207668 then
-			newSound.SoundId = "rbxassetid://103799151859408"
-		else
-			newSound.SoundId = "rbxassetid://18869124055"
-		end
-	else
-		newSound = workspace:WaitForChild("DrinkPotionAddonSound")
-	end
-	newSound:Play()
+    local newSound = nil
+    if not workspace:FindFirstChild("DrinkPotionAddonSound") then
+        newSound = Instance.new("Sound", workspace)
+        newSound.Name = "DrinkPotionAddonSound"
+        if game.GameId == 6627207668 then
+            newSound.SoundId = "rbxassetid://103799151859408"
+        else
+            newSound.SoundId = "rbxassetid://18869124055"
+        end
+    else
+        newSound = workspace:WaitForChild("DrinkPotionAddonSound")
+    end
+    newSound:Play()
 end
 
-toolNew.Parent = game.Players.LocalPlayer.Backpack
-toolNew.Name = "Viridislight Bottle" 
-toolNew.TextureId = "rbxassetid://76865808847706" 
+-- ============================================================
+-- ВЫДАЧА БУТЫЛКИ + АКТИВАЦИЯ
+-- ============================================================
+toolNew.Parent = LocalPlayer.Backpack
+toolNew.Name = "Viridislight Bottle"
+pcall(function()
+    toolNew.TextureId = "rbxassetid://76865808847706"
+end)
 
 toolNew.Equipped:Connect(function()
-	if game.GameId == 6627207668 then
-		ohhmydayz:Play()
-	end
+    if game.GameId == 6627207668 and ohhmydayz then
+        ohhmydayz:Play()
+    end
 end)
+
 toolNew.Unequipped:Connect(function()
-	if game.GameId == 6627207668 then
-		ohhmydayz:Stop()
-	end
+    if game.GameId == 6627207668 and ohhmydayz then
+        ohhmydayz:Stop()
+    end
 end)
 
 toolNew.Activated:Connect(function()
-	if drinked == false then
-		drinked = true
-		EffectOnScreen()
+    print("[Potion] Activated! drinked =", drinked)
+    if drinked == false then
+        drinked = true
+        EffectOnScreen()
 
-		if game.GameId == 6627207668 then
-			ohhmydayz2:Play()
-			ohhmydayz2.Ended:Wait()
-		else
-			ohhmydayz3:Play()
-			ohhmydayz3:Ended:Wait()
-		end
-		toolNew:Destroy()
-	end
+        if game.GameId == 6627207668 and ohhmydayz2 then
+            ohhmydayz2:Play()
+            ohhmydayz2.Ended:Wait()
+        elseif ohhmydayz3 then
+            ohhmydayz3:Play()
+            ohhmydayz3.Ended:Wait()
+        end
+        toolNew:Destroy()
+    end
 end)
+
+print("[Potion] ✅ Скрипт загружен, бутылка в Backpack")
