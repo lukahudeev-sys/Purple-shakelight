@@ -30,7 +30,7 @@ part.Parent = Workspace
 
 local sound = GetGitSound(SOUND_URL)
 sound.Name = "CourtSound"
-sound.Volume = 1.7
+sound.Volume = 2
 sound.RollOffMaxDistance = 55
 sound.Parent = part
 
