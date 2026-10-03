@@ -1,273 +1,281 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH (third person) — ИСПРАВЛЕНО
--- Зелье: 140419135012621
--- Rush:  78888776904283
+-- RUSH BOTTLE → MORPH
+-- Использует InsertService (работает в executor'ах лучше чем GetObjects)
 -- ============================================================
 
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local InsertService = game:GetService("InsertService")
+
 local LocalPlayer = Players.LocalPlayer
 
-print("[Potion] === Скрипт загружается ===")
-
-local MainUI_upvr = LocalPlayer.PlayerGui:WaitForChild("MainUI")
+print("[Rush] === Скрипт запущен ===")
 
 -- ============================================================
--- ЗАГРУЗКА БУТЫЛКИ (ID: 140419135012621)
+-- BACKPACK
 -- ============================================================
+local backpack = LocalPlayer:FindFirstChild("Backpack") or LocalPlayer:WaitForChild("Backpack", 10)
+if not backpack then
+    warn("[Rush] ❌ Backpack не найден")
+    return
+end
+
+-- ============================================================
+-- ЗАГРУЗКА БУТЫЛКИ (пробуем несколько способов)
+-- ============================================================
+local BOTTLE_IDS = {140419135012621, 111263531009426, 83996348420126}
+
 local toolNew
-if game.GameId == 6627207668 then
-	print("[Potion] Тестовый плейс, беру Moon Bottle")
-	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
-else
-	print("[Potion] Загружаю зелье: 140419135012621")
-	local ok, objs = pcall(function()
-		return game:GetObjects("rbxassetid://140419135012621")
-	end)
-	if not ok or not objs or not objs[1] then
-		warn("[Potion] НЕ УДАЛОСЬ загрузить зелье 140419135012621")
-		print("[Potion] ok =", ok, "| count =", objs and #objs or "nil")
-		return
-	end
-	toolNew = objs[1]
-	print("[Potion] Зелье загружено:", toolNew.Name)
+
+-- Способ 1: GetObjects
+for _, id in ipairs(BOTTLE_IDS) do
+    local ok, objs = pcall(function()
+        return game:GetObjects("rbxassetid://" .. id)
+    end)
+    if ok and objs and objs[1] then
+        toolNew = objs[1]
+        print("[Rush] ✅ Бутылка через GetObjects, ID:", id)
+        break
+    end
+end
+
+-- Способ 2: InsertService (если GetObjects не сработал)
+if not toolNew then
+    for _, id in ipairs(BOTTLE_IDS) do
+        local ok, model = pcall(function()
+            return InsertService:LoadAsset(id)
+        end)
+        if ok and model then
+            -- LoadAsset возвращает Model-контейнер, берём первого ребёнка
+            local child = model:GetChildren()[1]
+            if child then
+                toolNew = child
+                print("[Rush] ✅ Бутылка через InsertService, ID:", id)
+                break
+            end
+        end
+    end
+end
+
+if not toolNew then
+    warn("[Rush] ❌ Не удалось загрузить бутылку ни одним способом")
+    return
+end
+
+toolNew.Parent = backpack
+toolNew.Name = "Rush Bottle"
+pcall(function() toolNew.TextureId = "rbxassetid://76865808847706" end)
+print("[Rush] ✅ Бутылка в Backpack:", toolNew.Name, "| Class:", toolNew.ClassName)
+
+-- ============================================================
+-- НАСТРОЙКИ
+-- ============================================================
+local RUSH_ASSET = 78888776904283
+local MORPH_DURATION = 60
+
+local morphActive = false
+local isThirdPerson = true
+
+local Rush = nil
+local enforceLoop, inputConnection, morphTimer = nil, nil, nil
+local Footsteps, PlaySound = nil, nil
+
+-- ============================================================
+-- УНИВЕРСАЛЬНАЯ ЗАГРУЗКА МОДЕЛИ (GetObjects + InsertService)
+-- ============================================================
+local function loadModel(assetId)
+    print("[Rush] Пробую GetObjects для", assetId)
+    local ok, objs = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)
+    end)
+    if ok and objs and objs[1] then
+        print("[Rush] ✅ GetObjects сработал, count:", #objs)
+        return objs[1]
+    end
+    print("[Rush] ⚠️ GetObjects не сработал, ok =", ok, "| count =", objs and #objs or "nil")
+
+    print("[Rush] Пробую InsertService для", assetId)
+    local ok2, model = pcall(function()
+        return InsertService:LoadAsset(assetId)
+    end)
+    if ok2 and model then
+        local child = model:GetChildren()[1]
+        if child then
+            print("[Rush] ✅ InsertService сработал:", child.Name)
+            return child
+        end
+    end
+    print("[Rush] ❌ InsertService тоже не сработал, ok =", ok2, "| model =", model)
+
+    return nil
 end
 
 -- ============================================================
--- АНИМАЦИИ ПИТЬЯ (безопасно)
+-- CLEANUP
 -- ============================================================
-local hum0 = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-if not hum0 then
-	LocalPlayer.CharacterAdded:Wait()
-	hum0 = LocalPlayer.Character:WaitForChild("Humanoid")
+local function cleanupMorph()
+    if inputConnection then inputConnection:Disconnect() inputConnection = nil end
+    if enforceLoop then enforceLoop:Disconnect() enforceLoop = nil end
+    if morphTimer then task.cancel(morphTimer) morphTimer = nil end
+
+    local camera = workspace.CurrentCamera
+    if camera then camera.CameraType = Enum.CameraType.Custom end
+
+    local Character = LocalPlayer.Character
+    if Character then
+        for _, Object in ipairs(Character:GetDescendants()) do
+            if Object:IsA("BasePart") then
+                Object.LocalTransparencyModifier = 0
+                Object.Transparency = 0
+                Object.CanCollide = true
+            elseif Object:IsA("Decal") or Object:IsA("Texture") then
+                Object.Transparency = 0
+            end
+        end
+        for _, v in pairs(Character:GetChildren()) do
+            if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+                v.Handle.Transparency = 0
+                v.Handle.LocalTransparencyModifier = 0
+            end
+        end
+    end
+
+    if Footsteps then Footsteps:Stop() Footsteps = nil end
+    if PlaySound then PlaySound:Stop() PlaySound = nil end
+
+    if Rush then Rush:Destroy() Rush = nil end
+
+    morphActive = false
+    print("[Rush] 🔄 Морф снят")
 end
 
-local ohhmydayz, ohhmydayz2, ohhmydayz3
+-- ============================================================
+-- CORE MORPH
+-- ============================================================
+local function applyMorph()
+    if morphActive then cleanupMorph() end
 
-do
-	local bals = toolNew:FindFirstChild("bals")
-	local anims = toolNew:FindFirstChild("Animations")
-	if bals then
-		if bals:FindFirstChild("idle") then
-			ohhmydayz = hum0:LoadAnimation(bals.idle)
-		end
-		if bals:FindFirstChild("open") then
-			ohhmydayz2 = hum0:LoadAnimation(bals.open)
-		end
-	end
-	if anims and anims:FindFirstChild("open") then
-		ohhmydayz3 = hum0:LoadAnimation(anims.open)
-	end
+    Rush = loadModel(RUSH_ASSET)
+
+    if not Rush then
+        warn("[Rush] ❌ Модель Rush не загружена ни одним способом")
+        warn("[Rush] ID", RUSH_ASSET, "— либо мёртвый, либо недоступен в executor'е")
+        return
+    end
+
+    print("[Rush] ✅ Rush загружен:", Rush.Name, "| Class:", Rush.ClassName)
+    print("[Rush] --- Дети ---")
+    for _, c in pairs(Rush:GetChildren()) do
+        print("[Rush]   >", c.Name, "|", c.ClassName)
+    end
+
+    Rush.Parent = workspace
+
+    local Main = Rush:FindFirstChild("Main") or Rush
+
+    Footsteps = Main:FindFirstChild("Footsteps")
+    PlaySound = Main:FindFirstChild("PlaySound")
+    if Footsteps then pcall(function() Footsteps:Play() end) end
+    if PlaySound then pcall(function() PlaySound:Play() end) end
+
+    local camera = workspace.CurrentCamera
+    if camera then camera.CameraType = Enum.CameraType.Scriptable end
+
+    -- FOLLOW LOOP + КАМЕРА
+    enforceLoop = RunService.RenderStepped:Connect(function()
+        if not Rush or not Rush.Parent then return end
+
+        local Character = LocalPlayer.Character
+        if not Character then return end
+
+        local RootPart = Character:FindFirstChild("HumanoidRootPart")
+        if not RootPart then return end
+
+        pcall(function()
+            Rush:PivotTo(RootPart.CFrame)
+        end)
+
+        for _, Object in ipairs(Character:GetDescendants()) do
+            if Object:IsA("BasePart") then
+                Object.LocalTransparencyModifier = 1
+                for _, Child in ipairs(Object:GetDescendants()) do
+                    if Child:IsA("Decal") or Child:IsA("Texture") then
+                        Child.Transparency = 1
+                    end
+                end
+            elseif Object:IsA("Accessory") then
+                local Handle = Object:FindFirstChild("Handle")
+                if Handle then Handle.LocalTransparencyModifier = 1 end
+            end
+        end
+
+        if camera then
+            local morphHead = Rush:FindFirstChild("Head", true) or Rush:FindFirstChildWhichIsA("BasePart")
+            local targetPos = morphHead and morphHead.Position or (RootPart.Position + Vector3.new(0, 1.5, 0))
+
+            local lookVector = camera.CFrame.LookVector
+            local upVector = camera.CFrame.UpVector
+
+            if isThirdPerson then
+                local camPos = targetPos - (lookVector * 12) + Vector3.new(0, 2, 0)
+                camera.CFrame = CFrame.lookAt(camPos, targetPos, upVector)
+            else
+                local camPos = targetPos + lookVector * 0.5
+                camera.CFrame = CFrame.lookAt(camPos, camPos + lookVector, upVector)
+            end
+        end
+    end)
+
+    inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == Enum.KeyCode.R then
+                if Footsteps then
+                    if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+                end
+                if PlaySound then
+                    if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+                end
+            elseif input.KeyCode == Enum.KeyCode.L then
+                isThirdPerson = not isThirdPerson
+            end
+        end
+    end)
+
+    morphActive = true
+    print("[Rush] ✅ MORPH ACTIVATED! R — звуки, L — камера")
+
+    morphTimer = task.delay(MORPH_DURATION, function()
+        cleanupMorph()
+    end)
 end
 
+-- ============================================================
+-- АКТИВАЦИЯ ЗЕЛЬЯ
+-- ============================================================
 local drinked = false
 
--- ============================================================
--- НАСТРОЙКИ КАМЕРЫ
--- ============================================================
-local isThirdPerson = true
-local thirdPersonDistance = 12
-local thirdPersonHeightOffset = 2
-
-local function resetCamera()
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
-	end
-end
-
--- ============================================================
--- RUSH MORPH (ID: 78888776904283)
--- ============================================================
-local function transformIntoRush()
-	print("[Rush] === transformIntoRush() ===")
-
-	if _G.RushMorphActive then
-		warn("[Rush] Уже активен")
-		return
-	end
-	_G.RushMorphActive = true
-
-	print("[Rush] Загружаю модель: 78888776904283")
-	local ok, objs = pcall(function()
-		return game:GetObjects("rbxassetid://78888776904283")
-	end)
-
-	print("[Rush] ok =", ok, "| count =", objs and #objs or "nil")
-
-	if not ok or not objs or not objs[1] then
-		warn("[Rush] НЕ УДАЛОСЬ загрузить Rush 78888776904283")
-		_G.RushMorphActive = false
-		return
-	end
-
-	local figureNew = objs[1]
-	print("[Rush] Модель загружена:", figureNew.Name)
-	print("[Rush] --- Дети модели ---")
-	for _, c in pairs(figureNew:GetChildren()) do
-		print("[Rush]   >", c.Name, "|", c.ClassName)
-	end
-
-	local isTestPlace = (game.GameId == 6627207668)
-	figureNew.Parent = workspace
-
-	-- Звуки
-	local Main = figureNew:FindFirstChild("Main") or figureNew
-	local Footsteps, PlaySound
-	do
-		local Sounds = Main:FindFirstChild("Sounds")
-		if Sounds then
-			local soundFolder = isTestPlace and Sounds:FindFirstChild("test game")
-			                                    or Sounds:FindFirstChild("DOORS")
-			if soundFolder then
-				for _, s in pairs(soundFolder:GetChildren()) do
-					s:Clone().Parent = Main
-				end
-			end
-			Sounds:Destroy()
-		end
-		Footsteps = Main:FindFirstChild("Footsteps")
-		PlaySound = Main:FindFirstChild("PlaySound")
-		if Footsteps then Footsteps:Play() end
-		if PlaySound then PlaySound:Play() end
-	end
-
-	-- Анимация
-	local RunAnim
-	do
-		local animator = figureNew:FindFirstChild("AnimationController")
-		                 and figureNew.AnimationController:FindFirstChild("Animator")
-		if animator then
-			local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
-			local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
-			if runAnimObj then
-				RunAnim = animator:LoadAnimation(runAnimObj)
-				RunAnim:Play()
-				RunAnim:AdjustSpeed(0)
-			end
-		end
-	end
-
-	-- Скорость
-	spawn(function()
-		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-		local hum = char:WaitForChild("Humanoid")
-		hum.Running:Connect(function(speed)
-			if RunAnim then
-				if speed >= 20 then RunAnim:AdjustSpeed(1.5)
-				elseif speed >= 5 then RunAnim:AdjustSpeed(1)
-				else RunAnim:AdjustSpeed(0) end
-			end
-			if Footsteps and Footsteps.IsPlaying then
-				Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-			end
-			if PlaySound and PlaySound.IsPlaying then
-				PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-			end
-		end)
-	end)
-
-	-- Слежка + камера
-	RunService.RenderStepped:Connect(function()
-		local char = LocalPlayer.Character
-		if not char then return end
-
-		if char:FindFirstChild("Head") then
-			char.Head.Transparency = 1
-		end
-
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			pcall(function() figureNew:PivotTo(hrp.CFrame) end)
-		end
-
-		for _, v in pairs(char:GetChildren()) do
-			if v:IsA("BasePart") then
-				v.LocalTransparencyModifier = 1
-				for _, d in pairs(v:GetDescendants()) do
-					if d:IsA("Decal") or d:IsA("Texture") then
-						d.Transparency = 1
-					end
-				end
-			elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-				v.Handle.Transparency = 1
-			end
-		end
-
-		local camera = workspace.CurrentCamera
-		if camera and figureNew.Parent then
-			local morphHead = figureNew:FindFirstChild("Head", true)
-			                  or figureNew:FindFirstChildWhichIsA("BasePart")
-			if morphHead then
-				if isThirdPerson then
-					camera.CameraType = Enum.CameraType.Scriptable
-					local lookVector = camera.CFrame.LookVector
-					local upVector = camera.CFrame.UpVector
-					local headPos = morphHead.Position
-					local camPos = headPos - (lookVector * thirdPersonDistance)
-					               + Vector3.new(0, thirdPersonHeightOffset, 0)
-					camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
-				else
-					camera.CameraType = Enum.CameraType.Custom
-				end
-			end
-		end
-	end)
-
-	-- Управление
-	LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-		if key == "r" then
-			if Footsteps then
-				if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
-			end
-			if PlaySound then
-				if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
-			end
-		elseif key == "l" then
-			isThirdPerson = not isThirdPerson
-			if not isThirdPerson then resetCamera() end
-		end
-	end)
-
-	print("[Rush] ✅ MORPH ACTIVATED!")
-end
-
--- ============================================================
--- БУТЫЛКА
--- ============================================================
-toolNew.Parent = LocalPlayer.Backpack
-toolNew.Name = "Viridislight Bottle"
--- УБРАНО: toolNew.TextureId = "..." (у Tool нет такого свойства)
-
-toolNew.Equipped:Connect(function()
-	if game.GameId == 6627207668 and ohhmydayz then
-		ohhmydayz:Play()
-	end
-end)
-
-toolNew.Unequipped:Connect(function()
-	if game.GameId == 6627207668 and ohhmydayz then
-		ohhmydayz:Stop()
-	end
-end)
-
 toolNew.Activated:Connect(function()
-	print("[Potion] Зелье выпито! drinked =", drinked)
-	if drinked == false then
-		drinked = true
+    print("[Rush] 🍶 Activated сработал! drinked =", drinked)
+    if drinked then return end
+    drinked = true
 
-		if game.GameId == 6627207668 and ohhmydayz2 then
-			ohhmydayz2:Play()
-			ohhmydayz2.Ended:Wait()
-		elseif ohhmydayz3 then
-			ohhmydayz3:Play()
-			ohhmydayz3.Ended:Wait()
-		end
+    local newSound = workspace:FindFirstChild("DrinkPotionAddonSound")
+    if not newSound then
+        newSound = Instance.new("Sound", workspace)
+        newSound.Name = "DrinkPotionAddonSound"
+        newSound.SoundId = game.GameId == 6627207668
+            and "rbxassetid://103799151859408"
+            or  "rbxassetid://18869124055"
+    end
+    pcall(function() newSound:Play() end)
 
-		toolNew:Destroy()
-		transformIntoRush()
-	end
+    task.defer(function()
+        pcall(applyMorph)
+    end)
+
+    toolNew:Destroy()
 end)
 
-print("[Potion] ✅ Скрипт загружен, бутылка в Backpack")
+print("[Rush] ✅ Скрипт загружен, всё готово")
