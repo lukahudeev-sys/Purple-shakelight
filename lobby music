@@ -1,0 +1,52 @@
+--// ============================================================
+--// ЛОББИ-ЗВУК (CourtSound)
+--// Создаёт невидимую точку в центре лобби (комната 0)
+--// и проигрывает музыку с привязкой к ней
+--// ============================================================
+
+local Workspace = game:GetService("Workspace")
+
+--// ---------- Функция загрузки звука с GitHub ----------
+local function GetGitSound(GithubSnd)
+	-- Имя файла формируется из длины URL + первых 10 символов
+	local file = "HARDCORE_" .. tostring(#GithubSnd) .. "_" .. GithubSnd:sub(1,10):gsub("%W","") .. ".mp3"
+
+	-- Если файла нет — скачиваем
+	if not isfile(file) then
+		writefile(file, game:HttpGet(GithubSnd))
+	end
+
+	-- Создаём Sound с локальным asset ID
+	local sound = Instance.new("Sound")
+	sound.SoundId = (getcustomasset or getsynasset)(file)
+
+	return sound
+end
+
+--// ---------- Ждём папку с комнатами ----------
+local rooms = Workspace:WaitForChild("CurrentRooms")
+
+--// ---------- Ждём комнату 0 (лобби) ----------
+local room = rooms:WaitForChild("0")
+
+--// Получаем центр bounding box комнаты
+local cf = room:GetBoundingBox()
+
+--// ---------- Создаём невидимую точку-эмиттер ----------
+local part = Instance.new("Part")
+part.Name = "RoomBoundingCenter"
+part.Anchored = true
+part.CanCollide = false
+part.Transparency = 1
+part.Size = Vector3.new(1, 1, 1)
+part.CFrame = cf
+part.Parent = Workspace
+
+--// ---------- Создаём и запускаем звук ----------
+local sound = GetGitSound("https://github.com/lynguyen26031993-design/-u/raw/refs/heads/main/XRecorder_Edited_20260805_02.mp3?raw=true")
+sound.Name = "CourtSound"
+sound.Volume = 1.5
+sound.RollOffMaxDistance = 55   -- слышно в радиусе 55 стадов
+sound.Parent = part
+
+sound:Play()
