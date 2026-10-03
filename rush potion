@@ -48,11 +48,11 @@ local function transformIntoRush()
     _G.RushMorphActive = true
 
     local ok, figureNew = pcall(function()
-        return game:GetObjects("rbxassetid://100327482330650")[1]
+        return game:GetObjects("rbxassetid://78888776904283")[1]
     end)
 
     if not ok or not figureNew then
-        warn("[Rush] Не удалось загрузить модель rbxassetid://100327482330650")
+        warn("[Rush] Не удалось загрузить модель rbxassetid://78888776904283")
         _G.RushMorphActive = false
         return
     end
