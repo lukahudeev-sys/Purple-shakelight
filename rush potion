@@ -1,33 +1,63 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH (third person) — исправлено
+-- VIRIDIS BOTTLE → RUSH MORPH (third person) — ИСПРАВЛЕНО
+-- С отладкой и защитой от падений
 -- ============================================================
+
+print("========================================")
+print("[Potion] Файл начал загружаться...")
+print("========================================")
 
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local MainUI_upvr = LocalPlayer.PlayerGui:WaitForChild("MainUI")
+-- ============================================================
+-- НАСТРОЙКИ
+-- ============================================================
+local BOTTLE_ASSET = "rbxassetid://140419135012621"
+local RUSH_ASSET   = "rbxassetid://78888776904283"
+local TEST_PLACE_ID = 6627207668
 
--- ============================================================
--- ЗАГРУЗКА БУТЫЛКИ (с проверкой)
--- ============================================================
-local toolNew
-if game.GameId == 6627207668 then
-	toolNew = game.ReplicatedStorage:WaitForChild("Moon Bottle"):Clone()
-else
-	local ok, objs = pcall(function()
-		return game:GetObjects("rbxassetid://140419135012621")
-	end)
-	if not ok or not objs or not objs[1] then
-		warn("[Potion] Не удалось загрузить бутылку (140419135012621)")
-		return
+local isThirdPerson = true
+local thirdPersonDistance = 12
+local thirdPersonHeightOffset = 2
+
+local function resetCamera()
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.CameraType = Enum.CameraType.Custom
 	end
-	toolNew = objs[1]
 end
 
 -- ============================================================
--- АНИМАЦИИ ПИТЬЯ (с проверками)
+-- ЗАГРУЗКА БУТЫЛКИ
+-- ============================================================
+local toolNew
+if game.GameId == TEST_PLACE_ID then
+	print("[Potion] Тестовый плейс, беру Moon Bottle из ReplicatedStorage")
+	local moon = game.ReplicatedStorage:FindFirstChild("Moon Bottle")
+	if not moon then
+		warn("[Potion] Нет 'Moon Bottle' в ReplicatedStorage!")
+		return
+	end
+	toolNew = moon:Clone()
+else
+	print("[Potion] Загружаю бутылку:", BOTTLE_ASSET)
+	local ok, objs = pcall(function()
+		return game:GetObjects(BOTTLE_ASSET)
+	end)
+	if not ok or not objs or not objs[1] then
+		warn("[Potion] Не удалось загрузить бутылку:", BOTTLE_ASSET)
+		print("[Potion] ok =", ok, "count =", objs and #objs or "nil")
+		return
+	end
+	toolNew = objs[1]
+	print("[Potion] Бутылка загружена:", toolNew.Name)
+end
+
+-- ============================================================
+-- АНИМАЦИИ ПИТЬЯ (безопасно)
 -- ============================================================
 local hum0 = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 if not hum0 then
@@ -40,7 +70,6 @@ local ohhmydayz, ohhmydayz2, ohhmydayz3
 do
 	local bals = toolNew:FindFirstChild("bals")
 	local anims = toolNew:FindFirstChild("Animations")
-
 	if bals then
 		if bals:FindFirstChild("idle") then
 			ohhmydayz = hum0:LoadAnimation(bals.idle)
@@ -57,60 +86,52 @@ end
 local drinked = false
 
 -- ============================================================
--- НАСТРОЙКИ КАМЕРЫ
--- ============================================================
-local isThirdPerson = true
-local thirdPersonDistance = 12
-local thirdPersonHeightOffset = 2
-
-local function resetCamera()
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
-	end
-end
-
--- ============================================================
--- RUSH MORPH FUNCTION
+-- RUSH MORPH
 -- ============================================================
 local function transformIntoRush()
-	print("[Rush] transformIntoRush() вызвана")
+	print("[Rush] >>> transformIntoRush() вызвана")
 
 	if _G.RushMorphActive then
-		warn("[Rush] Уже активен")
+		warn("[Rush] Уже активен (сбрось _G.RushMorphActive = false)")
 		return
 	end
 	_G.RushMorphActive = true
 
+	-- Загружаем модель
+	print("[Rush] Загружаю:", RUSH_ASSET)
 	local ok, objs = pcall(function()
-		return game:GetObjects("rbxassetid://78888776904283")
+		return game:GetObjects(RUSH_ASSET)
 	end)
 
-	print("[Rush] GetObjects ok:", ok, "count:", objs and #objs or "nil")
+	print("[Rush] GetObjects ok =", ok, "| count =", objs and #objs or "nil")
 
 	if not ok or not objs or not objs[1] then
-		warn("[Rush] Не удалось загрузить модель 78888776904283")
+		warn("[Rush] НЕ УДАЛОСЬ ЗАГРУЗИТЬ МОДЕЛЬ", RUSH_ASSET)
 		_G.RushMorphActive = false
 		return
 	end
 
 	local figureNew = objs[1]
-	print("[Rush] Loaded:", figureNew.Name)
-	figureNew.Parent = workspace
-
-	local isTestPlace = (game.GameId == 6627207668)
-
-	-- Звуки (безопасно)
-	local Main = figureNew:FindFirstChild("Main")
-	if not Main then
-		warn("[Rush] Нет папки Main. Дети модели:")
-		for _, c in pairs(figureNew:GetChildren()) do
-			print("   >", c.Name, "|", c.ClassName)
-		end
+	print("[Rush] Модель загружена:", figureNew.Name)
+	print("[Rush] --- Дети модели ---")
+	for _, c in pairs(figureNew:GetChildren()) do
+		print("[Rush]   >", c.Name, "|", c.ClassName)
 	end
 
+	local isTestPlace = (game.GameId == TEST_PLACE_ID)
+	figureNew.Parent = workspace
+
+	-- === ИЩЕМ "Main" или fallback ===
+	local Main = figureNew:FindFirstChild("Main")
+	if not Main then
+		-- fallback: может быть папка "Rush" или сам корень
+		Main = figureNew:FindFirstChild("Rush") or figureNew
+		warn("[Rush] Нет 'Main', использую fallback:", Main.Name)
+	end
+
+	-- === ЗВУКИ ===
 	local Footsteps, PlaySound
-	if Main then
+	do
 		local Sounds = Main:FindFirstChild("Sounds")
 		if Sounds then
 			local soundFolder = isTestPlace and Sounds:FindFirstChild("test game")
@@ -128,21 +149,23 @@ local function transformIntoRush()
 		if PlaySound then PlaySound:Play() end
 	end
 
-	-- Анимация бега (безопасно)
+	-- === АНИМАЦИЯ ===
 	local RunAnim
-	local animator = figureNew:FindFirstChild("AnimationController")
-	                 and figureNew.AnimationController:FindFirstChild("Animator")
-	if animator then
-		local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
-		local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
-		if runAnimObj then
-			RunAnim = animator:LoadAnimation(runAnimObj)
-			RunAnim:Play()
-			RunAnim:AdjustSpeed(0)
+	do
+		local animator = figureNew:FindFirstChild("AnimationController")
+		                 and figureNew.AnimationController:FindFirstChild("Animator")
+		if animator then
+			local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
+			local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
+			if runAnimObj then
+				RunAnim = animator:LoadAnimation(runAnimObj)
+				RunAnim:Play()
+				RunAnim:AdjustSpeed(0)
+			end
 		end
 	end
 
-	-- Скорость
+	-- === СКОРОСТЬ ===
 	spawn(function()
 		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 		local hum = char:WaitForChild("Humanoid")
@@ -161,7 +184,7 @@ local function transformIntoRush()
 		end)
 	end)
 
-	-- Слежка + скрытие + камера
+	-- === СЛЕЖКА + СКРЫТИЕ + КАМЕРА ===
 	RunService.RenderStepped:Connect(function()
 		local char = LocalPlayer.Character
 		if not char then return end
@@ -224,7 +247,7 @@ local function transformIntoRush()
 		end
 	end)
 
-	print("[Rush] Morph activated! L — камера, R — звуки")
+	print("[Rush] ✅ MORPH ACTIVATED! L — камера, R — звуки")
 end
 
 -- ============================================================
@@ -232,26 +255,25 @@ end
 -- ============================================================
 toolNew.Parent = LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
--- УБРАЛ toolNew.TextureId — у Tool нет такого свойства
 
 toolNew.Equipped:Connect(function()
-	if game.GameId == 6627207668 and ohhmydayz then
+	if game.GameId == TEST_PLACE_ID and ohhmydayz then
 		ohhmydayz:Play()
 	end
 end)
 
 toolNew.Unequipped:Connect(function()
-	if game.GameId == 6627207668 and ohhmydayz then
+	if game.GameId == TEST_PLACE_ID and ohhmydayz then
 		ohhmydayz:Stop()
 	end
 end)
 
 toolNew.Activated:Connect(function()
-	print("[Potion] Activated! drinked =", drinked)
+	print("[Potion] >>> Activated сработал! drinked =", drinked)
 	if drinked == false then
 		drinked = true
 
-		if game.GameId == 6627207668 and ohhmydayz2 then
+		if game.GameId == TEST_PLACE_ID and ohhmydayz2 then
 			ohhmydayz2:Play()
 			ohhmydayz2.Ended:Wait()
 		elseif ohhmydayz3 then
@@ -264,4 +286,4 @@ toolNew.Activated:Connect(function()
 	end
 end)
 
-print("[Potion] Скрипт загружен, бутылка в Backpack")
+print("[Potion] ✅ Скрипт загружен, бутылка в Backpack")
