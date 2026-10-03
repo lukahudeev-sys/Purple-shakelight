@@ -1,25 +1,65 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH (third person)
--- Выпил зелье → превратился в Rush, камера сзади
--- L — toggle камеры, R — toggle звуков
+-- VIRIDIS BOTTLE → RUSH MORPH (third person) — ИСПРАВЛЕНО
+-- Зелье: 140419135012621
+-- Rush:  78888776904283
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local MainUI_upvr = game.Players.LocalPlayer.PlayerGui:WaitForChild("MainUI")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- Загружаем бутылку
+print("[Potion] === Скрипт загружается ===")
+
+local MainUI_upvr = LocalPlayer.PlayerGui:WaitForChild("MainUI")
+
+-- ============================================================
+-- ЗАГРУЗКА БУТЫЛКИ (ID: 140419135012621)
+-- ============================================================
 local toolNew
 if game.GameId == 6627207668 then
+	print("[Potion] Тестовый плейс, беру Moon Bottle")
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://140419135012621")[1]
+	print("[Potion] Загружаю зелье: 140419135012621")
+	local ok, objs = pcall(function()
+		return game:GetObjects("rbxassetid://140419135012621")
+	end)
+	if not ok or not objs or not objs[1] then
+		warn("[Potion] НЕ УДАЛОСЬ загрузить зелье 140419135012621")
+		print("[Potion] ok =", ok, "| count =", objs and #objs or "nil")
+		return
+	end
+	toolNew = objs[1]
+	print("[Potion] Зелье загружено:", toolNew.Name)
 end
 
--- Анимации питья
-local ohhmydayz  = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
-local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
-local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+-- ============================================================
+-- АНИМАЦИИ ПИТЬЯ (безопасно)
+-- ============================================================
+local hum0 = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if not hum0 then
+	LocalPlayer.CharacterAdded:Wait()
+	hum0 = LocalPlayer.Character:WaitForChild("Humanoid")
+end
+
+local ohhmydayz, ohhmydayz2, ohhmydayz3
+
+do
+	local bals = toolNew:FindFirstChild("bals")
+	local anims = toolNew:FindFirstChild("Animations")
+	if bals then
+		if bals:FindFirstChild("idle") then
+			ohhmydayz = hum0:LoadAnimation(bals.idle)
+		end
+		if bals:FindFirstChild("open") then
+			ohhmydayz2 = hum0:LoadAnimation(bals.open)
+		end
+	end
+	if anims and anims:FindFirstChild("open") then
+		ohhmydayz3 = hum0:LoadAnimation(anims.open)
+	end
+end
 
 local drinked = false
 
@@ -31,195 +71,203 @@ local thirdPersonDistance = 12
 local thirdPersonHeightOffset = 2
 
 local function resetCamera()
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera.CameraType = Enum.CameraType.Custom
-    end
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.CameraType = Enum.CameraType.Custom
+	end
 end
 
 -- ============================================================
--- RUSH MORPH FUNCTION
+-- RUSH MORPH (ID: 78888776904283)
 -- ============================================================
 local function transformIntoRush()
-    if _G.RushMorphActive then
-        warn("[Rush] Уже активен")
-        return
-    end
-    _G.RushMorphActive = true
+	print("[Rush] === transformIntoRush() ===")
 
-    local ok, figureNew = pcall(function()
-        return game:GetObjects("rbxassetid://100327482330650")[1]
-    end)
+	if _G.RushMorphActive then
+		warn("[Rush] Уже активен")
+		return
+	end
+	_G.RushMorphActive = true
 
-    if not ok or not figureNew then
-        warn("[Rush] Не удалось загрузить модель rbxassetid://100327482330650")
-        _G.RushMorphActive = false
-        return
-    end
+	print("[Rush] Загружаю модель: 78888776904283")
+	local ok, objs = pcall(function()
+		return game:GetObjects("rbxassetid://78888776904283")
+	end)
 
-    local isTestPlace = (game.GameId == 6627207668)
-    figureNew.Parent = workspace
+	print("[Rush] ok =", ok, "| count =", objs and #objs or "nil")
 
-    -- Звуки
-    local Main = figureNew:FindFirstChild("Main")
-    local Footsteps, PlaySound
-    if Main then
-        local Sounds = Main:FindFirstChild("Sounds")
-        if Sounds then
-            local soundFolder = isTestPlace and Sounds:FindFirstChild("test game")
-                                                or Sounds:FindFirstChild("DOORS")
-            if soundFolder then
-                for _, s in pairs(soundFolder:GetChildren()) do
-                    s:Clone().Parent = Main
-                end
-            end
-            Sounds:Destroy()
-        end
-        Footsteps = Main:FindFirstChild("Footsteps")
-        PlaySound = Main:FindFirstChild("PlaySound")
-        if Footsteps then Footsteps:Play() end
-        if PlaySound then PlaySound:Play() end
-    end
+	if not ok or not objs or not objs[1] then
+		warn("[Rush] НЕ УДАЛОСЬ загрузить Rush 78888776904283")
+		_G.RushMorphActive = false
+		return
+	end
 
-    -- Анимация бега
-    local RunAnim
-    local animator = figureNew:FindFirstChild("AnimationController")
-                     and figureNew.AnimationController:FindFirstChild("Animator")
-    if animator then
-        local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
-        local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
-        if runAnimObj then
-            RunAnim = animator:LoadAnimation(runAnimObj)
-            RunAnim:Play()
-            RunAnim:AdjustSpeed(0)
-        end
-    end
+	local figureNew = objs[1]
+	print("[Rush] Модель загружена:", figureNew.Name)
+	print("[Rush] --- Дети модели ---")
+	for _, c in pairs(figureNew:GetChildren()) do
+		print("[Rush]   >", c.Name, "|", c.ClassName)
+	end
 
-    -- Скорость шагов
-    spawn(function()
-        local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-        local hum = char:WaitForChild("Humanoid")
-        hum.Running:Connect(function(speed)
-            if RunAnim then
-                if speed >= 20 then RunAnim:AdjustSpeed(1.5)
-                elseif speed >= 5 then RunAnim:AdjustSpeed(1)
-                else RunAnim:AdjustSpeed(0) end
-            end
-            if Footsteps and Footsteps.IsPlaying then
-                Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-            end
-            if PlaySound and PlaySound.IsPlaying then
-                PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-            end
-        end)
-    end)
+	local isTestPlace = (game.GameId == 6627207668)
+	figureNew.Parent = workspace
 
-    -- ============================================================
-    -- СЛЕЖКА + СКРЫТИЕ + КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
-    -- ============================================================
-    RunService.RenderStepped:Connect(function()
-        local char = game.Players.LocalPlayer.Character
-        if not char then return end
+	-- Звуки
+	local Main = figureNew:FindFirstChild("Main") or figureNew
+	local Footsteps, PlaySound
+	do
+		local Sounds = Main:FindFirstChild("Sounds")
+		if Sounds then
+			local soundFolder = isTestPlace and Sounds:FindFirstChild("test game")
+			                                    or Sounds:FindFirstChild("DOORS")
+			if soundFolder then
+				for _, s in pairs(soundFolder:GetChildren()) do
+					s:Clone().Parent = Main
+				end
+			end
+			Sounds:Destroy()
+		end
+		Footsteps = Main:FindFirstChild("Footsteps")
+		PlaySound = Main:FindFirstChild("PlaySound")
+		if Footsteps then Footsteps:Play() end
+		if PlaySound then PlaySound:Play() end
+	end
 
-        if char:FindFirstChild("Head") then
-            char.Head.Transparency = 1
-        end
+	-- Анимация
+	local RunAnim
+	do
+		local animator = figureNew:FindFirstChild("AnimationController")
+		                 and figureNew.AnimationController:FindFirstChild("Animator")
+		if animator then
+			local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
+			local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
+			if runAnimObj then
+				RunAnim = animator:LoadAnimation(runAnimObj)
+				RunAnim:Play()
+				RunAnim:AdjustSpeed(0)
+			end
+		end
+	end
 
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            pcall(function() figureNew:PivotTo(hrp.CFrame) end)
-        end
+	-- Скорость
+	spawn(function()
+		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+		local hum = char:WaitForChild("Humanoid")
+		hum.Running:Connect(function(speed)
+			if RunAnim then
+				if speed >= 20 then RunAnim:AdjustSpeed(1.5)
+				elseif speed >= 5 then RunAnim:AdjustSpeed(1)
+				else RunAnim:AdjustSpeed(0) end
+			end
+			if Footsteps and Footsteps.IsPlaying then
+				Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+			end
+			if PlaySound and PlaySound.IsPlaying then
+				PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+			end
+		end)
+	end)
 
-        for _, v in pairs(char:GetChildren()) do
-            if v:IsA("BasePart") then
-                v.LocalTransparencyModifier = 1
-                for _, d in pairs(v:GetDescendants()) do
-                    if d:IsA("Decal") or d:IsA("Texture") then
-                        d.Transparency = 1
-                    end
-                end
-            elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-                v.Handle.Transparency = 1
-            end
-        end
+	-- Слежка + камера
+	RunService.RenderStepped:Connect(function()
+		local char = LocalPlayer.Character
+		if not char then return end
 
-        -- === КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
-        local camera = workspace.CurrentCamera
-        if camera and figureNew and figureNew.Parent then
-            local morphHead = figureNew:FindFirstChild("Head", true)
-            if not morphHead then
-                morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
-            end
+		if char:FindFirstChild("Head") then
+			char.Head.Transparency = 1
+		end
 
-            if morphHead then
-                if isThirdPerson then
-                    camera.CameraType = Enum.CameraType.Scriptable
-                    local lookVector = camera.CFrame.LookVector
-                    local upVector = camera.CFrame.UpVector
-                    local headPos = morphHead.Position
-                    local camPos = headPos - (lookVector * thirdPersonDistance)
-                                   + Vector3.new(0, thirdPersonHeightOffset, 0)
-                    camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
-                else
-                    camera.CameraType = Enum.CameraType.Custom
-                end
-            end
-        end
-    end)
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			pcall(function() figureNew:PivotTo(hrp.CFrame) end)
+		end
 
-    -- R — toggle звуков, L — toggle камеры
-    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-        if key == "r" then
-            if Footsteps then
-                if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
-            end
-            if PlaySound then
-                if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
-            end
-        elseif key == "l" then
-            isThirdPerson = not isThirdPerson
-            if not isThirdPerson then
-                resetCamera()
-            end
-        end
-    end)
+		for _, v in pairs(char:GetChildren()) do
+			if v:IsA("BasePart") then
+				v.LocalTransparencyModifier = 1
+				for _, d in pairs(v:GetDescendants()) do
+					if d:IsA("Decal") or d:IsA("Texture") then
+						d.Transparency = 1
+					end
+				end
+			elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
+				v.Handle.Transparency = 1
+			end
+		end
 
-    print("[Rush] Morph activated! L — камера, R — звуки")
+		local camera = workspace.CurrentCamera
+		if camera and figureNew.Parent then
+			local morphHead = figureNew:FindFirstChild("Head", true)
+			                  or figureNew:FindFirstChildWhichIsA("BasePart")
+			if morphHead then
+				if isThirdPerson then
+					camera.CameraType = Enum.CameraType.Scriptable
+					local lookVector = camera.CFrame.LookVector
+					local upVector = camera.CFrame.UpVector
+					local headPos = morphHead.Position
+					local camPos = headPos - (lookVector * thirdPersonDistance)
+					               + Vector3.new(0, thirdPersonHeightOffset, 0)
+					camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+				else
+					camera.CameraType = Enum.CameraType.Custom
+				end
+			end
+		end
+	end)
+
+	-- Управление
+	LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+		if key == "r" then
+			if Footsteps then
+				if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+			end
+			if PlaySound then
+				if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+			end
+		elseif key == "l" then
+			isThirdPerson = not isThirdPerson
+			if not isThirdPerson then resetCamera() end
+		end
+	end)
+
+	print("[Rush] ✅ MORPH ACTIVATED!")
 end
 
 -- ============================================================
 -- БУТЫЛКА
 -- ============================================================
-toolNew.Parent = game.Players.LocalPlayer.Backpack
+toolNew.Parent = LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
-toolNew.TextureId = "rbxassetid://76865808847706"
+-- УБРАНО: toolNew.TextureId = "..." (у Tool нет такого свойства)
 
 toolNew.Equipped:Connect(function()
-	if game.GameId == 6627207668 then
+	if game.GameId == 6627207668 and ohhmydayz then
 		ohhmydayz:Play()
 	end
 end)
 
 toolNew.Unequipped:Connect(function()
-	if game.GameId == 6627207668 then
+	if game.GameId == 6627207668 and ohhmydayz then
 		ohhmydayz:Stop()
 	end
 end)
 
 toolNew.Activated:Connect(function()
+	print("[Potion] Зелье выпито! drinked =", drinked)
 	if drinked == false then
 		drinked = true
 
-		if game.GameId == 6627207668 then
+		if game.GameId == 6627207668 and ohhmydayz2 then
 			ohhmydayz2:Play()
 			ohhmydayz2.Ended:Wait()
-		else
+		elseif ohhmydayz3 then
 			ohhmydayz3:Play()
 			ohhmydayz3.Ended:Wait()
 		end
 
 		toolNew:Destroy()
-
 		transformIntoRush()
 	end
 end)
+
+print("[Potion] ✅ Скрипт загружен, бутылка в Backpack")
