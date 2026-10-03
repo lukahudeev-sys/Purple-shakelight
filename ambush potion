@@ -1,173 +1,330 @@
-local function transformIntoAmbush()
-    -- Сбрасываем старый флаг
-    _G.TransformedIntoAnyMorph = false
+-- ============================================================
+-- AMBUSH BOTTLE + AMBUSH MORPH
+-- По образу seek potion.txt
+-- ============================================================
 
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
+local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-    local LocalPlayer = Players.LocalPlayer
-
-    -- ============================================================
-    -- ЗАГРУЗКА МОДЕЛИ (как в Seek)
-    -- ============================================================
-    local AMBUSH_ASSET = 98266611233960
-
-    local objects = game:GetObjects("rbxassetid://" .. AMBUSH_ASSET)
-    if not objects or not objects[1] then
-        warn("[Ambush Morph] Не удалось загрузить модель")
-        return
-    end
-
-    local Ambush = objects[1]
-    Ambush.Parent = workspace
-
-    -- ============================================================
-    -- ПРОВЕРКА MAIN
-    -- ============================================================
-    local Main = Ambush:FindFirstChild("Main")
-    if not Main then
-        warn("[Ambush Morph] У Ambush не найден объект Main")
-        Ambush:Destroy()
-        return
-    end
-
-    _G.TransformedIntoAnyMorph = true
-
-    -- ============================================================
-    -- ОРИГИНАЛЬНЫЙ ПЕРСОНАЖ
-    -- ============================================================
-    local originalCharacter = LocalPlayer.Character
-    if not originalCharacter then
-        warn("[Ambush Morph] Нет персонажа")
-        Ambush:Destroy()
-        return
-    end
-
-    local originalRootPart = originalCharacter:FindFirstChild("HumanoidRootPart")
-    local originalHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
-    if not originalRootPart or not originalHumanoid then
-        warn("[Ambush Morph] Нет HumanoidRootPart/Humanoid")
-        Ambush:Destroy()
-        return
-    end
-
-    -- ============================================================
-    -- УБИРАЕМ HUMANOID У МОДЕЛИ (как в Seek)
-    -- ============================================================
-    local morphHumanoid = Ambush:FindFirstChildWhichIsA("Humanoid")
-    if morphHumanoid then
-        morphHumanoid:Destroy()
-    end
-
-    for _, part in ipairs(Ambush:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Anchored = false
-            part.CanCollide = false
-        end
-    end
-
-    -- Ставим Ambush на игрока СРАЗУ
-    Ambush:PivotTo(originalRootPart.CFrame)
-
-    -- ============================================================
-    -- СКРЫВАЕМ ТЕЛО ИГРОКА
-    -- ============================================================
-    for _, part in ipairs(originalCharacter:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.LocalTransparencyModifier = 1
-            part.Transparency = 1
-            part.CanCollide = false
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
-        end
-    end
-
-    for _, v in pairs(originalCharacter:GetChildren()) do
-        if v:IsA("Accessory") and v:FindFirstChild("Handle") then
-            v.Handle.Transparency = 1
-        end
-    end
-
-    -- ============================================================
-    -- КАМЕРА
-    -- ============================================================
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera.CameraType = Enum.CameraType.Scriptable
-    end
-
-    -- ============================================================
-    -- ЗВУКИ
-    -- ============================================================
-    local Footsteps = Main:FindFirstChild("Footsteps")
-    local PlaySound = Main:FindFirstChild("PlaySound")
-
-    if Footsteps then Footsteps:Play() end
-    if PlaySound then PlaySound:Play() end
-
-    -- ============================================================
-    -- ENFORCE LOOP — PivotTo каждый кадр (как в Seek)
-    -- ============================================================
-    local enforceLoop = RunService.RenderStepped:Connect(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        if Ambush and Ambush.Parent then
-            Ambush:PivotTo(hrp.CFrame)
-        end
-
-        -- Скрываем тело игрока каждый кадр
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.LocalTransparencyModifier = 1
-            elseif part:IsA("Decal") or part:IsA("Texture") then
-                part.Transparency = 1
-            end
-        end
-        for _, v in pairs(char:GetChildren()) do
-            if v:IsA("Accessory") and v:FindFirstChild("Handle") then
-                v.Handle.Transparency = 1
-            end
-        end
-
-        -- Камера от третьего лица
-        if camera then
-            local headPos = hrp.Position + Vector3.new(0, 1.5, 0)
-            local lookVector = camera.CFrame.LookVector
-            local upVector = camera.CFrame.UpVector
-            local camPos = headPos - (lookVector * 12) + Vector3.new(0, 2, 0)
-            camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
-        end
-    end)
-
-    -- ============================================================
-    -- INPUT — R переключает звуки (как было)
-    -- ============================================================
-    local inputConnection
-    inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.R then
-                if Footsteps then
-                    if Footsteps.IsPlaying then
-                        Footsteps:Stop()
-                    else
-                        Footsteps:Play()
-                    end
-                end
-                if PlaySound then
-                    if PlaySound.IsPlaying then
-                        PlaySound:Stop()
-                    else
-                        PlaySound:Play()
-                    end
-                end
-            end
-        end
-    end)
-
-    print("[Ambush Morph] ✅ Ambush привязан к игроку")
+-- ============================================================
+-- MAIN UI
+-- ============================================================
+local MainUI_upvr = nil
+if not LocalPlayer.PlayerGui:FindFirstChild("MainUI") then
+	repeat wait() until LocalPlayer.PlayerGui:FindFirstChild("MainUI")
 end
+MainUI_upvr = LocalPlayer.PlayerGui.MainUI
+
+-- ============================================================
+-- ЗЕЛЬЕ
+-- ============================================================
+local toolNew = nil
+if game.GameId == 6627207668 then
+	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
+else
+	toolNew = game:GetObjects("rbxassetid://70922560617067")[1]
+end
+
+local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
+local drinked = false
+local CollisionLoopRunning = true
+local ended = false
+newCloneEffect.Name = "GuidingLightPotion"
+newCloneEffect.Visible = false
+newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
+
+local ohhmydayz = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
+local ohhmydayz2 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
+local ohhmydayz3 = LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
+
+-- ============================================================
+-- AMBUSH MORPH STATE
+-- ============================================================
+local AMBUSH_ASSET = 98266611233960
+
+local morphActive = false
+local isThirdPerson = true
+
+local morph = nil
+local originalCharacter, originalRootPart, originalHumanoid = nil, nil, nil
+local originalWalkSpeed, originalJumpPower, originalJumpHeight = 16, 50, 7.2
+local enforceLoop, inputConnection = nil, nil
+
+-- ============================================================
+-- CLEANUP
+-- ============================================================
+local function cleanupMorph()
+	if inputConnection then inputConnection:Disconnect() inputConnection = nil end
+	if enforceLoop then enforceLoop:Disconnect() enforceLoop = nil end
+
+	local camera = workspace.CurrentCamera
+	if camera then camera.CameraType = Enum.CameraType.Custom end
+
+	if originalCharacter then
+		for _, part in ipairs(originalCharacter:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Transparency = 0
+				part.LocalTransparencyModifier = 0
+				part.CanCollide = true
+			elseif part:IsA("Decal") or part:IsA("Texture") then
+				part.Transparency = 0
+			end
+		end
+		for _, v in pairs(originalCharacter:GetChildren()) do
+			if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+				v.Handle.Transparency = 0
+			end
+		end
+	end
+
+	if originalHumanoid then
+		originalHumanoid.WalkSpeed = originalWalkSpeed
+		originalHumanoid.JumpPower = originalJumpPower
+		if originalJumpHeight then
+			originalHumanoid.JumpHeight = originalJumpHeight
+		end
+	end
+
+	if morph then
+		morph:Destroy()
+		morph = nil
+	end
+
+	morphActive = false
+end
+
+-- ============================================================
+-- CORE MORPH ENGINE (через PivotTo)
+-- ============================================================
+local function applyMorph()
+	if morphActive then cleanupMorph() end
+
+	local objects = game:GetObjects("rbxassetid://" .. AMBUSH_ASSET)
+	if not objects or not objects[1] then
+		warn("[Ambush Morph] Не удалось загрузить модель")
+		return
+	end
+
+	morph = objects[1]
+
+	local Main = morph:FindFirstChild("Main")
+	if not Main then
+		warn("[Ambush Morph] У Ambush не найден объект Main")
+		morph:Destroy()
+		morph = nil
+		return
+	end
+
+	originalCharacter = LocalPlayer.Character
+	if not originalCharacter or not originalCharacter:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+
+	originalRootPart = originalCharacter:FindFirstChild("HumanoidRootPart")
+	originalHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
+	if not originalRootPart or not originalHumanoid then return end
+
+	originalWalkSpeed = originalHumanoid.WalkSpeed
+	originalJumpPower = originalHumanoid.JumpPower
+	originalJumpHeight = originalHumanoid.JumpHeight
+
+	-- Морф в мир
+	morph.Parent = workspace
+
+	-- Убираем Humanoid если есть
+	local morphHumanoid = morph:FindFirstChildWhichIsA("Humanoid")
+	if morphHumanoid then morphHumanoid:Destroy() end
+
+	for _, part in ipairs(morph:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored = false
+			part.CanCollide = false
+		end
+	end
+
+	-- Ставим Ambush на игрока СРАЗУ
+	morph:PivotTo(originalRootPart.CFrame)
+
+	-- Скрываем тело игрока
+	for _, part in ipairs(originalCharacter:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.LocalTransparencyModifier = 1
+			part.Transparency = 1
+			part.CanCollide = false
+		elseif part:IsA("Decal") or part:IsA("Texture") then
+			part.Transparency = 1
+		end
+	end
+	for _, v in pairs(originalCharacter:GetChildren()) do
+		if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+			v.Handle.Transparency = 1
+		end
+	end
+
+	-- Камера
+	local camera = workspace.CurrentCamera
+	if camera then camera.CameraType = Enum.CameraType.Scriptable end
+
+	-- Звуки Ambush
+	local Footsteps = Main:FindFirstChild("Footsteps")
+	local PlaySound = Main:FindFirstChild("PlaySound")
+	if Footsteps then Footsteps:Play() end
+	if PlaySound then PlaySound:Play() end
+
+	-- =========================
+	-- ENFORCE LOOP — PivotTo каждый кадр
+	-- =========================
+	enforceLoop = RunService.RenderStepped:Connect(function()
+		local char = LocalPlayer.Character
+		if not char then return end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+
+		if morph and morph.Parent then
+			morph:PivotTo(hrp.CFrame)
+		end
+
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.LocalTransparencyModifier = 1
+			elseif part:IsA("Decal") or part:IsA("Texture") then
+				part.Transparency = 1
+			end
+		end
+		for _, v in pairs(char:GetChildren()) do
+			if v:IsA("Accessory") and v:FindFirstChild("Handle") then
+				v.Handle.Transparency = 1
+			end
+		end
+
+		if camera then
+			local headPos = hrp.Position + Vector3.new(0, 1.5, 0)
+			local lookVector = camera.CFrame.LookVector
+			local upVector = camera.CFrame.UpVector
+
+			if isThirdPerson then
+				local camPos = headPos - (lookVector * 12) + Vector3.new(0, 2, 0)
+				camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+			else
+				local camPos = headPos + lookVector * 0.5
+				camera.CFrame = CFrame.lookAt(camPos, camPos + lookVector, upVector)
+			end
+		end
+	end)
+
+	-- =========================
+	-- INPUT (R — звуки, L — 1st/3rd person)
+	-- =========================
+	local UserInputService = game:GetService("UserInputService")
+	inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if input.KeyCode == Enum.KeyCode.R then
+				if Footsteps then
+					if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+				end
+				if PlaySound then
+					if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+				end
+			elseif input.KeyCode == Enum.KeyCode.L then
+				isThirdPerson = not isThirdPerson
+			end
+		end
+	end)
+
+	morphActive = true
+	print("[Ambush Morph] ✅ Ambush привязан к игроку")
+end
+
+-- ============================================================
+-- ЭФФЕКТ НА ЭКРАНЕ
+-- ============================================================
+local function EffectOnScreen()
+	drinkSoundPlay()
+	newCloneEffect.Visible = true
+	spawn(function()
+		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
+		if clone then
+			local clone_2 = clone:Clone()
+			clone_2.Name = "Live"
+			clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
+			clone_2.ImageTransparency = 1
+			clone_2.Parent = MainUI_upvr.MainFrame
+			clone_2.Visible = true
+			TweenService_upvr:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				ImageTransparency = 0
+			}):Play()
+			wait(5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1.5, 0, 1.5, 0)
+			}):Play()
+			wait(0.5)
+			TweenService_upvr:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1
+			}):Play()
+			wait(4.5)
+			clone_2:Destroy()
+		end
+	end)
+end
+
+function drinkSoundPlay()
+	local newSound = nil
+	if not workspace:FindFirstChild("DrinkPotionAddonSound") then
+		newSound = Instance.new("Sound", workspace)
+		newSound.Name = "DrinkPotionAddonSound"
+		if game.GameId == 6627207668 then
+			newSound.SoundId = "rbxassetid://103799151859408"
+		else
+			newSound.SoundId = "rbxassetid://18869124055"
+		end
+	else
+		newSound = workspace:WaitForChild("DrinkPotionAddonSound")
+	end
+	newSound:Play()
+end
+
+-- ============================================================
+-- ВЫДАЧА ЗЕЛЬЯ
+-- ============================================================
+toolNew.Parent = LocalPlayer.Backpack
+toolNew.Name = "Ambush Bottle"
+toolNew.TextureId = "rbxassetid://139716715049853"
+
+toolNew.Equipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Play()
+	end
+end)
+toolNew.Unequipped:Connect(function()
+	if game.GameId == 6627207668 then
+		ohhmydayz:Stop()
+	end
+end)
+
+-- ============================================================
+-- ВЫПИВАНИЕ → МОРФ В AMBUSH
+-- ============================================================
+toolNew.Activated:Connect(function()
+	if drinked == false then
+		drinked = true
+		EffectOnScreen()
+
+		if game.GameId == 6627207668 then
+			ohhmydayz2:Play()
+			ohhmydayz2.Ended:Wait()
+		else
+			ohhmydayz3:Play()
+			ohhmydayz3.Ended:Wait()
+		end
+
+		task.defer(function()
+			pcall(applyMorph)
+		end)
+
+		toolNew:Destroy()
+	end
+end)
