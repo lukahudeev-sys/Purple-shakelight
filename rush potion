@@ -231,7 +231,7 @@ end
 toolNew.Parent = LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
 pcall(function()
-    toolNew.TextureId = "rbxassetid://76865808847706"
+    toolNew.TextureId = "rbxassetid://100357051469105"
 end)
 
 toolNew.Equipped:Connect(function()
