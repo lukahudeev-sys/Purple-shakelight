@@ -25,7 +25,7 @@ end
 -- ЗАГРУЖАЕМ БУТЫЛКУ
 -- ============================================================
 local toolNew
-for _, id in ipairs({70922560617067, 111263531009426}) do
+for _, id in ipairs({138478901250064, 111263531009426}) do
     local ok, objs = pcall(function()
         return game:GetObjects("rbxassetid://" .. id)
     end)
