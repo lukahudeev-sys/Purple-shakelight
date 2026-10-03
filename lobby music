@@ -43,7 +43,7 @@ part.CFrame = cf
 part.Parent = Workspace
 
 --// ---------- Создаём и запускаем звук ----------
-local sound = GetGitSound("https://github.com/lynguyen26031993-design/-u/raw/refs/heads/main/XRecorder_Edited_20260805_02.mp3?raw=true")
+local sound = GetGitSound("https://github.com/lukahudeev-sys/Purple-shakelight/blob/main/nico_s-nextbots-ost-menu-_halloween-in-game-version_.mp3")
 sound.Name = "CourtSound"
 sound.Volume = 1.5
 sound.RollOffMaxDistance = 55   -- слышно в радиусе 55 стадов
