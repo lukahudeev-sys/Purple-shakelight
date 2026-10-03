@@ -1,6 +1,6 @@
 -- ============================================================
--- AMBUSH BOTTLE → MORPH (от третьего лица)
--- Основано на рабочем ambush morph.txt
+-- RUSH BOTTLE → MORPH (от третьего лица)
+-- Основано на рабочем ambush potion.txt
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -17,45 +17,47 @@ if not backpack then
     backpack = LocalPlayer:WaitForChild("Backpack", 10)
 end
 if not backpack then
-    warn("[Ambush] ❌ Backpack не найден")
+    warn("[Rush] ❌ Backpack не найден")
     return
 end
 
 -- ============================================================
--- ЗАГРУЖАЕМ БУТЫЛКУ
+-- ЗАГРУЖАЕМ БУТЫЛКУ (пробуем несколько ID)
 -- ============================================================
 local toolNew
-for _, id in ipairs({83996348420126, 111263531009426}) do
+for _, id in ipairs({140419135012621, 111263531009426, 83996348420126}) do
     local ok, objs = pcall(function()
         return game:GetObjects("rbxassetid://" .. id)
     end)
     if ok and objs and objs[1] then
         toolNew = objs[1]
-        print("[Ambush] ✅ Бутылка загружена с ID:", id)
+        print("[Rush] ✅ Бутылка загружена с ID:", id)
         break
+    else
+        warn("[Rush] ❌ ID не сработал:", id)
     end
 end
 
 if not toolNew then
-    warn("[Ambush] ❌ Не удалось загрузить бутылку")
+    warn("[Rush] ❌ Не удалось загрузить бутылку")
     return
 end
 
 toolNew.Parent = backpack
-toolNew.Name = "Ambush Bottle"
-toolNew.TextureId = "rbxassetid://113605284946572"
-print("[Ambush] ✅ Предмет выдан в Backpack")
+toolNew.Name = "Rush Bottle"
+toolNew.TextureId = "rbxassetid://76865808847706"
+print("[Rush] ✅ Предмет выдан в Backpack")
 
 -- ============================================================
--- AMBUSH MORPH (логика из твоего рабочего скрипта + камера от 3-го лица)
+-- RUSH MORPH
 -- ============================================================
-local AMBUSH_ASSET = 98266611233960
+local RUSH_ASSET = 78888776904283
 local MORPH_DURATION = 60 -- ⏱ длительность морфа в секундах
 
 local morphActive = false
 local isThirdPerson = true
 
-local Ambush = nil
+local Rush = nil
 local enforceLoop, inputConnection, morphTimer = nil, nil, nil
 local Footsteps, PlaySound = nil, nil
 
@@ -93,56 +95,66 @@ local function cleanupMorph()
     if Footsteps then Footsteps:Stop() Footsteps = nil end
     if PlaySound then PlaySound:Stop() PlaySound = nil end
 
-    if Ambush then
-        Ambush:Destroy()
-        Ambush = nil
+    if Rush then
+        Rush:Destroy()
+        Rush = nil
     end
 
     morphActive = false
-    print("[Ambush] 🔄 Морф снят")
+    print("[Rush] 🔄 Морф снят")
 end
 
 -- ============================================================
--- CORE MORPH — логика из ambush morph.txt + камера
+-- CORE MORPH
 -- ============================================================
 local function applyMorph()
     if morphActive then cleanupMorph() end
 
+    print("[Rush] Загружаю модель Rush, ID:", RUSH_ASSET)
+
     local Success, Objects = pcall(function()
-        return game:GetObjects("rbxassetid://" .. AMBUSH_ASSET)
+        return game:GetObjects("rbxassetid://" .. RUSH_ASSET)
     end)
 
+    print("[Rush] ok =", Success, "| count =", Objects and #Objects or "nil")
+
     if not Success or not Objects or not Objects[1] then
-        warn("[Ambush] ❌ Не удалось загрузить модель Ambush")
+        warn("[Rush] ❌ Не удалось загрузить модель Rush")
+        print("[Rush] Попробуй другой ID. Сейчас в скрипте:", RUSH_ASSET)
         return
     end
 
-    Ambush = Objects[1]
-    Ambush.Parent = workspace
+    Rush = Objects[1]
+    print("[Rush] ✅ Модель загружена:", Rush.Name)
+    print("[Rush] --- Дети модели ---")
+    for _, c in pairs(Rush:GetChildren()) do
+        print("[Rush]   >", c.Name, "|", c.ClassName)
+    end
 
-    local Main = Ambush:FindFirstChild("Main")
+    Rush.Parent = workspace
+
+    -- Ищем Main или fallback
+    local Main = Rush:FindFirstChild("Main")
     if not Main then
-        warn("[Ambush] ❌ У Ambush не найден объект Main")
-        Ambush:Destroy()
-        Ambush = nil
-        return
+        warn("[Rush] Нет 'Main', использую корень модели")
+        Main = Rush
     end
 
-    -- Звуки
+    -- Звуки (безопасно)
     Footsteps = Main:FindFirstChild("Footsteps")
     PlaySound = Main:FindFirstChild("PlaySound")
     if Footsteps then Footsteps:Play() end
     if PlaySound then PlaySound:Play() end
 
-    -- Камера от 3-го лица
+    -- Камера
     local camera = workspace.CurrentCamera
     if camera then camera.CameraType = Enum.CameraType.Scriptable end
 
     -- ============================================================
-    -- FOLLOW LOOP — как в твоём рабочем скрипте + камера
+    -- FOLLOW LOOP + КАМЕРА
     -- ============================================================
     enforceLoop = RunService.RenderStepped:Connect(function()
-        if not Ambush or not Ambush.Parent then return end
+        if not Rush or not Rush.Parent then return end
 
         local Character = LocalPlayer.Character
         if not Character then return end
@@ -150,9 +162,9 @@ local function applyMorph()
         local RootPart = Character:FindFirstChild("HumanoidRootPart")
         if not RootPart then return end
 
-        -- Перемещаем Ambush за игроком (как в твоём рабочем скрипте)
+        -- Перемещаем Rush за игроком
         pcall(function()
-            Ambush:PivotTo(RootPart.CFrame)
+            Rush:PivotTo(RootPart.CFrame)
         end)
 
         -- Скрываем тело игрока
@@ -174,15 +186,27 @@ local function applyMorph()
 
         -- 🎥 КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
         if camera then
-            local headPos = RootPart.Position + Vector3.new(0, 1.5, 0)
+            -- Ищем Head у Rush для привязки камеры
+            local morphHead = Rush:FindFirstChild("Head", true)
+            if not morphHead then
+                morphHead = Rush:FindFirstChildWhichIsA("BasePart")
+            end
+
+            local targetPos
+            if morphHead then
+                targetPos = morphHead.Position
+            else
+                targetPos = RootPart.Position + Vector3.new(0, 1.5, 0)
+            end
+
             local lookVector = camera.CFrame.LookVector
             local upVector = camera.CFrame.UpVector
 
             if isThirdPerson then
-                local camPos = headPos - (lookVector * 12) + Vector3.new(0, 2, 0)
-                camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+                local camPos = targetPos - (lookVector * 12) + Vector3.new(0, 2, 0)
+                camera.CFrame = CFrame.lookAt(camPos, targetPos, upVector)
             else
-                local camPos = headPos + lookVector * 0.5
+                local camPos = targetPos + lookVector * 0.5
                 camera.CFrame = CFrame.lookAt(camPos, camPos + lookVector, upVector)
             end
         end
@@ -208,7 +232,7 @@ local function applyMorph()
     end)
 
     morphActive = true
-    print("[Ambush] ✅ Ambush morph activated! Третье лицо. R — звуки, L — 1/3 лицо")
+    print("[Rush] ✅ Rush morph activated! R — звуки, L — 1/3 лицо")
 
     -- ⏱ Таймер: через MORPH_DURATION секунд морф исчезает
     morphTimer = task.delay(MORPH_DURATION, function()
@@ -225,9 +249,9 @@ toolNew.Activated:Connect(function()
     if drinked then return end
     drinked = true
 
-    print("[Ambush] 🍶 Зелье выпито, превращаюсь в Ambush...")
+    print("[Rush] 🍶 Зелье выпито, превращаюсь в Rush...")
 
-    -- Звук выпивания (если есть)
+    -- Звук выпивания
     local newSound = workspace:FindFirstChild("DrinkPotionAddonSound")
     if not newSound then
         newSound = Instance.new("Sound", workspace)
