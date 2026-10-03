@@ -43,7 +43,7 @@ end
 
 toolNew.Parent = backpack
 toolNew.Name = "Ambush Bottle"
-toolNew.TextureId = "rbxassetid://139716715049853"
+toolNew.TextureId = "rbxassetid://113605284946572"
 print("[Ambush] ✅ Предмет выдан в Backpack")
 
 -- ============================================================
