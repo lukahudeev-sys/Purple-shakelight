@@ -1,5 +1,6 @@
 -- ============================================================
--- AMBUSH BOTTLE + AMBUSH MORPH (для инжектора)
+-- AMBUSH BOTTLE + AMBUSH MORPH (без анимаций)
+-- Выпил → морф → через время морф исчезает
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -22,15 +23,11 @@ if not backpack then
 end
 
 -- ============================================================
--- ЖДЁМ MAINUI
+-- ЖДЁМ MAINUI (для эффекта на экране — можно убрать, если не надо)
 -- ============================================================
 local MainUI = LocalPlayer.PlayerGui:FindFirstChild("MainUI")
 if not MainUI then
     MainUI = LocalPlayer.PlayerGui:WaitForChild("MainUI", 10)
-end
-if not MainUI then
-    warn("[Ambush] ❌ MainUI не найден")
-    return
 end
 
 -- ============================================================
@@ -59,13 +56,8 @@ end
 print("[Ambush] ✅ Бутылка загружена:", toolNew.Name)
 
 -- ============================================================
--- ЭФФЕКТ НА ЭКРАНЕ
+-- ЭФФЕКТ НА ЭКРАНЕ (без анимаций персонажа)
 -- ============================================================
-local newCloneEffect = MainUI.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
-newCloneEffect.Name = "GuidingLightPotion"
-newCloneEffect.Visible = false
-newCloneEffect.Parent = MainUI.MainFrame.Healthbar.Effects
-
 local function drinkSoundPlay()
     local newSound = workspace:FindFirstChild("DrinkPotionAddonSound")
     if not newSound then
@@ -80,39 +72,11 @@ local function drinkSoundPlay()
     newSound:Play()
 end
 
-local function EffectOnScreen()
-    drinkSoundPlay()
-    newCloneEffect.Visible = true
-    spawn(function()
-        local clone = MainUI.MainFrame.WhiteVignette:Clone()
-        if clone then
-            local clone_2 = clone:Clone()
-            clone_2.Name = "Live"
-            clone_2.ImageColor3 = Color3.fromRGB(142, 255, 153)
-            clone_2.ImageTransparency = 1
-            clone_2.Parent = MainUI.MainFrame
-            clone_2.Visible = true
-            TweenService:Create(clone_2, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                ImageTransparency = 0
-            }):Play()
-            wait(5)
-            TweenService:Create(clone_2, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-                Size = UDim2.new(1.5, 0, 1.5, 0)
-            }):Play()
-            wait(0.5)
-            TweenService:Create(clone_2, TweenInfo.new(4.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {
-                ImageTransparency = 1
-            }):Play()
-            wait(4.5)
-            clone_2:Destroy()
-        end
-    end)
-end
-
 -- ============================================================
 -- AMBUSH MORPH ENGINE (через PivotTo, как в Seek)
 -- ============================================================
 local AMBUSH_ASSET = 98266611233960
+local MORPH_DURATION = 60 -- ⏱ СКОЛЬКО СЕКУНД ДЛИТСЯ МОРФ (меняй как хочешь)
 
 local morphActive = false
 local isThirdPerson = true
@@ -120,10 +84,15 @@ local morph = nil
 local originalCharacter, originalRootPart, originalHumanoid = nil, nil, nil
 local originalWalkSpeed, originalJumpPower, originalJumpHeight = 16, 50, 7.2
 local enforceLoop, inputConnection = nil, nil
+local morphTimer = nil
 
+-- ============================================================
+-- CLEANUP — возвращает игрока в нормальное состояние
+-- ============================================================
 local function cleanupMorph()
     if inputConnection then inputConnection:Disconnect() inputConnection = nil end
     if enforceLoop then enforceLoop:Disconnect() enforceLoop = nil end
+    if morphTimer then task.cancel(morphTimer) morphTimer = nil end
 
     local camera = workspace.CurrentCamera
     if camera then camera.CameraType = Enum.CameraType.Custom end
@@ -159,8 +128,12 @@ local function cleanupMorph()
     end
 
     morphActive = false
+    print("[Ambush] 🔄 Морф снят, игрок вернулся в нормальное состояние")
 end
 
+-- ============================================================
+-- CORE MORPH ENGINE
+-- ============================================================
 local function applyMorph()
     if morphActive then cleanupMorph() end
 
@@ -215,6 +188,7 @@ local function applyMorph()
 
     morph:PivotTo(originalRootPart.CFrame)
 
+    -- Скрываем тело игрока
     for _, part in ipairs(originalCharacter:GetDescendants()) do
         if part:IsA("BasePart") then
             part.LocalTransparencyModifier = 1
@@ -233,11 +207,15 @@ local function applyMorph()
     local camera = workspace.CurrentCamera
     if camera then camera.CameraType = Enum.CameraType.Scriptable end
 
+    -- Звуки Ambush
     local Footsteps = Main:FindFirstChild("Footsteps")
     local PlaySound = Main:FindFirstChild("PlaySound")
     if Footsteps then Footsteps:Play() end
     if PlaySound then PlaySound:Play() end
 
+    -- =========================
+    -- ENFORCE LOOP — PivotTo каждый кадр
+    -- =========================
     enforceLoop = RunService.RenderStepped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
@@ -276,6 +254,9 @@ local function applyMorph()
         end
     end)
 
+    -- =========================
+    -- INPUT (R — звуки, L — 1st/3rd person)
+    -- =========================
     inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -293,7 +274,14 @@ local function applyMorph()
     end)
 
     morphActive = true
-    print("[Ambush] ✅ Ambush привязан к игроку")
+    print("[Ambush] ✅ Ambush привязан к игроку на " .. MORPH_DURATION .. " сек")
+
+    -- =========================
+    -- ⏱ ТАЙМЕР — через MORPH_DURATION секунд морф исчезает
+    -- =========================
+    morphTimer = task.delay(MORPH_DURATION, function()
+        cleanupMorph()
+    end)
 end
 
 -- ============================================================
@@ -306,7 +294,7 @@ toolNew.TextureId = "rbxassetid://139716715049853"
 print("[Ambush] ✅ Предмет выдан в Backpack")
 
 -- ============================================================
--- АКТИВАЦИЯ → МОРФ
+-- АКТИВАЦИЯ → СРАЗУ МОРФ (без анимаций)
 -- ============================================================
 local drinked = false
 
@@ -314,9 +302,9 @@ toolNew.Activated:Connect(function()
     if drinked then return end
     drinked = true
 
-    print("[Ambush] 🍶 Зелье выпито, запускаю морф...")
+    print("[Ambush] 🍶 Зелье выпито, морфую в Ambush...")
 
-    EffectOnScreen()
+    drinkSoundPlay()
 
     task.defer(function()
         pcall(applyMorph)
