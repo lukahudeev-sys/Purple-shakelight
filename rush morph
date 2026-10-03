@@ -1,218 +1,200 @@
--- Rush Morph (third person) — исправленная версия
--- Заменяет старый transformIntoRush
--- Управление: R — toggle звуков, L — toggle камеры
+--[[
+    Rush Morph для Doors
+    Основано на структуре seek.txt
+    
+    Управление:
+      R — toggle звуков (шаги + основной звук)
+      T — крик (Scream, если есть)
+      L — toggle камеры 1-е / 3-е лицо
+--]]
 
-local player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
--- Настройки камеры
+-- Защита от повторного морфа (СВОЙ флаг, как в seek.txt)
+if _G.RushMorphActive then
+    warn("[Rush Morph] Уже активен!")
+    return
+end
+_G.RushMorphActive = true
+
+-- ============================================================
+-- НАСТРОЙКА
+-- ============================================================
+local RUSH_ASSET = "rbxassetid://100327482330650"
+local DOORS_TEST_PLACE_ID = 6627207668
+
+-- Камера
 local isThirdPerson = true
 local thirdPersonDistance = 12
 local thirdPersonHeightOffset = 2
 
-local function resetCamera()
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera.CameraType = Enum.CameraType.Custom
-    end
+-- ============================================================
+-- ЗАГРУЗКА МОДЕЛИ
+-- ============================================================
+local ok, figureNew = pcall(function()
+    return game:GetObjects(RUSH_ASSET)[1]
+end)
+
+if not ok or not figureNew then
+    warn("[Rush Morph] Не удалось загрузить модель Rush. Проверь asset id.")
+    _G.RushMorphActive = false
+    return
 end
 
--- Очистка предыдущего Rush-морфа, если был
-if _G.RushMorphCleanup then
-    pcall(_G.RushMorphCleanup)
-end
+local isTestPlace = (game.GameId == DOORS_TEST_PLACE_ID)
 
-local function transformIntoRush()
-    print(">>> Rush button pressed!")
-    print(">>> _G.TransformedIntoAnyMorph =", _G.TransformedIntoAnyMorph)
+figureNew.Parent = workspace
 
-    -- НЕ блокируемся жёстко — сбрасываем флаг как в Ambush
-    _G.TransformedIntoAnyMorph = false
+-- ============================================================
+-- ЗВУКИ (копируем как в morphs.txt)
+-- ============================================================
+local Main = figureNew:FindFirstChild("Main")
+local Footsteps, PlaySound
 
-    -- Загружаем модель
-    local ok, objs = pcall(function()
-        return game:GetObjects("rbxassetid://100327482330650")
-    end)
-
-    print(">>> GetObjects ok:", ok)
-    print(">>> objs count:", objs and #objs or "nil")
-
-    if not ok or not objs or not objs[1] then
-        warn("[Rush] Не удалось загрузить модель rbxassetid://100327482330650")
-        return
-    end
-
-    local figureNew = objs[1]
-    print(">>> Loaded model:", figureNew.Name)
-
-    local testingPlace = (game.GameId == 6627207668)
-
-    figureNew.Parent = workspace
-
-    _G.TransformedIntoAnyMorph = true
-
-    -- === ЗВУКИ (безопасно) ===
-    local Main = figureNew:FindFirstChild("Main")
-    if not Main then
-        warn("[Rush] В модели нет папки Main. Дочерние объекты:")
-        for _, c in pairs(figureNew:GetChildren()) do
-            print("   >", c.Name, "|", c.ClassName)
-        end
-    end
-
-    local Footsteps, PlaySound
-
-    if Main then
-        local Sounds = Main:FindFirstChild("Sounds")
-        if Sounds then
-            local soundFolder = testingPlace and Sounds:FindFirstChild("test game")
-                                                or Sounds:FindFirstChild("DOORS")
-            if soundFolder then
-                for _, s in pairs(soundFolder:GetChildren()) do
-                    s:Clone().Parent = Main
-                end
+if Main then
+    local Sounds = Main:FindFirstChild("Sounds")
+    if Sounds then
+        local soundFolder = isTestPlace and Sounds:FindFirstChild("test game")
+                                            or Sounds:FindFirstChild("DOORS")
+        if soundFolder then
+            for _, s in pairs(soundFolder:GetChildren()) do
+                s:Clone().Parent = Main
             end
-            Sounds:Destroy()
         end
-
-        Footsteps = Main:FindFirstChild("Footsteps")
-        PlaySound = Main:FindFirstChild("PlaySound")
-        if Footsteps then Footsteps:Play() end
-        if PlaySound then PlaySound:Play() end
+        Sounds:Destroy()
     end
 
-    -- === АНИМАЦИЯ (безопасно) ===
-    local RunAnim
-    do
-        local animator = figureNew:FindFirstChild("AnimationController")
-                         and figureNew.AnimationController:FindFirstChild("Animator")
-        if animator then
-            local animsFolder = figureNew:FindFirstChild(testingPlace and "AnimationsTest" or "Animations")
-            local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
-            if runAnimObj then
-                RunAnim = animator:LoadAnimation(runAnimObj)
-                RunAnim:Play()
+    Footsteps = Main:FindFirstChild("Footsteps")
+    PlaySound = Main:FindFirstChild("PlaySound")
+
+    if Footsteps then Footsteps:Play() end
+    if PlaySound then PlaySound:Play() end
+end
+
+-- ============================================================
+-- АНИМАЦИЯ (если есть)
+-- ============================================================
+local RunAnim
+local animator = figureNew:FindFirstChild("AnimationController")
+                 and figureNew.AnimationController:FindFirstChild("Animator")
+
+if animator then
+    local animsFolder = figureNew:FindFirstChild(isTestPlace and "AnimationsTest" or "Animations")
+    local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
+    if runAnimObj then
+        RunAnim = animator:LoadAnimation(runAnimObj)
+        RunAnim:Play()
+        RunAnim:AdjustSpeed(0)
+    end
+end
+
+-- ============================================================
+-- АНИМАЦИЯ ПО СКОРОСТИ + УСКОРЕНИЕ ШАГОВ
+-- ============================================================
+spawn(function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    hum.Running:Connect(function(speed)
+        if RunAnim then
+            if speed >= 20 then
+                RunAnim:AdjustSpeed(1.5)
+            elseif speed >= 5 then
+                RunAnim:AdjustSpeed(1)
+            else
                 RunAnim:AdjustSpeed(0)
             end
         end
-    end
+        if Footsteps and Footsteps.IsPlaying then
+            Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+        end
+        if PlaySound and PlaySound.IsPlaying then
+            PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
+        end
+    end)
+end)
 
-    -- === Привязка звуков к скорости ===
-    spawn(function()
-        local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-        local hum = char:WaitForChild("Humanoid")
-        hum.Running:Connect(function(speed)
-            if RunAnim then
-                if speed >= 20 then
-                    RunAnim:AdjustSpeed(1.5)
-                elseif speed >= 5 then
-                    RunAnim:AdjustSpeed(1)
-                else
-                    RunAnim:AdjustSpeed(0)
-                end
-            end
-            if Footsteps and Footsteps.IsPlaying then
-                Footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-            end
-            if PlaySound and PlaySound.IsPlaying then
-                PlaySound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-            end
+-- ============================================================
+-- СИНХРОНИЗАЦИЯ + СКРЫТИЕ ИГРОКА + КАМЕРА
+-- ============================================================
+local renderConn = RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local head = char:FindFirstChild("Head")
+    if head then head.Transparency = 1 end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp and figureNew.Parent then
+        pcall(function()
+            figureNew:PivotTo(hrp.CFrame)
         end)
-    end)
-
-    -- === Основной RenderStepped: движение + камера ===
-    local renderConnection = game:GetService("RunService").RenderStepped:Connect(function()
-        local character = game.Players.LocalPlayer.Character
-        if not character then return end
-
-        if character:FindFirstChild("Head") then
-            character.Head.Transparency = 1
-        end
-
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            pcall(function()
-                figureNew:PivotTo(hrp.CFrame)
-            end)
-        end
-
-        -- Скрываем части персонажа
-        for _, v in pairs(character:GetChildren()) do
-            if v:IsA("BasePart") then
-                v.LocalTransparencyModifier = 1
-                for _, d in pairs(v:GetDescendants()) do
-                    if d:IsA("Decal") or d:IsA("Texture") then
-                        d.Transparency = 1
-                    end
-                end
-            elseif v:IsA("Accessory") then
-                local h = v:FindFirstChild("Handle")
-                if h then h.Transparency = 1 end
-            end
-        end
-
-        -- Камера от третьего лица
-        local camera = workspace.CurrentCamera
-        if camera and figureNew and figureNew.Parent then
-            local morphHead = figureNew:FindFirstChild("Head", true)
-            if not morphHead then
-                morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
-            end
-
-            if morphHead then
-                if isThirdPerson then
-                    camera.CameraType = Enum.CameraType.Scriptable
-                    local lookVector = camera.CFrame.LookVector
-                    local upVector = camera.CFrame.UpVector
-                    local headPos = morphHead.Position
-                    local camPos = headPos - (lookVector * thirdPersonDistance) + Vector3.new(0, thirdPersonHeightOffset, 0)
-                    camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
-                else
-                    camera.CameraType = Enum.CameraType.Custom
-                end
-            end
-        end
-    end)
-
-    -- === Cleanup ===
-    _G.RushMorphCleanup = function()
-        if renderConnection then
-            renderConnection:Disconnect()
-            renderConnection = nil
-        end
-        resetCamera()
-        if figureNew then
-            figureNew:Destroy()
-            figureNew = nil
-        end
-        _G.TransformedIntoAnyMorph = false
-        _G.RushMorphCleanup = nil
     end
 
-    -- === Управление ===
-    game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-        if key == "r" then
-            if Footsteps then
-                if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then
+            v.LocalTransparencyModifier = 1
+            for _, d in pairs(v:GetDescendants()) do
+                if d:IsA("Decal") or d:IsA("Texture") then
+                    d.Transparency = 1
+                end
             end
-            if PlaySound then
-                if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
-            end
-        elseif key == "l" then
-            isThirdPerson = not isThirdPerson
-            if not isThirdPerson then
-                resetCamera()
+        elseif v:IsA("Accessory") then
+            if v:FindFirstChild("Handle") then
+                v.Handle.Transparency = 1
             end
         end
-    end)
+    end
 
-    print(">>> Rush morph activated!")
-end
+    -- Камера от третьего лица
+    local camera = workspace.CurrentCamera
+    if camera and figureNew.Parent then
+        local morphHead = figureNew:FindFirstChild("Head", true)
+        if not morphHead then
+            morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
+        end
 
--- === Подключение кнопки ===
-print(">>> Registering Rush button...")
-mspaint.Groupbox:AddButton({
-    Text = 'Rush',
-    Tooltip = 'Transforms you into Rush (third person)',
-    Func = transformIntoRush,
-})
-print(">>> Rush button registered OK")
+        if morphHead then
+            if isThirdPerson then
+                camera.CameraType = Enum.CameraType.Scriptable
+                local lookVector = camera.CFrame.LookVector
+                local upVector = camera.CFrame.UpVector
+                local headPos = morphHead.Position
+                local camPos = headPos - (lookVector * thirdPersonDistance)
+                               + Vector3.new(0, thirdPersonHeightOffset, 0)
+                camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+            else
+                camera.CameraType = Enum.CameraType.Custom
+            end
+        end
+    end
+end)
+
+-- ============================================================
+-- УПРАВЛЕНИЕ
+-- ============================================================
+LocalPlayer:GetMouse().KeyDown:Connect(function(key)
+    if key == "r" then
+        -- toggle звуков
+        if Footsteps then
+            if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+        end
+        if PlaySound then
+            if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+        end
+    elseif key == "t" then
+        -- крик
+        local scream = Main and Main:FindFirstChild("Scream")
+        if scream then scream:Play() end
+    elseif key == "l" then
+        -- toggle камеры
+        isThirdPerson = not isThirdPerson
+        if not isThirdPerson then
+            local camera = workspace.CurrentCamera
+            if camera then camera.CameraType = Enum.CameraType.Custom end
+        end
+    end
+end)
+
+print("[Rush Morph] Загружен! R — звуки, T — крик, L — камера")
