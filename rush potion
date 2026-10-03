@@ -1,9 +1,11 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH (без эффектов)
--- Выпил зелье → превратился в Rush
+-- VIRIDIS BOTTLE → RUSH MORPH (third person)
+-- Выпил зелье → превратился в Rush, камера сзади
+-- L — toggle камеры, R — toggle звуков
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local MainUI_upvr = game.Players.LocalPlayer.PlayerGui:WaitForChild("MainUI")
 
 -- Загружаем бутылку
@@ -20,6 +22,20 @@ local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):L
 local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
 
 local drinked = false
+
+-- ============================================================
+-- НАСТРОЙКИ КАМЕРЫ
+-- ============================================================
+local isThirdPerson = true
+local thirdPersonDistance = 12
+local thirdPersonHeightOffset = 2
+
+local function resetCamera()
+    local camera = workspace.CurrentCamera
+    if camera then
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end
 
 -- ============================================================
 -- RUSH MORPH FUNCTION
@@ -98,32 +114,60 @@ local function transformIntoRush()
         end)
     end)
 
-    -- Слежка + скрытие тела
-    spawn(function()
-        game:GetService("RunService").RenderStepped:Connect(function()
-            local char = game.Players.LocalPlayer.Character
-            if not char then return end
-            if char:FindFirstChild("Head") then char.Head.Transparency = 1 end
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                pcall(function() figureNew:PivotTo(hrp.CFrame) end)
-            end
-            for _, v in pairs(char:GetChildren()) do
-                if v:IsA("BasePart") then
-                    v.LocalTransparencyModifier = 1
-                    for _, d in pairs(v:GetDescendants()) do
-                        if d:IsA("Decal") or d:IsA("Texture") then
-                            d.Transparency = 1
-                        end
+    -- ============================================================
+    -- СЛЕЖКА + СКРЫТИЕ + КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
+    -- ============================================================
+    RunService.RenderStepped:Connect(function()
+        local char = game.Players.LocalPlayer.Character
+        if not char then return end
+
+        if char:FindFirstChild("Head") then
+            char.Head.Transparency = 1
+        end
+
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function() figureNew:PivotTo(hrp.CFrame) end)
+        end
+
+        for _, v in pairs(char:GetChildren()) do
+            if v:IsA("BasePart") then
+                v.LocalTransparencyModifier = 1
+                for _, d in pairs(v:GetDescendants()) do
+                    if d:IsA("Decal") or d:IsA("Texture") then
+                        d.Transparency = 1
                     end
-                elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-                    v.Handle.Transparency = 1
+                end
+            elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
+                v.Handle.Transparency = 1
+            end
+        end
+
+        -- === КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
+        local camera = workspace.CurrentCamera
+        if camera and figureNew and figureNew.Parent then
+            local morphHead = figureNew:FindFirstChild("Head", true)
+            if not morphHead then
+                morphHead = figureNew:FindFirstChildWhichIsA("BasePart")
+            end
+
+            if morphHead then
+                if isThirdPerson then
+                    camera.CameraType = Enum.CameraType.Scriptable
+                    local lookVector = camera.CFrame.LookVector
+                    local upVector = camera.CFrame.UpVector
+                    local headPos = morphHead.Position
+                    local camPos = headPos - (lookVector * thirdPersonDistance)
+                                   + Vector3.new(0, thirdPersonHeightOffset, 0)
+                    camera.CFrame = CFrame.lookAt(camPos, headPos, upVector)
+                else
+                    camera.CameraType = Enum.CameraType.Custom
                 end
             end
-        end)
+        end
     end)
 
-    -- R — toggle звуков
+    -- R — toggle звуков, L — toggle камеры
     game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
         if key == "r" then
             if Footsteps then
@@ -132,10 +176,15 @@ local function transformIntoRush()
             if PlaySound then
                 if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
             end
+        elseif key == "l" then
+            isThirdPerson = not isThirdPerson
+            if not isThirdPerson then
+                resetCamera()
+            end
         end
     end)
 
-    print("[Rush] Morph activated!")
+    print("[Rush] Morph activated! L — камера, R — звуки")
 end
 
 -- ============================================================
@@ -161,7 +210,6 @@ toolNew.Activated:Connect(function()
 	if drinked == false then
 		drinked = true
 
-		-- Анимация питья
 		if game.GameId == 6627207668 then
 			ohhmydayz2:Play()
 			ohhmydayz2.Ended:Wait()
@@ -172,7 +220,6 @@ toolNew.Activated:Connect(function()
 
 		toolNew:Destroy()
 
-		-- Превращение в Rush
 		transformIntoRush()
 	end
 end)
