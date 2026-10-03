@@ -1,0 +1,16 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameData = ReplicatedStorage:WaitForChild("GameData")
+local floorInstance = GameData:WaitForChild("Floor")
+local floor = floorInstance.Value
+
+if floor == "Hotel" then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/all%20rifts"))()
+elseif floor == "Backdoor" then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Backdoor-rifts-doors/refs/heads/main/all%20rifts%20backdoor"))()
+elseif floor == "Archives" then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Archive-doors-rifts/refs/heads/main/all%20rifts%20arhives"))()
+elseif floor == "Outdoors" or floor == "Garden" then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Outdoors-doors-rifts/refs/heads/main/all%20rifts%20outdoors"))()
+elseif floor == "Mines" then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Mines-doors-script/refs/heads/main/all%20rifts%20mines"))()
+end
