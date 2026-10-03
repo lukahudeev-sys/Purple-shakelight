@@ -1,0 +1,291 @@
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("CHRISTMAS Mode initiated! Scipt by Chill guy",true)
+-- Функция для добавления эффектов
+local function addLightingEffects()
+    local lighting = game:GetService("Lighting")
+
+    -- Добавляем BloomEffect
+    local bloom = lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect", lighting)
+    bloom.Intensity = 0.3 -- Интенсивность свечения
+    bloom.Size = 40 -- Размер свечения
+    bloom.Threshold = 0,05 -- Порог свечения
+
+    -- Добавляем ColorCorrectionEffect
+    local colorCorrection = lighting:FindFirstChildOfClass("MainColorCorrectionEffect") or Instance.new("ColorCorrectionEffect", lighting)
+    colorCorrection.TintColor = Color3.new(255, 145, 20) -- Тёплый оттенок
+    colorCorrection.Brightness = 0.01 -- Небольшое повышение яркости
+    colorCorrection.Contrast = 0.05 -- Лёгкое усиление контраста
+    colorCorrection.Saturation = -0.1 -- Умеренная насыщенность
+
+    -- Добавляем BlurEffect (OxygenBlur)
+    local blur = lighting:FindFirstChildOfClass("BlurEffect") or Instance.new("BlurEffect", lighting)
+    blur.Name = "OxygenBlur" -- Уникальное имя
+    blur.Size = 0 -- Лёгкое размытие
+end
+
+-- Применяем эффекты
+addLightingEffects()
+
+-- Создаём объект Sound
+local sound = Instance.new("Sound")
+
+-- Указываем параметры звука
+sound.Name = "BackgroundMusic"
+sound.SoundId = "rbxassetid://0" -- Замените на ID вашей музыки
+sound.Looped = true -- Включить повтор
+sound.Volume = 0.45 -- Громкость (от 0 до 1)
+
+-- Добавляем звук в Workspace (или в другое подходящее место, например, Lighting)
+sound.Parent = workspace
+
+-- Воспроизводим музыку
+sound:Play()
+
+-- Остановка музыки (если нужно)
+-- sound:Stop()
+
+-- Функция для изменения цвета объекта
+local function paintObjectSoftRed(object)
+    if object:IsA("BasePart") then
+        object.Color = Color3.new(255, 145, 20) -- Менее яркий красный (RGB)
+    end
+end
+
+-- Окрашиваем существующие объекты
+for _, object in ipairs(workspace:GetDescendants()) do
+    if object:IsA("BasePart") and (object.Name == "Carpet" or object.Name == "CarpetLight") then
+        paintObjectSoftRed(object)
+    end
+end
+
+-- Слушаем добавление новых объектов и окрашиваем их
+game.DescendantAdded:Connect(function(descendant)
+    if (descendant:IsA("Model") and descendant.Name == "Rug") or 
+       (descendant:IsA("BasePart") and (descendant.Name == "Carpet" or descendant.Name == "CarpetLight")) then
+        paintObjectSoftRed(descendant)
+    end
+end)
+
+-- Функция для изменения цвета и прозрачности объектов
+local function paintWallAndWallpaper(part)
+    -- Проверяем, является ли объект Part и его имя "Wall"
+    if part:IsA("BasePart") and part.Name == "Wall" then
+        part.BrickColor = BrickColor.new("White") -- Красим в белый цвет
+        part.Material = Enum.Material.SmoothPlastic -- Устанавливаем материал для лучшего отображения
+
+        -- Проверяем наличие дочернего объекта "Wallpaper" в Wall
+        local wallpaper = part:FindFirstChild("Wallpaper")
+        if wallpaper and wallpaper:IsA("Part") then
+            wallpaper.Color = Color3.fromRGB(255, 145, 20) -- Красим в красный
+            wallpaper.Transparency = 0.7 -- Устанавливаем прозрачность
+        end
+    end
+end
+
+-- Проходим по всем существующим объектам в Workspace
+for _, object in ipairs(workspace:GetDescendants()) do
+    paintWallAndWallpaper(object)
+end
+
+-- Реагируем на добавление новых объектов
+workspace.DescendantAdded:Connect(function(descendant)
+    paintWallAndWallpaper(descendant)
+end)
+
+-- Функция для обработки модели "Window_Tall"
+local function processWindowTallModel(windowTallModel)
+    -- Удаляем все звуки внутри модели
+    for _, descendant in ipairs(windowTallModel:GetDescendants()) do
+        if descendant:IsA("Sound") then
+            descendant:Destroy()
+        end
+    end
+
+    -- Ищем объект Skybox (Model или MeshPart) внутри модели Window_Tall
+    local skybox = windowTallModel:FindFirstChild("Skybox", true)
+    if skybox then
+        -- Если Skybox — это MeshPart, меняем его цвет
+        if skybox:IsA("MeshPart") then
+            skybox.Color = Color3.fromRGB(255, 145, 20) -- Меняем цвет на красный
+            print("Skybox (MeshPart) найден и цвет изменён на красный.")
+        -- Если Skybox — это Model, меняем цвет всех частей
+        elseif skybox:IsA("Model") then
+            for _, part in ipairs(skybox:GetDescendants()) do
+                if part:IsA("MeshPart") then
+                    part.Color = Color3.fromRGB(255, 145, 20) -- Красим все MeshPart в красный цвет
+                end
+            end
+            print("Skybox (Model) найден, цвет всех MeshPart изменён на красный.")
+        end
+    else
+        warn("Skybox не найден в модели Window_Tall.")
+    end
+
+    -- Ищем объект RainParticle и изменяем его параметры
+    local rainParticle = windowTallModel:FindFirstChild("RainParticle", true)
+    if rainParticle and rainParticle:IsA("ParticleEmitter") then
+        rainParticle.Texture = "rbxassetid://8249343390" -- Новый ID текстуры
+        rainParticle.Rate = 3 -- Изменяем Rate
+        rainParticle.Lifetime = NumberRange.new(10, 10) -- Устанавливаем Lifetime
+        rainParticle.Speed = NumberRange.new(3, 3) -- Устанавливаем Speed
+    end
+
+    -- Удаляем все остальные ParticleEmitter внутри модели
+    for _, descendant in ipairs(windowTallModel:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") and descendant.Name ~= "RainParticle" then
+            descendant:Destroy()
+        end
+    end
+end
+
+-- Основной скрипт для обработки всех моделей в CurrentRooms
+local currentRooms = workspace:FindFirstChild("CurrentRooms")
+if currentRooms and currentRooms:IsA("Folder") then
+    -- Обрабатываем все модели "Window_Tall" в папке CurrentRooms
+    for _, model in ipairs(currentRooms:GetDescendants()) do
+        if model:IsA("Model") and model.Name == "Window_Tall" then
+            processWindowTallModel(model)
+        end
+    end
+
+    -- Реагируем на новые объекты, добавленные в CurrentRooms
+    currentRooms.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("Model") and descendant.Name == "Window_Tall" then
+            processWindowTallModel(descendant)
+        end
+    end)
+else
+    warn("Папка CurrentRooms не найдена или не является папкой.")
+end
+
+-- Функция для обработки модели "Window"
+local function processWindowModel(windowModel)
+    -- Удаляем все звуки внутри модели
+    for _, descendant in ipairs(windowModel:GetDescendants()) do
+        if descendant:IsA("Sound") then
+            descendant:Destroy()
+        end
+    end
+
+    -- Ищем объект Skybox (Model или MeshPart) внутри модели Window
+    local skybox = windowModel:FindFirstChild("Skybox", true)
+    if skybox then
+        -- Если Skybox — это MeshPart, меняем его цвет
+        if skybox:IsA("MeshPart") then
+            skybox.Color = Color3.fromRGB(255, 145, 20) -- Меняем цвет на красный
+            print("Skybox (MeshPart) найден и цвет изменён на красный.")
+        -- Если Skybox — это Model, меняем цвет всех частей
+        elseif skybox:IsA("Model") then
+            for _, part in ipairs(skybox:GetDescendants()) do
+                if part:IsA("MeshPart") then
+                    part.Color = Color3.fromRGB(255, 145, 20) -- Красим все MeshPart в красный цвет
+                end
+            end
+            print("Skybox (Model) найден, цвет всех MeshPart изменён на красный.")
+        end
+    else
+        warn("Skybox не найден в модели Window.")
+    end
+
+    -- Ищем объект RainParticle и изменяем его параметры
+    local rainParticle = windowModel:FindFirstChild("RainParticle", true)
+    if rainParticle and rainParticle:IsA("ParticleEmitter") then
+        rainParticle.Texture = "rbxassetid://18448650142" -- Новый ID текстуры
+        rainParticle.Rate = 1.5 -- Изменяем Rate
+        rainParticle.Lifetime = NumberRange.new(6, 6) -- Устанавливаем Lifetime
+        rainParticle.Speed = NumberRange.new(1, 1) -- Устанавливаем Speed
+    end
+
+    -- Удаляем все остальные ParticleEmitter внутри модели
+    for _, descendant in ipairs(windowModel:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") and descendant.Name ~= "RainParticle" then
+            descendant:Destroy()
+        end
+    end
+end
+
+-- Основной скрипт для обработки всех моделей в CurrentRooms
+local currentRooms = workspace:FindFirstChild("CurrentRooms")
+if currentRooms and currentRooms:IsA("Folder") then
+    -- Обрабатываем все модели "Window" в папке CurrentRooms
+    for _, model in ipairs(currentRooms:GetDescendants()) do
+        if model:IsA("Model") and model.Name == "Window" then
+            processWindowModel(model)
+        end
+    end
+
+    -- Реагируем на новые объекты, добавленные в CurrentRooms
+    currentRooms.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("Model") and descendant.Name == "Window" then
+            processWindowModel(descendant)
+        end
+    end)
+else
+    warn("Папка CurrentRooms не найдена или не является папкой.")
+end
+
+wait(2)
+-- Функция для обработки модели "Window"
+local function processWindowModel(windowModel)
+    -- Удаляем все звуки внутри модели
+    for _, descendant in ipairs(windowModel:GetDescendants()) do
+        if descendant:IsA("Sound") then
+            descendant:Destroy()
+        end
+    end
+
+    -- Ищем объект Skybox (Model или MeshPart) внутри модели Window
+    local skybox = windowModel:FindFirstChild("Skybox", true)
+    if skybox then
+        -- Если Skybox — это MeshPart, меняем его цвет
+        if skybox:IsA("MeshPart") then
+            skybox.Color = Color3.fromRGB(255, 145, 20) -- Меняем цвет на красный
+            print("Skybox (MeshPart) найден и цвет изменён на красный.")
+        -- Если Skybox — это Model, меняем цвет всех частей
+        elseif skybox:IsA("Model") then
+            for _, part in ipairs(skybox:GetDescendants()) do
+                if part:IsA("MeshPart") then
+                    part.Color = Color3.fromRGB(255, 145, 20) -- Красим все MeshPart в красный цвет
+                end
+            end
+            print("Skybox (Model) найден, цвет всех MeshPart изменён на красный.")
+        end
+    else
+        warn("Skybox не найден в модели Window.")
+    end
+
+    -- Ищем объект RainParticle и изменяем его параметры
+    local rainParticle = windowModel:FindFirstChild("RainParticle", true)
+    if rainParticle and rainParticle:IsA("ParticleEmitter") then
+        rainParticle.Texture = "rbxassetid://18448650142" -- Новый ID текстуры
+        rainParticle.Rate = 1.5 -- Изменяем Rate
+        rainParticle.Lifetime = NumberRange.new(6, 6) -- Устанавливаем Lifetime
+        rainParticle.Speed = NumberRange.new(1, 1) -- Устанавливаем Speed
+    end
+
+    -- Удаляем все остальные ParticleEmitter внутри модели
+    for _, descendant in ipairs(windowModel:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") and descendant.Name ~= "RainParticle" then
+            descendant:Destroy()
+        end
+    end
+end
+
+-- Основной скрипт для обработки всех моделей в CurrentRooms
+local currentRooms = workspace:FindFirstChild("CurrentRooms")
+if currentRooms and currentRooms:IsA("Folder") then
+    -- Обрабатываем все модели "Window" в папке CurrentRooms
+    for _, model in ipairs(currentRooms:GetDescendants()) do
+        if model:IsA("Model") and model.Name == "Window" then
+            processWindowModel(model)
+        end
+    end
+
+    -- Реагируем на новые объекты, добавленные в CurrentRooms
+    currentRooms.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("Model") and descendant.Name == "Window" then
+            processWindowModel(descendant)
+        end
+    end)
+else
+    warn("Папка CurrentRooms не найдена или не является папкой.")
+end
