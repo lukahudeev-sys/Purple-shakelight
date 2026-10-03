@@ -1,127 +1,108 @@
 local function transformIntoRush()
-    if _G.TransformedIntoAnyMorph == true then
-        warn("[Rush] Уже есть активный морф. Сбрось _G.TransformedIntoAnyMorph = nil")
-        return
-    end
-    _G.TransformedIntoAnyMorph = true
+    -- Сбрасываем старый флаг, чтобы морф мог запуститься
+    _G.TransformedIntoAnyMorph = false
 
-    local success, err = pcall(function()
-        local figureNew = game:GetObjects("rbxassetid://100327482330650")[1]
-        if not figureNew then
-            error("Ассет Rush не загрузился (rbxassetid://100327482330650)")
-        end
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
 
-        local testingPlace = (game.GameId == 6627207668)
-        figureNew.Parent = workspace
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
 
-        -- === ЗВУКИ ===
-        local soundsRoot = figureNew:FindFirstChild("Main") and figureNew.Main:FindFirstChild("Sounds")
-        if soundsRoot then
-            local soundFolder = testingPlace and soundsRoot:FindFirstChild("test game")
-                                                or soundsRoot:FindFirstChild("DOORS")
-            if soundFolder then
-                for _, s in pairs(soundFolder:GetChildren()) do
-                    s:Clone().Parent = figureNew.Main
-                end
-            end
-            soundsRoot:Destroy()
-        end
-
-        -- === БАЗОВЫЕ ЗВУКИ (безопасно) ===
-        local footsteps = figureNew.Main and figureNew.Main:FindFirstChild("Footsteps")
-        local playSound = figureNew.Main and figureNew.Main:FindFirstChild("PlaySound")
-        if footsteps then footsteps:Play() end
-        if playSound then playSound:Play() end
-
-        -- === АНИМАЦИЯ (безопасно) ===
-        local RunAnim
-        local animator = figureNew:FindFirstChild("AnimationController")
-                         and figureNew.AnimationController:FindFirstChild("Animator")
-        if animator then
-            local animsFolder = figureNew:FindFirstChild(testingPlace and "AnimationsTest" or "Animations")
-            local runAnimObj = animsFolder and animsFolder:FindFirstChild("run")
-            if runAnimObj then
-                RunAnim = animator:LoadAnimation(runAnimObj)
-                RunAnim:Play()
-                RunAnim:AdjustSpeed(0)
-            end
-        end
-
-        -- === ПРИВЯЗКА СКОРОСТИ ===
-        spawn(function()
-            local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
-            local hum = char:WaitForChild("Humanoid")
-            hum.Running:Connect(function(speed)
-                if RunAnim then
-                    if speed >= 20 then
-                        RunAnim:AdjustSpeed(1.5)
-                    elseif speed >= 5 then
-                        RunAnim:AdjustSpeed(1)
-                    else
-                        RunAnim:AdjustSpeed(0)
-                    end
-                end
-                if footsteps and footsteps.IsPlaying then
-                    footsteps.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-                end
-                if playSound and playSound.IsPlaying then
-                    playSound.PlaybackSpeed = math.clamp(speed / 16, 0.6, 1.8)
-                end
-            end)
-        end)
-
-        -- === СЛЕЖКА + НЕВИДИМОСТЬ ===
-        spawn(function()
-            game:GetService("RunService").RenderStepped:Connect(function()
-                local char = game.Players.LocalPlayer.Character
-                if not char then return end
-                if char:FindFirstChild("Head") then
-                    char.Head.Transparency = 1
-                end
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    figureNew:PivotTo(hrp.CFrame)
-                end
-                for _, v in pairs(char:GetChildren()) do
-                    if v:IsA("BasePart") then
-                        v.LocalTransparencyModifier = 1
-                        for _, d in pairs(v:GetDescendants()) do
-                            if d:IsA("Decal") or d:IsA("Texture") then
-                                d.Transparency = 1
-                            end
-                        end
-                    elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-                        v.Handle.Transparency = 1
-                    end
-                end
-            end)
-        end)
-
-        -- === УПРАВЛЕНИЕ ===
-        game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(key)
-            if key == "r" then
-                if footsteps then
-                    if footsteps.IsPlaying then footsteps:Stop() else footsteps:Play() end
-                end
-                if playSound then
-                    if playSound.IsPlaying then playSound:Stop() else playSound:Play() end
-                end
-            elseif key == "t" then
-                local scream = figureNew.Main and figureNew.Main:FindFirstChild("Scream")
-                if scream then scream:Play() end
-            end
-        end)
+    -- Загружаем модель Rush
+    local Success, Objects = pcall(function()
+        return game:GetObjects("rbxassetid://100327482330650")
     end)
 
-    if not success then
-        warn("[Rush] Ошибка: " .. tostring(err))
-        _G.TransformedIntoAnyMorph = nil
+    if not Success or not Objects or not Objects[1] then
+        warn("Не удалось загрузить модель Rush")
+        return
     end
+
+    local Rush = Objects[1]
+    Rush.Parent = workspace
+
+    local Main = Rush:FindFirstChild("Main")
+
+    if not Main then
+        warn("У Rush не найден объект Main")
+        Rush:Destroy()
+        return
+    end
+
+    -- Копируем звуки под игру (как в оригинале morphs.txt)
+    local Sounds = Main:FindFirstChild("Sounds")
+    if Sounds then
+        local testingPlace = (game.GameId == 6627207668)
+        local soundFolder = testingPlace and Sounds:FindFirstChild("test game")
+                                            or Sounds:FindFirstChild("DOORS")
+        if soundFolder then
+            for _, s in pairs(soundFolder:GetChildren()) do
+                s:Clone().Parent = Main
+            end
+        end
+        Sounds:Destroy()
+    end
+
+    _G.TransformedIntoAnyMorph = true
+
+    -- Запускаем звуки
+    local Footsteps = Main:FindFirstChild("Footsteps")
+    local PlaySound = Main:FindFirstChild("PlaySound")
+
+    if Footsteps then Footsteps:Play() end
+    if PlaySound then PlaySound:Play() end
+
+    -- Следим за персонажем
+    RunService.RenderStepped:Connect(function()
+        if not Rush or not Rush.Parent then return end
+
+        Character = Player.Character
+        if not Character then return end
+
+        local RootPart = Character:FindFirstChild("HumanoidRootPart")
+        if not RootPart then return end
+
+        -- Перемещаем Rush вместе с игроком
+        pcall(function()
+            Rush:PivotTo(RootPart.CFrame)
+        end)
+
+        -- Скрываем обычного персонажа
+        for _, Object in ipairs(Character:GetChildren()) do
+            if Object:IsA("BasePart") then
+                Object.LocalTransparencyModifier = 1
+                for _, Child in ipairs(Object:GetDescendants()) do
+                    if Child:IsA("Decal") or Child:IsA("Texture") then
+                        Child.Transparency = 1
+                    end
+                end
+            elseif Object:IsA("Accessory") then
+                local Handle = Object:FindFirstChild("Handle")
+                if Handle then
+                    Handle.LocalTransparencyModifier = 1
+                end
+            end
+        end
+    end)
+
+    -- R переключает звуки Rush
+    Player:GetMouse().KeyDown:Connect(function(Key)
+        if Key ~= "r" then return end
+
+        if Footsteps then
+            if Footsteps.IsPlaying then Footsteps:Stop() else Footsteps:Play() end
+        end
+        if PlaySound then
+            if PlaySound.IsPlaying then PlaySound:Stop() else PlaySound:Play() end
+        end
+    end)
+
+    print("Rush morph activated!")
 end
 
--- === ПОДКЛЮЧЕНИЕ КНОПКИ ===
+-- Кнопка
 mspaint.Groupbox:AddButton({
-    Text = 'Rush',
-    Tooltip = 'Transforms you into Rush',
+    Text = "Rush",
+    Tooltip = "Transforms you into Rush",
     Func = transformIntoRush,
 })
