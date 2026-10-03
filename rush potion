@@ -1,11 +1,10 @@
 -- ============================================================
--- VIRIDIS BOTTLE → RUSH MORPH (третье лицо, без эффектов)
+-- VIRIDIS BOTTLE → RUSH MORPH (третье лицо, БЕЗ эффектов)
 -- Бутылка: 140419135012621
 -- Rush:    100327482330650
--- L — toggle камеры, R — toggle звуков, T — крик
+-- L — toggle камеры, R — звуки Rush, T — крик
 -- ============================================================
 
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -153,9 +152,7 @@ local function transformIntoRush()
         end)
     end)
 
-    -- ============================================================
-    -- СЛЕЖКА + СКРЫТИЕ + КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
-    -- ============================================================
+    -- Слежка + скрытие + КАМЕРА
     spawn(function()
         RunService.RenderStepped:Connect(function()
             local char = LocalPlayer.Character
@@ -183,7 +180,6 @@ local function transformIntoRush()
                 end
             end
 
-            -- === КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА ===
             local camera = workspace.CurrentCamera
             if camera and figureNew.Parent then
                 local morphHead = figureNew:FindFirstChild("Head", true)
@@ -230,24 +226,7 @@ local function transformIntoRush()
 end
 
 -- ============================================================
--- ЭФФЕКТ НА ЭКРАНЕ (только звук питья)
--- ============================================================
-function drinkSoundPlay()
-    local newSound = workspace:FindFirstChild("DrinkPotionAddonSound")
-    if not newSound then
-        newSound = Instance.new("Sound", workspace)
-        newSound.Name = "DrinkPotionAddonSound"
-        if game.GameId == 6627207668 then
-            newSound.SoundId = "rbxassetid://103799151859408"
-        else
-            newSound.SoundId = "rbxassetid://18869124055"
-        end
-    end
-    newSound:Play()
-end
-
--- ============================================================
--- ВЫДАЧА БУТЫЛКИ + АКТИВАЦИЯ
+-- ВЫДАЧА БУТЫЛКИ + АКТИВАЦИЯ (БЕЗ ЭФФЕКТОВ)
 -- ============================================================
 toolNew.Parent = LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
@@ -272,8 +251,6 @@ toolNew.Activated:Connect(function()
     if drinked == false then
         drinked = true
 
-        drinkSoundPlay()
-
         -- Анимация питья
         if game.GameId == 6627207668 and ohhmydayz2 then
             ohhmydayz2:Play()
@@ -286,9 +263,8 @@ toolNew.Activated:Connect(function()
         toolNew:Destroy()
 
         -- Превращение в Rush
-        task.wait(0.5)
         transformIntoRush()
     end
 end)
 
-print("[Potion] ✅ Скрипт загружен, бутылка в Backpack")
+print("[Potion] ✅ Скрипт загружен")
