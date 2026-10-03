@@ -15,3 +15,5 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevius%20bundle%20rift"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20rift"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Skin%20rift%20test"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/halloween%20rooms%20hotel"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lobby%20music"))()
