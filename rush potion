@@ -13,7 +13,7 @@ local toolNew
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
+	toolNew = game:GetObjects("rbxassetid://140419135012621")[1]
 end
 
 -- Анимации питья
