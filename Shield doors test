@@ -1,4 +1,4 @@
--- Health Shield для Doors
+-- Health Shield для Doors (стиль под хилку)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -8,12 +8,17 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- ⚙️ НАСТРОЙКИ
 local MAX_SHIELD   = 50   -- макс. запас щита
-local HEAL_BONUS   = 15   -- бонусное хил при уроне (0 = выкл)
-local SHIELD_REGEN = 2    -- реген щита в сек (0 = выкл)
+local HEAL_BONUS   = 15   -- бонусное хил при уроне
+local SHIELD_REGEN = 2    -- реген щита в сек
 local REGEN_DELAY  = 5    -- задержка регена после урона
 
 local currentShield = MAX_SHIELD
 local lastDamageTime = 0
+
+-- 🎨 ЦВЕТА (как на скрине)
+local COLOR_BORDER = Color3.fromRGB(255, 245, 230) -- кремовый
+local COLOR_TRACK  = Color3.fromRGB(40, 25, 20)    -- тёмно-коричневый
+local COLOR_FILL   = Color3.fromRGB(255, 245, 230) -- заливка (кремовый)
 
 -- GUI
 local playerGui = player:WaitForChild("PlayerGui")
@@ -22,31 +27,58 @@ screenGui.Name = "ShieldGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 32)
-frame.Position = UDim2.new(0.5, -110, 1, -90)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
+-- Внешняя рамка (кремовая)
+local outerFrame = Instance.new("Frame")
+outerFrame.Size = UDim2.new(0, 240, 0, 30)
+outerFrame.Position = UDim2.new(0.5, -120, 1, -90)
+outerFrame.BackgroundColor3 = COLOR_BORDER
+outerFrame.BorderSizePixel = 0
+outerFrame.Parent = screenGui
 
+local outerCorner = Instance.new("UICorner")
+outerCorner.CornerRadius = UDim.new(1, 0) -- полное скругление (пилюля)
+outerCorner.Parent = outerFrame
+
+-- Внутренний фон (тёмный трек)
+local innerFrame = Instance.new("Frame")
+innerFrame.Size = UDim2.new(1, -8, 1, -8)
+innerFrame.Position = UDim2.new(0, 4, 0, 4)
+innerFrame.BackgroundColor3 = COLOR_TRACK
+innerFrame.BorderSizePixel = 0
+innerFrame.ClipsDescendants = true
+innerFrame.Parent = outerFrame
+
+local innerCorner = Instance.new("UICorner")
+innerCorner.CornerRadius = UDim.new(1, 0)
+innerCorner.Parent = innerFrame
+
+-- Полоса заполнения (щит)
 local bar = Instance.new("Frame")
 bar.Size = UDim2.new(1, 0, 1, 0)
-bar.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+bar.BackgroundColor3 = COLOR_FILL
 bar.BorderSizePixel = 0
-bar.Parent = frame
+bar.Parent = innerFrame
 
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(1, 0)
+barCorner.Parent = bar
+
+-- (Опционально) Текст поверх бара
+-- Если хочешь чистый бар как в Doors — закомментируй или удали этот блок
 local label = Instance.new("TextLabel")
 label.Size = UDim2.new(1, 0, 1, 0)
 label.BackgroundTransparency = 1
-label.TextColor3 = Color3.fromRGB(255, 255, 255)
-label.TextStrokeTransparency = 0
+label.TextColor3 = Color3.fromRGB(40, 25, 20)
+label.TextStrokeTransparency = 1
 label.Font = Enum.Font.GothamBold
 label.TextScaled = true
-label.Parent = frame
+label.Text = ""
+label.Parent = outerFrame
 
 local function updateGui()
-    bar.Size = UDim2.new(math.clamp(currentShield / MAX_SHIELD, 0, 1), 0, 1, 0)
-    label.Text = "🛡 " .. math.floor(currentShield) .. " / " .. MAX_SHIELD
+    local ratio = math.clamp(currentShield / MAX_SHIELD, 0, 1)
+    bar.Size = UDim2.new(ratio, 0, 1, 0)
+    -- Если хочешь текст: label.Text = "🛡 " .. math.floor(currentShield)
 end
 
 local function bindHumanoid(hum)
@@ -62,7 +94,6 @@ local function bindHumanoid(hum)
             currentShield -= absorbed
             lastDamageTime = tick()
 
-            -- 💚 Возвращаем поглощённый урон + бонус
             hum.Health = math.min(hum.MaxHealth, hum.Health + absorbed + HEAL_BONUS)
             hum:SetAttribute("LastHealth", hum.Health)
 
