@@ -221,14 +221,25 @@ local function ReplaceSeekMusic(container)
             obj.Volume = 2.2
             obj.Looped = true
 
-            -- Форсим замену, если игра попытается вернуть оригинал
+            -- Проверяем загрузку
+            task.spawn(function()
+                if not obj.IsLoaded then
+                    obj.Loaded:Wait()
+                end
+                if obj.IsLoaded then
+                    print("[Glitch Seek] Песня успешно загружена и заменена!")
+                    pcall(function() obj:Play() end)
+                else
+                    warn("[Glitch Seek] ПЕСНЯ НЕ ЗАГРУЗИЛАСЬ. Проверь ссылку: " .. GLITCH_SEEK_OST)
+                end
+            end)
+
+            -- Форсим замену при попытке сброса
             obj:GetPropertyChangedSignal("SoundId"):Connect(function()
                 if obj.SoundId ~= GLITCH_SEEK_OST then
                     obj.SoundId = GLITCH_SEEK_OST
                 end
             end)
-
-            pcall(function() obj:Play() end)
         end
     end
 end
