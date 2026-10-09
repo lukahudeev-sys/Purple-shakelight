@@ -1,0 +1,95 @@
+-- Health Shield для Doors
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- ⚙️ НАСТРОЙКИ
+local MAX_SHIELD   = 50   -- макс. запас щита
+local HEAL_BONUS   = 15   -- бонусное хил при уроне (0 = выкл)
+local SHIELD_REGEN = 2    -- реген щита в сек (0 = выкл)
+local REGEN_DELAY  = 5    -- задержка регена после урона
+
+local currentShield = MAX_SHIELD
+local lastDamageTime = 0
+
+-- GUI
+local playerGui = player:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ShieldGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 32)
+frame.Position = UDim2.new(0.5, -110, 1, -90)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local bar = Instance.new("Frame")
+bar.Size = UDim2.new(1, 0, 1, 0)
+bar.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+bar.BorderSizePixel = 0
+bar.Parent = frame
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextStrokeTransparency = 0
+label.Font = Enum.Font.GothamBold
+label.TextScaled = true
+label.Parent = frame
+
+local function updateGui()
+    bar.Size = UDim2.new(math.clamp(currentShield / MAX_SHIELD, 0, 1), 0, 1, 0)
+    label.Text = "🛡 " .. math.floor(currentShield) .. " / " .. MAX_SHIELD
+end
+
+local function bindHumanoid(hum)
+    hum:SetAttribute("LastHealth", hum.Health)
+    hum.HealthChanged:Connect(function(newHealth)
+        if hum.Health <= 0 then return end
+        local oldHealth = hum:GetAttribute("LastHealth") or newHealth
+        local damage = oldHealth - newHealth
+        hum:SetAttribute("LastHealth", newHealth)
+
+        if damage > 0 and currentShield > 0 then
+            local absorbed = math.min(currentShield, damage)
+            currentShield -= absorbed
+            lastDamageTime = tick()
+
+            -- 💚 Возвращаем поглощённый урон + бонус
+            hum.Health = math.min(hum.MaxHealth, hum.Health + absorbed + HEAL_BONUS)
+            hum:SetAttribute("LastHealth", hum.Health)
+
+            updateGui()
+        end
+    end)
+end
+
+bindHumanoid(humanoid)
+
+-- Регенерация щита
+RunService.Heartbeat:Connect(function(dt)
+    if SHIELD_REGEN > 0 and tick() - lastDamageTime > REGEN_DELAY then
+        if currentShield < MAX_SHIELD then
+            currentShield = math.min(MAX_SHIELD, currentShield + SHIELD_REGEN * dt)
+            updateGui()
+        end
+    end
+end)
+
+-- Респавн
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = newChar:WaitForChild("Humanoid")
+    currentShield = MAX_SHIELD
+    bindHumanoid(humanoid)
+    updateGui()
+end)
+
+updateGui()
