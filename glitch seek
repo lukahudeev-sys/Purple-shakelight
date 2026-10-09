@@ -206,6 +206,36 @@ local function v17(p6, p7)
         end
     end
 end
+
+-- ============================================================
+-- ЗАМЕНА OST ДЛЯ GLITCH SEEK
+-- ============================================================
+local GLITCH_SEEK_OST = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/YTDown.com_YouTube_Seek-Hard-Mode-Ost_Media_cAjv2KH_Vc0_001_1080p.mp3?raw=true"
+
+local function ReplaceSeekMusic(container)
+    if not container then return end
+
+    for _, obj in ipairs(container:GetDescendants()) do
+        if obj:IsA("Sound") then
+            obj.SoundId = GLITCH_SEEK_OST
+            obj.Volume = 2.2
+            obj.Looped = true
+
+            -- Форсим замену, если игра попытается вернуть оригинал
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                if obj.SoundId ~= GLITCH_SEEK_OST then
+                    obj.SoundId = GLITCH_SEEK_OST
+                end
+            end)
+
+            pcall(function() obj:Play() end)
+        end
+    end
+end
+
+-- ============================================================
+-- ОСНОВНАЯ ФУНКЦИЯ ОБРАБОТКИ
+-- ============================================================
 local function v18(p8)
     if not p8:IsA("Model") or not p8.Name then
         return
@@ -217,6 +247,11 @@ local function v18(p8)
         if not u3 then
             return
         end
+
+        -- >>> ЗАМЕНА ПЕСНИ <<<
+        ReplaceSeekMusic(p8)
+        -- >>> КОНЕЦ ЗАМЕНЫ <<<
+
         local SeekRig = p8:FindFirstChild("SeekRig")
         local Root
         if SeekRig then
