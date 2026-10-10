@@ -7,7 +7,7 @@
 --// ============================================================
 
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-	.caption("HALLOWEEN Mode initiated! Script by Chill guy", true)
+	.caption("HALLOWEEN Mode initiated! Script by Nowxwellor", true)
 
 --// ---------- Константы ----------
 local ORANGE = Color3.fromRGB(255, 145, 20)
