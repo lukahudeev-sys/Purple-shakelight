@@ -1,0 +1,21 @@
+-- Behaviour trace of a Unknown obfuscator script
+-- NOTE: reconstructed from observed behaviour; branches that were not taken
+--       during the trace are missing and conditions are only noted in comments.
+-- run status: finished
+-- 12 statements recorded in 0.07s
+-- URLs requested:
+--   https://raw.githubusercontent.com/bonellocristian78-lab/Gradish-Mode/main/ObjectScanner.rbxm
+--   https://raw.githubusercontent.com/bonellocristian78-lab/Gradish-Mode/claude/sei-qui-con-noi-ye4k62/ObjectScanner.rbxm
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
+local UserInputService = game:GetService("UserInputService")
+local Debris = game:GetService("Debris")
+_G.Scanner = nil
+local response = game:HttpGet("https://raw.githubusercontent.com/bonellocristian78-lab/Gradish-Mode/main/ObjectScanner.rbxm")
+response:sub(1, 8)
+local response2 = game:HttpGet("https://raw.githubusercontent.com/bonellocristian78-lab/Gradish-Mode/claude/sei-qui-con-noi-ye4k62/ObjectScanner.rbxm")
+response2:sub(1, 8)
+warn("[Scanner] its model could not be loaded")
