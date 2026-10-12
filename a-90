@@ -1,0 +1,102 @@
+local DriveToEdit = "EGG"
+local Connections = {}
+
+task.spawn(function()
+	while task.wait() do
+		game.Players.LocalPlayer.PlayerGui:WaitForChild("TopbarUI"):WaitForChild("Topbar"):WaitForChild("Modifiers").Visible = false
+		game.Players.LocalPlayer.PlayerGui:WaitForChild("TopbarUI"):WaitForChild("ButtonsLeft"):WaitForChild("PanelButton").Visible = false
+		game.ReplicatedStorage.LiveModifiers:ClearAllChildren()
+		game.Players.LocalPlayer.PlayerGui:WaitForChild("MainUI"):WaitForChild("MainFrame"):WaitForChild("Healthbar"):WaitForChild("Effects").Visible = false
+		game.Players.LocalPlayer.PlayerGui:WaitForChild("MainUI"):WaitForChild("MainFrame"):WaitForChild("Healthbar"):WaitForChild("TempControls").Visible = false
+	end
+end)
+
+Connections[1] = workspace.Drops.ChildAdded:Connect(function(d)
+	task.wait(0.05)
+	if d.Name == "Drive" and d:GetAttribute("Tool_ScannerMode") == DriveToEdit then
+		d:WaitForChild("Handle"):WaitForChild("Image"):WaitForChild("Decal").Texture = "rbxassetid://100546703949841"
+		d:WaitForChild("Handle"):WaitForChild("Image").Color = Color3.fromRGB(67, 0, 0)
+		d:WaitForChild("Handle").Color = Color3.fromRGB(151, 0, 0)
+	end
+end)
+local function settoolidk(d)
+	d:SetAttribute("ScannerColor",Color3.fromRGB(151, 0, 0))
+	d:SetAttribute("ScannerIcon","rbxassetid://100546703949841")
+	d:WaitForChild("Handle"):WaitForChild("Image"):WaitForChild("Decal").Texture = "rbxassetid://100546703949841"
+	d:WaitForChild("Handle"):WaitForChild("Image").Color = Color3.fromRGB(67, 0, 0)
+	d:WaitForChild("Handle").Color = Color3.fromRGB(151, 0, 0)
+	d:WaitForChild("Handle"):WaitForChild("SurfaceGui"):WaitForChild("Label").Text = "??????"
+	d:WaitForChild("Handle"):WaitForChild("SurfaceGui"):WaitForChild("Label").TextColor3 = Color3.fromRGB(98, 0, 2)
+end
+Connections[2] = game:GetService("RunService").RenderStepped:Connect(function()
+	for _, d in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+		if d.Name == "Drive" and d:GetAttribute("ScannerMode") == DriveToEdit then
+			settoolidk(d)
+		elseif d.Name == "ObjectScanner" then
+			if d:WaitForChild("ToolClientModule"):FindFirstChild(DriveToEdit) and not d:WaitForChild("ToolClientModule"):FindFirstChild(DriveToEdit):GetAttribute("orangeidk") then
+				d:WaitForChild("ToolClientModule"):FindFirstChild(DriveToEdit):SetAttribute("orangeidk",true)
+				d:WaitForChild("ToolClientModule"):WaitForChild(DriveToEdit):WaitForChild("Screen"):ClearAllChildren()
+				d:WaitForChild("ToolClientModule"):WaitForChild(DriveToEdit):WaitForChild("Screen").BackgroundTransparency = 1
+				local Screen = d:WaitForChild("ToolClientModule"):WaitForChild(DriveToEdit):WaitForChild("Screen")
+				local ModeulEgg = require(d:WaitForChild("ToolClientModule"):FindFirstChild(DriveToEdit))
+				ModeulEgg.Name = "Ransom"
+				ModeulEgg.Label = "??????"
+				ModeulEgg.SoftwareLabel = "RANSOM"
+				ModeulEgg.BootImage = "rbxassetid://0"
+				ModeulEgg.BoxArt = "rbxassetid://0"
+				ModeulEgg.Color = Color3.fromRGB(151, 0, 0)
+				
+				local NewCoolThingTest = Instance.new("VideoFrame",Screen)
+				NewCoolThingTest.Size = UDim2.new(1, 0, 1.2, 0)
+				NewCoolThingTest.Video = "rbxassetid://123063767680944"
+				NewCoolThingTest.Position = UDim2.new(0, 0, -0.19, 0)
+				
+				local Skibidi = nil
+
+				ModeulEgg.OnEnter = function(v1)
+					local ui = v1.ui
+					ui.VideoFrame.Playing = true
+					Skibidi = task.delay(7.185,function()
+						ui.VideoFrame.Parent = workspace
+						game.Players.LocalPlayer.Character.Humanoid:UnequipTools()
+						--game.ReplicatedStorage.RemotesFolder.DropItem:FireServer(game.Players.LocalPlayer.Character.ObjectScanner)
+						--workspace.Drops:WaitForChild("ObjectScanner"):WaitForChild("Main"):WaitForChild("PlaySound"):Destroy()
+						--workspace.Drops:WaitForChild("ObjectScanner").Parent = game.ReplicatedStorage
+						local args = {
+							"RansomPlayer",
+							{
+								Players = {
+									[game.Players.LocalPlayer.Name] = game.Players.LocalPlayer.Name
+								}
+							}
+						}
+						game:GetService("ReplicatedStorage"):WaitForChild("RemotesFolder"):WaitForChild("AdminPanelRunCommand"):FireServer(unpack(args))
+					end)
+				end
+				ModeulEgg.OnExit = function(v1)
+					local ui = v1.ui
+					--ui.VideoFrame.Playing = false
+					if Skibidi then
+						--task.cancel(Skibidi)
+						Skibidi = nil
+					end				end
+			end
+		end
+	end
+	for _, d in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
+		if d.Name == "Drive" and d:GetAttribute("ScannerMode") == DriveToEdit then
+			settoolidk(d)
+		end
+	end
+end)
+
+Connections[3] = game:GetService("UserInputService").InputBegan:Connect(function(v,d)
+	--if v.KeyCode == Enum.KeyCode.Z and not d then
+	--	for _, d in pairs(Connections) do
+	--		d:Disconnect()
+	--	end
+	--	if game.ReplicatedStorage:FindFirstChild("ObjectScanner") then
+	--		game.ReplicatedStorage.ObjectScanner.Parent = workspace.Drops
+	--	end
+	--end
+end)
