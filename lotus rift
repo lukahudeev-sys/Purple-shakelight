@@ -16,8 +16,8 @@ local function sanitizeModel(model)
 
 	for _, v in ipairs(model:GetDescendants()) do
 
-		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Enabled = true
-		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://118155296320990"
+		workspace["lotus pentagram"].StarCenter.ItemHolder.Item.Enabled = true
+		workspace["lotus pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://118155296320990"
 
 		-- ❌ xóa BeamFlat / BeamGlow
 		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
@@ -184,7 +184,7 @@ local function spawnNearRift()
 
 	local objs = game:GetObjects("rbxassetid://110852226869313")
 	local model = objs[1]
-	model.Name = "viridis pentagram"
+	model.Name = "lotus pentagram"
 
 	if not model then
 		warn("failed to load model -_-")
