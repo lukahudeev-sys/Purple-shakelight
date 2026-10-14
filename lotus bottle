@@ -7,7 +7,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
+	toolNew = game:GetObjects("rbxassetid://137825174872342")[1]
 end
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
@@ -321,7 +321,7 @@ end
 
 toolNew.Parent = game.Players.LocalPlayer.Backpack
 toolNew.Name = "Viridislight Bottle"
-toolNew.TextureId = "rbxassetid://76865808847706"
+toolNew.TextureId = "rbxassetid://101230017624059"
 
 toolNew.Equipped:Connect(function()
 	if game.GameId == 6627207668 then
