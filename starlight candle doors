@@ -1,12 +1,12 @@
--- Загрузка утилит (как у тебя)
+-- Загрузка утилит
 loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
 
 -- \\ Настройки // --
-local CANDLE_ID       = "rbxassetid://110853297264350" -- модель Звёздной свечи
-local HIGHLIGHT_COLOR = Color3.fromRGB(180, 220, 255) -- звёздный голубой для обычных дверей
-local LOCKED_COLOR    = Color3.fromRGB(255, 80, 80)   -- красный для запертых дверей
-local HIGHLIGHT_FILL  = 0.6
-local COOLDOWN        = 3 -- перезарядка способности (сек)
+local CANDLE_ID         = "rbxassetid://110853297264350"
+local HIGHLIGHT_COLOR   = Color3.fromRGB(255, 220, 60)   -- обычная дверь (жёлтая)
+local LOCKED_COLOR      = Color3.fromRGB(255, 80, 80)    -- запертая дверь (красная)
+local HIGHLIGHT_FILL    = 0.55
+local HIGHLIGHT_OUTLINE = 0.15
 
 -- \\ Создание свечи // --
 local Players = game:GetService("Players")
@@ -17,10 +17,10 @@ tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
 
--- Перекрас в звёздный (голубоватый) цвет
+-- Перекрас в звёздный (жёлто-золотой) цвет
 local function starColor(color)
-	local h, s, v = Color3.toHSV(color)
-	return Color3.fromHSV(0.58, math.clamp(s * 0.6, 0, 1), v)
+	local _, s, v = Color3.toHSV(color)
+	return Color3.fromHSV(0.13, math.clamp(s * 0.8, 0, 1), v) -- золотистый оттенок
 end
 
 local function recolorSeq(seq)
@@ -47,73 +47,95 @@ end
 
 -- \\ Подсветка дверей в DOORS // --
 local activeHighlights = {}
+local highlightEnabled = false
+
+local function makeHighlight(door, isLocked)
+	local hl = Instance.new("Highlight")
+	hl.Name = "StarCandleHighlight"
+	hl.Adornee = door
+	hl.FillColor = isLocked and LOCKED_COLOR or HIGHLIGHT_COLOR
+	hl.FillTransparency = HIGHLIGHT_FILL
+	hl.OutlineColor = Color3.fromRGB(255, 255, 200)   -- светло-жёлтый контур
+	hl.OutlineTransparency = HIGHLIGHT_OUTLINE
+	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	hl.Parent = door
+	return hl
+end
+
+local function refreshRoom(room)
+	local door = room:FindFirstChild("Door")
+	if not door then return end
+
+	local existing = activeHighlights[door]
+	if existing and existing.Parent then
+		local isLocked = door:FindFirstChild("Lock") ~= nil
+		existing.FillColor = isLocked and LOCKED_COLOR or HIGHLIGHT_COLOR
+		return
+	end
+
+	if not highlightEnabled then return end
+
+	local isLocked = door:FindFirstChild("Lock") ~= nil
+	activeHighlights[door] = makeHighlight(door, isLocked)
+end
+
+local function scanAllRooms()
+	local currentRooms = workspace:FindFirstChild("CurrentRooms")
+	if not currentRooms then return end
+	for _, room in ipairs(currentRooms:GetChildren()) do
+		refreshRoom(room)
+	end
+end
 
 local function clearHighlights()
-	for _, h in ipairs(activeHighlights) do
-		if h and h.Parent then h:Destroy() end
+	for _, hl in pairs(activeHighlights) do
+		if hl and hl.Parent then hl:Destroy() end
 	end
 	activeHighlights = {}
 end
 
-local function highlightDoors()
-	clearHighlights()
+-- \\ Автослежение за новыми комнатами // --
+local currentRoomsConn
+local function bindRooms()
+	if currentRoomsConn then currentRoomsConn:Disconnect() end
 
-	local char = LocalPlayer.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if not root then return 0 end
+	local currentRooms = workspace:WaitForChild("CurrentRooms", 10)
+	if not currentRooms then return end
 
-	local count = 0
-	local currentRooms = workspace:FindFirstChild("CurrentRooms")
-	if not currentRooms then return 0 end
+	currentRoomsConn = currentRooms.ChildAdded:Connect(function(room)
+		task.wait(0.1)
+		refreshRoom(room)
+	end)
+end
 
-	-- Проходим по всем моделям комнат в CurrentRooms
-	for _, room in ipairs(currentRooms:GetChildren()) do
-		local door = room:FindFirstChild("Door")
-		if door then
-			-- Проверяем, не заперта ли дверь
-			local isLocked = door:FindFirstChild("Lock") ~= nil
-			local color = isLocked and LOCKED_COLOR or HIGHLIGHT_COLOR
-
-			local hl = Instance.new("Highlight")
-			hl.Name = "StarCandleHighlight"
-			hl.Adornee = door
-			hl.FillColor = color
-			hl.FillTransparency = HIGHLIGHT_FILL
-			hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-			hl.OutlineTransparency = 0.2
-			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-			hl.Parent = door
-			table.insert(activeHighlights, hl)
-			count += 1
+-- \\ Тумблер // --
+local function toggleHighlight()
+	highlightEnabled = not highlightEnabled
+	if highlightEnabled then
+		scanAllRooms()
+		bindRooms()
+		print("[Star Candle] Подсветка ВКЛ (жёлтая)")
+	else
+		clearHighlights()
+		if currentRoomsConn then
+			currentRoomsConn:Disconnect()
+			currentRoomsConn = nil
 		end
+		print("[Star Candle] Подсветка ВЫКЛ")
 	end
-
-	return count
 end
 
--- \\ Активация способности // --
-local lastUse = 0
-local function onActivated()
-	if tick() - lastUse < COOLDOWN then
-		local left = math.ceil(COOLDOWN - (tick() - lastUse))
-		print(("[Star Candle] Перезарядка: %d сек"):format(left))
-		return
-	end
-	lastUse = tick()
+-- \\ Активация // --
+tool.Activated:Connect(toggleHighlight)
 
-	local count = highlightDoors()
-	print(("[Star Candle] Подсвечено дверей: %d"):format(count))
-
-	task.delay(5, clearHighlights)
-end
-
-tool.Activated:Connect(onActivated)
-
--- Дополнительная активация по клавише E
 local UIS = game:GetService("UserInputService")
 UIS.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if input.KeyCode == Enum.KeyCode.E then
-		onActivated()
+		toggleHighlight()
 	end
 end)
+
+-- Автостарт
+task.wait(1)
+toggleHighlight()
