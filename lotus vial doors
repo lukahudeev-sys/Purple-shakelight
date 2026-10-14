@@ -7,7 +7,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://105677845096283")[1]
+	toolNew = game:GetObjects("rbxassetid://82162059755922")[1]
 end
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
@@ -187,7 +187,67 @@ viridis:Play()
     viridis:Destroy() 
     end) 
 
--- звук и амбиент живут, пока игрок в игре; не привязаны к таймеру
+-- =========================
+-- ⏱ TIMER UI
+-- =========================
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 200, 0, 40)
+label.Position = UDim2.new(0.5, -100, 0, 10)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(255, 105, 180) -- 💗 PINK
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.TextSize = 20
+label.Text = "0:10"
+label.Parent = gui
+
+-- =========================
+-- ⏱ TIMER LOGIC
+-- =========================
+local timeLeft = 10
+
+local function formatTime(t)
+	local m = math.floor(t / 60)
+	local s = t % 60
+	return string.format("%d:%02d", m, s)
+end
+
+-- =========================
+-- ⏳ COUNTDOWN LOOP
+-- =========================
+task.spawn(function()
+	while timeLeft >= 0 do
+		label.Text = formatTime(timeLeft)
+
+		if timeLeft == 0 then
+			stopHeal()
+			restore()
+			ambience:Destroy()
+
+			CollisionLoopRunning = false
+
+			if CollisionClone then
+				CollisionClone:Destroy()
+			end
+
+			-- убрать UI таймера
+			task.delay(0.1, function()
+				if gui then gui:Destroy() end
+			end)
+
+			break
+		end
+
+		timeLeft -= 1
+		task.wait(1)
+	end
+end)
 				end
 		end
 	end
@@ -240,7 +300,7 @@ end
 
 toolNew.Parent = game.Players.LocalPlayer.Backpack
 toolNew.Name = "Viridislight Vial" 
-toolNew.TextureId = "rbxassetid://100244494697093" 
+toolNew.TextureId = "rbxassetid://78203107937345" 
 
 toolNew.Equipped:Connect(function()
 	if game.GameId == 6627207668 then
