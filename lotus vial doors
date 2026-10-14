@@ -21,6 +21,9 @@ local ohhmydayz = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):Lo
 local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
 local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
 
+-- 🔧 FIX: сброс флага на старте, чтобы не залипал от прошлого запуска
+getgenv().ViridislightRunning = false
+
 spawn(function()
 	while wait() do
 		if drinked == true and ended == false then
@@ -128,10 +131,8 @@ local function fullHeal()
 	end
 end
 
--- мгновенное полное лечение
 fullHeal()
 
--- подстраховка: если игра сбрасывает HP, лечим снова
 hpConn = task.spawn(function()
 	while not stopped do
 		task.wait(0.1)
@@ -174,7 +175,6 @@ end
 	
 	newCloneEffect.Visible = false
 
-	-- tween speed back
 	local tween = TweenService:Create(Humanoid, TweenInfo.new(2), {
 		WalkSpeed = 16
 	})
@@ -188,23 +188,29 @@ viridis:Play()
     end) 
 
 -- =========================
--- ⏱ TIMER UI
+-- ⏱ TIMER UI  🔧 FIX
 -- =========================
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
+gui.Name = "ViridisTimerGui"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
+gui.DisplayOrder = 999                      -- 🔧 FIX: поверх всего
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- 🔧 FIX
+gui.Enabled = true                          -- 🔧 FIX
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local label = Instance.new("TextLabel")
 label.Size = UDim2.new(0, 200, 0, 40)
 label.Position = UDim2.new(0.5, -100, 0, 10)
-label.BackgroundTransparency = 1
+label.BackgroundTransparency = 0.5          -- 🔧 FIX: лёгкий фон, чтобы было видно
+label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 label.TextColor3 = Color3.fromRGB(255, 105, 180) -- 💗 PINK
-label.TextStrokeTransparency = 0.6
-label.Font = Enum.Font.Gotham
-label.TextSize = 20
+label.TextStrokeTransparency = 0.3
+label.Font = Enum.Font.GothamBold
+label.TextSize = 22
 label.Text = "0:10"
+label.ZIndex = 10                           -- 🔧 FIX: поверх других элементов GUI
 label.Parent = gui
 
 -- =========================
@@ -236,7 +242,6 @@ task.spawn(function()
 				CollisionClone:Destroy()
 			end
 
-			-- убрать UI таймера
 			task.delay(0.1, function()
 				if gui then gui:Destroy() end
 			end)
@@ -252,6 +257,43 @@ end)
 		end
 	end
 end)
+
+-- 🔧 FIX: таймер для Pressure-ветки (иначе его там вообще нет)
+if game.GameId == 6627207668 then
+	spawn(function()
+		while not drinked do task.wait(0.1) end
+		task.wait(0.2) -- дать flyTest создаться
+
+		local player = game.Players.LocalPlayer
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "ViridisTimerGui"
+		gui.IgnoreGuiInset = true
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 999
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		gui.Enabled = true
+		gui.Parent = player:WaitForChild("PlayerGui")
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0, 200, 0, 40)
+		label.Position = UDim2.new(0.5, -100, 0, 10)
+		label.BackgroundTransparency = 0.5
+		label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		label.TextColor3 = Color3.fromRGB(255, 105, 180)
+		label.TextStrokeTransparency = 0.3
+		label.Font = Enum.Font.GothamBold
+		label.TextSize = 22
+		label.Text = "0:10"
+		label.ZIndex = 10
+		label.Parent = gui
+
+		for t = 10, 0, -1 do
+			label.Text = string.format("0:%02d", t)
+			task.wait(1)
+		end
+		if gui then gui:Destroy() end
+	end)
+end
 
 local function EffectOnScreen()
 	drinkSoundPlay()
