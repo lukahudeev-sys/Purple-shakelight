@@ -20,65 +20,111 @@ for _, obj in ipairs(tool:GetDescendants()) do
 end
 
 -- =========================
--- ПОДСВЕТКА ГЛАВНОЙ ДВЕРИ (жёлтая)
+-- ПОДСВЕТКА ВСЕХ ДВЕРЕЙ + НОМЕРА
 -- =========================
 local Workspace = game:GetService("Workspace")
 
 local stopped = true
-local activeHighlight = nil
+local activeHighlights = {}   -- [door] = {highlight, billboard}
 local connections = {}
 
-local FILL_COLOR = Color3.fromRGB(255, 220, 80)
+local FILL_COLOR    = Color3.fromRGB(255, 220, 80)
 local OUTLINE_COLOR = Color3.fromRGB(255, 170, 0)
+local TEXT_COLOR    = Color3.fromRGB(255, 235, 120)
 
--- Имена комнат, где лежит главная дверь (лобби)
-local LOBBY_NAMES = {["lobby"]=true, ["room0"]=true, ["0"]=true, ["start"]=true, ["startroom"]=true, ["lobbydoor"]=true}
+local ATTRIBUTE_NAMES = {"Code", "Number", "RoomNumber", "DoorNumber", "NumberCode", "Num"}
 
-local function isMainDoor(inst)
-    if not inst:IsA("Model") then return false end
-    if inst.Name ~= "Door" then return false end
-
-    -- Проверяем, что дверь лежит в комнате-лобби
-    local parent = inst.Parent
-    if parent then
-        local pname = parent.Name:lower()
-        if LOBBY_NAMES[pname] then
-            return true
-        end
-        -- Иногда дверь лежит глубже: Room0.Lobby.Door
-        local grand = parent.Parent
-        if grand and LOBBY_NAMES[grand.Name:lower()] then
-            return true
+local function getDoorNumber(door)
+    -- 1) Пробуем атрибуты
+    for _, attr in ipairs(ATTRIBUTE_NAMES) do
+        local v = door:GetAttribute(attr)
+        if v ~= nil and tostring(v) ~= "" then
+            return tostring(v)
         end
     end
-    return false
+
+    -- 2) Ищем TextLabel внутри двери, у которого текст — число/код
+    for _, d in ipairs(door:GetDescendants()) do
+        if d:IsA("TextLabel") or d:IsA("TextButton") then
+            local t = d.Text
+            if t and t:match("^%d+$") and #t >= 1 then
+                return t
+            end
+        end
+    end
+
+    -- 3) Ищем в названии двери (Door_0001, Door1234 и т.п.)
+    local num = door.Name:match("(%d+)")
+    if num then return num end
+
+    return nil
 end
 
-local function applyHighlight(inst)
-    if activeHighlight and activeHighlight.Parent then return end
+local function isDoorModel(inst)
+    if not inst:IsA("Model") then return false end
+    local n = inst.Name:lower()
+    return n == "door" or n:find("door") ~= nil
+end
+
+local function getDoorPrimaryPart(door)
+    local p = door.PrimaryPart
+    if not p then
+        p = door:FindFirstChildWhichIsA("BasePart", true)
+    end
+    return p
+end
+
+local function applyToDoor(door)
+    if activeHighlights[door] then return end
+
+    -- Highlight
     local h = Instance.new("Highlight")
     h.FillColor = FILL_COLOR
     h.OutlineColor = OUTLINE_COLOR
     h.FillTransparency = 0.35
     h.OutlineTransparency = 0
     h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    h.Parent = inst
-    activeHighlight = h
+    h.Parent = door
+
+    -- BillboardGui с номером
+    local billboard
+    local num = getDoorNumber(door)
+    local part = getDoorPrimaryPart(door)
+    if part and num then
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = "GlitchDoorNumber"
+        billboard.Size = UDim2.new(0, 160, 0, 60)
+        billboard.StudsOffset = Vector3.new(0, 4, 0)
+        billboard.AlwaysOnTop = true
+        billboard.MaxDistance = 500
+        billboard.Parent = part
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = num
+        lbl.TextColor3 = TEXT_COLOR
+        lbl.TextStrokeTransparency = 0.4
+        lbl.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
+        lbl.TextScaled = true
+        lbl.Font = Enum.Font.GothamBold
+        lbl.Parent = billboard
+    end
+
+    activeHighlights[door] = {highlight = h, billboard = billboard}
 end
 
-local function tryHighlight(inst)
+local function process(inst)
     if stopped then return end
-    if activeHighlight and activeHighlight.Parent then return end
-    if isMainDoor(inst) then
-        applyHighlight(inst)
+    if isDoorModel(inst) then
+        applyToDoor(inst)
     end
 end
 
 local function scanContainer(container)
     if stopped or not container then return end
     for _, v in ipairs(container:GetDescendants()) do
-        tryHighlight(v)
-        if activeHighlight and activeHighlight.Parent then return end
+        process(v)
     end
 end
 
@@ -87,15 +133,15 @@ local function hookContainer(container)
     local conn = container.DescendantAdded:Connect(function(v)
         if stopped then return end
         task.wait()
-        tryHighlight(v)
+        process(v)
     end)
     table.insert(connections, conn)
 end
 
-local function startDoorHighlight()
+local function startHighlight()
     if not stopped then return end
     stopped = false
-    activeHighlight = nil
+    activeHighlights = {}
     connections = {}
 
     task.spawn(function()
@@ -123,7 +169,7 @@ local function startDoorHighlight()
     end)
 end
 
-local function stopDoorHighlight()
+local function stopHighlight()
     stopped = true
 
     for _, conn in ipairs(connections) do
@@ -131,10 +177,15 @@ local function stopDoorHighlight()
     end
     connections = {}
 
-    if activeHighlight and activeHighlight.Parent then
-        activeHighlight:Destroy()
+    for door, data in pairs(activeHighlights) do
+        if data.highlight and data.highlight.Parent then
+            data.highlight:Destroy()
+        end
+        if data.billboard and data.billboard.Parent then
+            data.billboard:Destroy()
+        end
     end
-    activeHighlight = nil
+    activeHighlights = {}
 end
 
 -- =========================
@@ -146,8 +197,7 @@ tool.Equipped:Connect(function()
             part.Material = Enum.Material.Neon
         end
     end
-
-    startDoorHighlight()
+    startHighlight()
 end)
 
 tool.Unequipped:Connect(function()
@@ -156,6 +206,5 @@ tool.Unequipped:Connect(function()
             part.Material = material
         end
     end
-
-    stopDoorHighlight()
+    stopHighlight()
 end)
