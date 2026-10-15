@@ -105,7 +105,7 @@ print("[Hub] Кнопки добавлены")
 
 --\\ Таблицы (URL'ы в коротком формате: main вместо refs/heads/main) // --
 local ITEMS = {
-    ["starlight candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20candle%20rift",
+    ["starlight candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20candle%20doors",
     ["Barrel of starlight"]  = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Barrel%20of%20Starlight",
     ["Spiral Bottle"]        = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
     ["Figure potion"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Figure%20potion",
