@@ -19,168 +19,78 @@ for _, obj in ipairs(tool:GetDescendants()) do
 end
 
 -- =========================
--- ПОДСВЕТКА ДВЕРЕЙ
+-- ПОДСВЕТКА ДВЕРЕЙ (жёлтая, без текста)
 -- =========================
 local Workspace = game:GetService("Workspace")
 
-local MIN_NUM = 2
-local MAX_NUM = 100
-
-local stopped = true
+local stopped = false
 local activeHighlights = {}
-local connections = {}
 
-local FILL_COLOR     = Color3.fromRGB(255, 220, 80)
-local OUTLINE_COLOR  = Color3.fromRGB(255, 200, 40)
-local FILL_TRANSP    = 0.85
-local OUTLINE_TRANSP = 0
+local FILL_COLOR    = Color3.fromRGB(255, 220, 80)
+local OUTLINE_COLOR = Color3.fromRGB(255, 200, 40)
 
-local ATTRIBUTE_NAMES = {
-    "Code", "Number", "RoomNumber", "DoorNumber",
-    "NumberCode", "Num", "Room", "RoomId", "Id", "ID"
-}
-
-local function extractNumber(str)
-    if str == nil then return nil end
-    str = tostring(str)
-    local digits = str:match("(%d+)")
-    if not digits then return nil end
-    return tonumber(digits)
-end
-
--- Ищем номер в атрибутах, во всех TextLabel/TextButton/TextBox, в имени
-local function findNumber(obj)
-    for _, attr in ipairs(ATTRIBUTE_NAMES) do
-        local v = obj:GetAttribute(attr)
-        if v ~= nil then
-            local n = extractNumber(v)
-            if n then return n end
-        end
-    end
-
-    for _, d in ipairs(obj:GetDescendants()) do
-        if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-            local n = extractNumber(d.Text)
-            if n then return n end
-        end
-    end
-
-    return extractNumber(obj.Name)
-end
-
-local function isLocked(door)
-    local la = door:GetAttribute("Locked") or door:GetAttribute("IsLocked")
-    if la == true then return true end
-    for _, d in ipairs(door:GetDescendants()) do
-        local n = d.Name:lower()
-        if n:find("lock") then return true end
-    end
-    return false
-end
-
-local function looksLikeDoor(obj)
-    local n = obj.Name:lower()
-    if n == "door" or n:find("door") then return true end
-    -- если внутри есть SurfaceGui/BillboardGui с цифрой — тоже дверь
-    for _, d in ipairs(obj:GetDescendants()) do
-        if d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
-            for _, t in ipairs(d:GetDescendants()) do
-                if t:IsA("TextLabel") and t.Text:match("%d+") then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
-local function applyHighlight(obj)
-    if activeHighlights[obj] then return end
+local function createHighlight(inst)
     local h = Instance.new("Highlight")
     h.FillColor = FILL_COLOR
     h.OutlineColor = OUTLINE_COLOR
-    h.FillTransparency = FILL_TRANSP
-    h.OutlineTransparency = OUTLINE_TRANSP
+    h.FillTransparency = 0.4
+    h.OutlineTransparency = 0
     h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    h.Parent = obj
-    activeHighlights[obj] = h
-    print("[GlitchCandle] Подсвечена дверь:", obj:GetFullName())
+    h.Parent = inst
+    table.insert(activeHighlights, h)
 end
 
 local function process(inst)
     if stopped then return end
-    if not (inst:IsA("Model") or inst:IsA("BasePart")) then return end
-    if not looksLikeDoor(inst) then return end
-
-    local n = findNumber(inst)
-    if not n then return end
-    if n < MIN_NUM or n > MAX_NUM then return end
-    if isLocked(inst) then return end
-
-    applyHighlight(inst)
+    if inst:IsA("Model") and inst.Name == "Door" then
+        if not inst:FindFirstChildOfClass("Highlight") then
+            createHighlight(inst)
+        end
+    end
 end
 
-local function scanContainer(container)
-    if stopped or not container then return end
-    for _, v in ipairs(container:GetDescendants()) do
+local function scanRooms()
+    if stopped then return end
+    local rooms = Workspace:FindFirstChild("CurrentRooms")
+    if not rooms then return end
+    for _, v in ipairs(rooms:GetDescendants()) do
         process(v)
     end
 end
 
-local function hookContainer(container)
-    if not container then return end
-    local conn = container.DescendantAdded:Connect(function(v)
-        if stopped then return end
-        task.wait()
-        process(v)
-    end)
-    table.insert(connections, conn)
-end
+local conn
 
 local function startHighlight()
-    if not stopped then return end
     stopped = false
     activeHighlights = {}
-    connections = {}
 
-    task.spawn(function()
-        print("[GlitchCandle] Сканирую Workspace...")
-        scanContainer(Workspace)
+    scanRooms()
 
-        local rooms = Workspace:FindFirstChild("CurrentRooms")
-        if not rooms then
-            rooms = Workspace:WaitForChild("CurrentRooms", 15)
-        end
-        if rooms then
-            print("[GlitchCandle] Сканирую CurrentRooms...")
-            scanContainer(rooms)
-            hookContainer(rooms)
-        else
-            warn("[GlitchCandle] CurrentRooms не найден")
-        end
-
-        local wsConn = Workspace.ChildAdded:Connect(function(child)
-            if child.Name == "CurrentRooms" then
-                task.wait(0.5)
-                scanContainer(child)
-                hookContainer(child)
-            end
+    local rooms = Workspace:FindFirstChild("CurrentRooms")
+    if not rooms then
+        rooms = Workspace:WaitForChild("CurrentRooms", 15)
+    end
+    if rooms then
+        conn = rooms.DescendantAdded:Connect(function(v)
+            if stopped then return end
+            task.wait()
+            process(v)
         end)
-        table.insert(connections, wsConn)
-
-        hookContainer(Workspace)
-        print("[GlitchCandle] Готово. Если дверей не видно — покажи этот лог в F9.")
-    end)
+    end
 end
 
 local function stopHighlight()
     stopped = true
-    for _, conn in ipairs(connections) do
-        if conn then conn:Disconnect() end
+
+    if conn then
+        conn:Disconnect()
+        conn = nil
     end
-    connections = {}
-    for door, h in pairs(activeHighlights) do
-        if h and h.Parent then h:Destroy() end
+
+    for _, h in ipairs(activeHighlights) do
+        if h and h.Parent then
+            h:Destroy()
+        end
     end
     activeHighlights = {}
 end
