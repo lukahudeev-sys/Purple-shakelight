@@ -6,9 +6,9 @@ local v5 = v2
 local CreateWindow = v5.CreateWindow
 local RightShift = Enum.KeyCode.RightShift
 local v8 = CreateWindow(v5, {
-	Title = "Doors Modes Hub",
-	Footer = "Version: Revamped",
-	Icon = 95816097006870,
+	Title = "lkagod's admin panel",
+	Footer = "Version v1",
+	Icon = 100021442325477,
 	NotifySide = "Right",
 	ShowCustomCursor = true,
 	AutoShow = true,
@@ -61,12 +61,9 @@ local v23 = t2.Settings:AddRightGroupbox("Options", "keyboard")
 
 t2.Utilities:AddLeftGroupbox("Utilities", "user"):AddLabel("STILL IN DEVELOPMENT")
 v21:AddLabel("Credits to:")
-v21:AddLabel("Voorpr0")
-v21:AddLabel("NoWhyWhats")
-v21:AddLabel("Guestly")
-v21:AddLabel("reboundplayz")
-v21:AddLabel("Rip_Silence")
-v21:AddLabel("Vuivuiviu2")
+v21:AddLabel("lkagod")
+v21:AddLabel("Noxwellor")
+
 
 local u24 = true
 v23:AddButton({
@@ -94,98 +91,8 @@ v23:AddButton({
 v23:AddButton({
 	Text = "Copy Discord Link",
 	Func = function()
-		setclipboard("https://discord.gg/HNyjBHJJTM")
+		setclipboard("https://discord.gg/DHDKM3ajG")
 		v2:Notify("Discord link copied!", 3)
-	end
-})
-v19:AddDropdown("Modes", {
-	Values = {
-		"Lunacy Mode",
-		"Water Rises Mode",
-		"Impossible Fear Mode",
-		"Hardcore Re-Remastered",
-		"Voidness Mode",
-		"Mayhem Mode",
-		"Furry Mode",
-		"Hallucination Mode (Easy)",
-		"Hallucination Mode (Hard)",
-		"Cataclysm Mode",
-		"Cataclysmic Mode",
-		"Hazy Mode",
-		"Extreme Mode",
-		"Forbidden Mode",
-		"Suggestions Mode",
-		"Parts Mode",
-		"Glassy Mode",
-		"Laver Mode",
-		"Dreamcore Mode",
-		"Impossible Mode Re Degenerate",
-		"Degenerate Mode",
-		"Ambush Mode",
-		"Endless Mode",
-		"Fear Mode",
-		"Nightmare Mode",
-		"Fog Mode"
-	},
-	Default = "Lunacy Mode",
-	Multi = false,
-	Text = "Select the mode",
-	Callback = function(p1)
-		if p1 == "Lunacy Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Nowhywhat/Cooking/main/LunacyMode.lua"))()
-		elseif p1 == "Water Rises Mode" then
-			loadstring(game:HttpGet("https://pastefy.app/mrM9vA2L/raw"))()
-		elseif p1 == "Hardcore Re-Remastered" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Hardcore-Mode-Re-Remastered-Made-By-Guestly-Vuivuiviu2-Nowhywhat-Voorpr0", true))()
-		elseif p1 == "Voidness Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Voidness-Mode-Made-By-Guestly-Vuivuiviu2-And-Voorpr0", true))()
-		elseif p1 == "Mayhem Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/localplayerr/Doors-stuff/refs/heads/main/Mayhem%20mode%20recreate/Code"))()
-		elseif p1 == "Furry Mode" then
-			loadstring(game:HttpGet("https://pastefy.app/US91TWoT/raw"))()
-		elseif p1 == "Hallucination Mode (Easy)" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Hallucination-Mode-(Easy-Version)-Made-by-Celestian-on-Discord", true))()
-		elseif p1 == "Hallucination Mode (Hard)" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Hallucination-Mode-(Hard-Version)-Made-by-Celestian-On-Discord", true))()
-		elseif p1 == "Cataclysm Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Cataclysm-Mode-made-by-Guestly-and-Vuivuiviu3", true))()
-		elseif p1 == "Cataclysmic Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Cataclysmic-Mode-Made-by-Guestly-and-Vuivuiviu4", true))()
-		elseif p1 == "Hazy Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Hazy-Mode-Recreated-made-by-Guestly-(Celestian)-on-Discord", true))()
-		elseif p1 == "Extreme Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Extreme-Mode-Recreated-made-by-Guestly", true))()
-		elseif p1 == "Forbidden Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Forbidden-Mode-recreated-by-Guestly", true))()
-		elseif p1 == "Suggestions Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Suggestions-Mode", true))()
-		elseif p1 == "Parts Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Parts-Mode"))()
-		elseif p1 == "Glassy Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/lynguyen26031993-design/-u/refs/heads/main/Glassy%20Mode"))()
-		elseif p1 == "Laver Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Laver-Mode-Remake"))()
-		elseif p1 == "Dreamcore Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Modes/refs/heads/main/Dreamcore-Mode-Made-by-Guestly-and-Voorpr0", true))()
-		elseif p1 == "Impossible Mode Re Degenerate" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Impossible-Mode-Re-Degenerate-Made-By-Guestly", true))()
-		elseif p1 == "Degenerate Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Modes/refs/heads/main/Degenerate-Mode-Made-By-Guestly", true))()
-		elseif p1 == "Ambush Mode" then
-			loadstring(game:HttpGet("https://pastefy.app/kuLssvSU/raw"))()
-		elseif p1 == "Endless Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/ItzzGabbbb/The-Endless/refs/heads/main/EndlessModeFixedByGabOmgReal.lua"))()
-		elseif p1 == "Fear Mode" then
-			loadstring(game:HttpGet("https://github.com/reboundplayz/Doors-Fixed-Modes/raw/refs/heads/main/Doors%20Fear%20Mode"))()
-		elseif p1 == "Nightmare Mode" then
-			loadstring(game:HttpGet("https://pastebin.com/raw/YbkbZ3fp"))()
-		elseif p1 == "Fog Mode" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Ganyu06112/Fog-Mode/refs/heads/main/Fog-Mode.lua"))()
-		elseif p1 == "Doors X Grace" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/DoorsXGrace.lua"))()
-		end
-
-		v2:Notify(p1 .. " loaded!", 3)
 	end
 })
 v20:AddDropdown("Items", {
@@ -306,9 +213,9 @@ v19:AddDropdown("Additional Mods", {
 	end
 })
 loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()({
-	Title = "Thanks for using Grampy's Doors hub!",
-	Desc = "Your part of the cool ones now!",
-	Reason = "Executed Grampy's Doors Hub.",
+	Title = "Thanks for using admin panel by lkagod",
+	Desc = "You are cool guy",
+	Reason = "Executed lkagod's admin panel",
 	Image = "rbxassetid://17857830685"
 })
 v3:SetLibrary(v2)
