@@ -23,7 +23,7 @@ local function isDoor(obj)
 	return string.find(n, "door") or string.find(n, "двер")
 end
 
--- ESP на дверь (БЕЗ света)
+-- ESP на дверь (только контур, без текста)
 local function createESP(door)
 	if tracked[door] then return end
 
@@ -32,40 +32,17 @@ local function createESP(door)
 	hl.Adornee = door
 	hl.FillColor = Color3.fromRGB(255, 235, 160)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 0.9      -- почти прозрачная заливка
-	hl.OutlineTransparency = 0.35
+	hl.FillTransparency = 1        -- без заливки
+	hl.OutlineTransparency = 0.2   -- видно контур
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	hl.Parent = espFolder
 
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "StarCandleName"
-	billboard.Adornee = door
-	billboard.Size = UDim2.new(0, 200, 0, 40)
-	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-	billboard.AlwaysOnTop = true
-	billboard.MaxDistance = 250
-	billboard.Parent = espFolder
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = "🚪 " .. door.Name
-	label.TextColor3 = Color3.fromRGB(255, 240, 180)
-	label.TextStrokeTransparency = 0.3
-	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	label.TextScaled = true
-	label.Font = Enum.Font.GothamBold
-	label.Parent = billboard
-
-	-- никакого PointLight на двери
-	tracked[door] = {Highlight = hl, Billboard = billboard}
+	tracked[door] = hl
 end
 
 local function clearAll()
-	for door, data in pairs(tracked) do
-		if data.Highlight then data.Highlight:Destroy() end
-		if data.Billboard then data.Billboard:Destroy() end
-		if data.Light then data.Light:Destroy() end
+	for door, hl in pairs(tracked) do
+		if hl then hl:Destroy() end
 	end
 	tracked = {}
 end
