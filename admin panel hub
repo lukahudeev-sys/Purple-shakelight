@@ -1,225 +1,231 @@
-local v1 = unpack or table.unpack
-local v2 = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-local v3 = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
-local v4 = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
-local v5 = v2
-local CreateWindow = v5.CreateWindow
-local RightShift = Enum.KeyCode.RightShift
-local v8 = CreateWindow(v5, {
-	Title = "lkagod's admin panel",
-	Footer = "Version v1",
-	Icon = 100021442325477,
-	NotifySide = "Right",
-	ShowCustomCursor = true,
-	AutoShow = true,
-	ToggleKeybind = RightShift
+--\\ Утилиты // --
+local unpack = unpack or table.unpack
+
+local Obsidian       = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+local ThemeManager   = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
+local SaveManager    = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
+
+-- Безопасная загрузка любых внешних скриптов
+local function safeLoad(url, label)
+    local ok, err = pcall(function()
+        local src = game:HttpGet(url)
+        local fn  = loadstring(src)
+        if not fn then error("loadstring failed") end
+        fn()
+    end)
+    if not ok then
+        warn(("[Hub] Ошибка загрузки %s: %s"):format(label or "?", tostring(err)))
+        pcall(function() Obsidian:Notify("Ошибка: " .. (label or "?"), 4) end)
+    end
+    return ok
+end
+
+--\\ Окно // --
+local Window = Obsidian:CreateWindow({
+    Title           = "Doors Items Hub",
+    Footer          = "Version: Revamped",
+    Icon            = 95816097006870,
+    NotifySide      = "Right",
+    ShowCustomCursor= true,
+    AutoShow        = true,
+    ToggleKeybind   = Enum.KeyCode.RightShift
 })
-v2:Notify("Hub loaded!", 4)
+Obsidian:Notify("Hub loaded!", 4)
 
-local v9 = v2:AddDraggableLabel("Doors Mods Hub")
+--\\ Watermark // --
+local Watermark = Obsidian:AddDraggableLabel("Doors Items Hub")
+Watermark:SetVisible(true)
 
-v9:SetVisible(true)
+do
+    local frames = 0
+    local fps = 60
+    local lastUpdate = tick()
 
-local timestamp = tick()
-local n1 = 0
-local n2 = 60
-game:GetService("RunService").RenderStepped:Connect(function()
-	n1 += 1
+    game:GetService("RunService").RenderStepped:Connect(function()
+        frames += 1
+        if tick() - lastUpdate >= 1 then
+            fps = frames
+            frames = 0
+            lastUpdate = tick()
+        end
 
-	if tick() - timestamp >= 1 then
-		n2 = n1
-		tick()
-	end
+        local ping = 0
+        pcall(function()
+            local stats = game:GetService("Stats")
+            ping = math.floor(stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
 
-	local v25 = v9
-	local v26 = math.floor(n2)
-	local t1 = { (math.floor((game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()))) }
+        Watermark:SetText(("Doors Items Hub | %d fps | %d ms"):format(fps, ping))
+    end)
+end
 
-	v25:SetText(("Doors Mods Hub | %s fps | %s ms"):format(v26, v1(t1)))
+--\\ Табы // --
+local Tabs = {
+    Items     = Window:AddTab("Items", "package"),
+    Utilities = Window:AddTab("Utilities", "boxes"),
+    Credits   = Window:AddTab("Credits", "graduation-cap"),
+    Settings  = Window:AddTab("Settings", "settings"),
+}
+
+local ItemsBox    = Tabs.Items:AddLeftGroupbox("Items")
+local CreditsBox  = Tabs.Credits:AddLeftGroupbox("Credits")
+local SettingsBox = Tabs.Settings:AddLeftGroupbox("Settings")
+local OptionsBox  = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
+
+Tabs.Utilities:AddLeftGroupbox("Utilities", "user"):AddLabel("STILL IN DEVELOPMENT")
+
+--\\ Credits // --
+for _, name in ipairs({
+    "Credits to:",
+    "lkagod",
+    "noxwellor"
+}) do
+    CreditsBox:AddLabel(name)
+end
+
+--\\ Options // --
+local watermarkVisible = true
+OptionsBox:AddButton({
+    Text = "Toggle Watermark",
+    Func = function()
+        watermarkVisible = not watermarkVisible
+        Watermark:SetVisible(watermarkVisible)
+        Obsidian:Notify("Watermark " .. (watermarkVisible and "enabled" or "disabled"), 2)
+    end
+})
+OptionsBox:AddButton({
+    Text = "Unload",
+    Func = function() Obsidian:Unload() end
+})
+OptionsBox:AddButton({
+    Text = "Copy Discord Link",
+    Func = function()
+        setclipboard("https://discord.gg/HNyjBHJJTM")
+        Obsidian:Notify("Discord link copied!", 3)
+    end
+})
+
+--\\ Таблицы предметов и дополнений // --
+local ITEMS = {
+    ["Golden Flashlight"] = "https://raw.githubusercontent.com/aadyian9000/the-thing/main/GoldenGummyFlashlight.lua",
+    ["OLD Flashlight"]    = "https://raw.githubusercontent.com/thelostw3r/Scripts/refs/heads/main/FlashlightOLD.lua",
+    ["Spiral Bottle"]     = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
+    ["Magnet"]            = "https://raw.githubusercontent.com/MrNeRD0/Doors-Hack/main/MagnetByNerd.lua",
+    ["Scanner"]           = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
+    ["Golden Scanner"]    = "https://raw.githubusercontent.com/Junbbinopro/Golden-scanner/refs/heads/main/Scanner",
+    ["Purple Shakelight"] = "https://raw.githubusercontent.com/thelostw3r/Scripts/refs/heads/main/PurpleFlashlight.lua",
+    ["M249"]              = "https://raw.githubusercontent.com/hi822010/Extras-Gliese-Hub-Doors/refs/heads/main/M249",
+    ["Luger Pistol"]      = "https://pastebin.com/raw/WcYCnACD",
+    ["Screech Plush"]     = "https://pastebin.com/raw/CRYiKPZX",
+    ["Lantern"]           = "https://raw.githubusercontent.com/Junbbinopro/Item/refs/heads/main/lantern",
+    ["Guiding Candle"]    = "https://raw.githubusercontent.com/Junbbinopro/Guiding-light-candle/refs/heads/main/Candle",
+    ["Torch"]             = "https://raw.githubusercontent.com/Junbbinopro/Torch/refs/heads/main/Tool",
+    ["Admin Slap"]        = "https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Scripts/refs/heads/main/Admin-Slap-For-DOORS-made-by-Celestian-(Guestly)-on-Discord",
+    ["Flamethrower"]        = nil,
+    ["Foundation Crucifix"] = nil,
+}
+
+local EXTRAS = {
+    ["Giggle in jail :("]  = "https://raw.githubusercontent.com/OoOoALemon/OL1/refs/heads/main/README.md",
+    ["Eat Everything"]     = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
+    ["Speedrun Timer"]     = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
+    ["Coolkid Seek"]       = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/c00lkiddSeek",
+    ["Chill Seek"]         = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/refs/heads/main/chillseklal.Pl.txt",
+    ["Chill Light"]        = "https://pastebin.com/raw/nCYbqkAb",
+}
+
+local function collectKeys(t)
+    local keys = {}
+    for k in pairs(t) do table.insert(keys, k) end
+    table.sort(keys)
+    return keys
+end
+
+--\\ Dropdown предметов // --
+ItemsBox:AddDropdown("Items", {
+    Values  = collectKeys(ITEMS),
+    Default = "Golden Flashlight",
+    Multi   = false,
+    Text    = "Select the item",
+    Callback = function(choice)
+        local url = ITEMS[choice]
+        if not url then
+            Obsidian:Notify(choice .. " — скрипт пока недоступен", 3)
+            return
+        end
+        safeLoad(url, choice)
+        Obsidian:Notify(choice .. " loaded!", 3)
+    end
+})
+
+--\\ Дополнительные моды // --
+local extrasList = collectKeys(EXTRAS)
+table.insert(extrasList, "Enable Jump")
+table.insert(extrasList, "Sprint bar")
+
+ItemsBox:AddDropdown("Additional Mods", {
+    Values  = extrasList,
+    Default = "Enable Jump",
+    Multi   = false,
+    Text    = "Cool additions!",
+    Callback = function(choice)
+        if choice == "Enable Jump" then
+            local char = game.Players.LocalPlayer.Character
+                or game.Players.LocalPlayer.CharacterAdded:Wait()
+            char:SetAttribute("CanJump", true)
+            Obsidian:Notify("Jump enabled!", 3)
+            return
+
+        elseif choice == "Sprint bar" then
+            _G.msrhyan_config_sprint = {
+                timetospeedexpire    = 25,
+                cooldowntime         = 5,
+                sprintspeed          = 50,
+                speedapplytime       = 0.3,
+                speedremovetime      = 0.5,
+                staminarecovertime   = 10,
+                effectfadetime       = 0.2,
+                showstaminamessages  = true,
+                customstaminamessage = "SUA STAMINA ACABOU, AGUARDE %ds!",
+                enableeffects        = true,
+                effectcolor          = { 100, 200, 255 },
+                staminabarcolor      = { 0, 162, 255 },
+                sprintfov            = 120,
+                normalfov            = 70,
+                usewhileloading      = false
+            }
+            safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/refs/heads/main/projects/DOORS-SPRINT.lua", "Sprint bar")
+            Obsidian:Notify("Sprint bar loaded!", 3)
+            return
+        end
+
+        local url = EXTRAS[choice]
+        if not url then
+            Obsidian:Notify(choice .. " — скрипт недоступен", 3)
+            return
+        end
+        safeLoad(url, choice)
+        Obsidian:Notify(choice .. " loaded!", 3)
+    end
+})
+
+--\\ Кастомная ачивка // --
+pcall(function()
+    loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
+    )())({
+        Title  = "Thanks for using Grampy's Doors hub!",
+        Desc   = "Your part of the cool ones now!",
+        Reason = "Executed Grampy's Doors Hub.",
+        Image  = "rbxassetid://17857830685"
+    })
 end)
 
-local v14 = v8:AddTab("Items", "package")
-local v15 = v8:AddTab("Utilities", "boxes")
-local v16 = v8:AddTab("Credits", "graduation-cap")
-local v17 = v8:AddTab("Settings", "settings")
-local t2 = {
-	Modes = v13,
-	Items = v14,
-	Utilities = v15,
-	Credits = v16,
-	Settings = v17
-}
-local v19 = t2.Modes:AddLeftGroupbox("Mods", "wrench")
+--\\ Тема и сохранения // --
+ThemeManager:SetLibrary(Obsidian)
+ThemeManager:SetFolder("DoorsModsHub")
+ThemeManager:ApplyToGroupbox(SettingsBox)
 
-t2.Modes:AddRightGroupbox("Legacy Modes (Hotel-)", "wrench")
-
-local v20 = t2.Items:AddLeftGroupbox("Items")
-local v21 = t2.Credits:AddLeftGroupbox("Credits")
-local v22 = t2.Settings:AddLeftGroupbox("Settings")
-local v23 = t2.Settings:AddRightGroupbox("Options", "keyboard")
-
-t2.Utilities:AddLeftGroupbox("Utilities", "user"):AddLabel("STILL IN DEVELOPMENT")
-v21:AddLabel("Credits to:")
-v21:AddLabel("lkagod")
-v21:AddLabel("Noxwellor")
-
-
-local u24 = true
-v23:AddButton({
-	Text = "Toggle Watermark",
-	Func = function()
-		u24 = not u24
-		v9:SetVisible(u24)
-
-		local v28 = v2
-		local v29 = u24 and "enabled"
-
-		if not v29 then
-			v29 = "disabled"
-		end
-
-		v28:Notify("Watermark " .. v29, 2)
-	end
-})
-v23:AddButton({
-	Text = "Unload",
-	Func = function()
-		v2:Unload()
-	end
-})
-v23:AddButton({
-	Text = "Copy Discord Link",
-	Func = function()
-		setclipboard("https://discord.gg/DHDKM3ajG")
-		v2:Notify("Discord link copied!", 3)
-	end
-})
-v20:AddDropdown("Items", {
-	Values = {
-		"Golden Flashlight",
-		"OLD Flashlight",
-		"Spiral Bottle",
-		"Magnet",
-		"Scanner",
-		"Golden Scanner",
-		"Purple Shakelight",
-		"M249",
-		"Luger Pistol",
-		"Screech Plush",
-		"Lantern",
-		"Guiding Candle",
-		"Torch",
-		"Admin Slap",
-		"Flamethrower",
-		"Foundation Crucifix"
-	},
-	Default = "Golden Flashlight",
-	Multi = false,
-	Text = "Select the item",
-	Callback = function(p2)
-		if p2 == "Golden Flashlight" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/aadyian9000/the-thing/main/GoldenGummyFlashlight.lua", true))()
-		elseif p2 == "OLD Flashlight" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/thelostw3r/Scripts/refs/heads/main/FlashlightOLD.lua"))()
-		elseif p2 == "Spiral Bottle" then
-			loadstring(game:HttpGet("https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle"))()
-		elseif p2 == "Magnet" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/MrNeRD0/Doors-Hack/main/MagnetByNerd.lua", true))()
-		elseif p2 == "Scanner" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua"))()
-		elseif p2 == "Golden Scanner" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Junbbinopro/Golden-scanner/refs/heads/main/Scanner"))()
-		elseif p2 == "Purple Shakelight" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/thelostw3r/Scripts/refs/heads/main/PurpleFlashlight.lua"))()
-		elseif p2 == "M249" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/hi822010/Extras-Gliese-Hub-Doors/refs/heads/main/M249"))()
-		elseif p2 == "Luger Pistol" then
-			loadstring(game:HttpGet("https://pastebin.com/raw/WcYCnACD"))()
-		elseif p2 == "Screech Plush" then
-			loadstring(game:HttpGet("https://pastebin.com/raw/CRYiKPZX"))()
-		elseif p2 == "Lantern" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Junbbinopro/Item/refs/heads/main/lantern"))()
-		elseif p2 == "Guiding Candle" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Junbbinopro/Guiding-light-candle/refs/heads/main/Candle"))()
-		elseif p2 == "Torch" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Junbbinopro/Torch/refs/heads/main/Tool"))()
-		elseif p2 == "Admin Slap" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/GuestlyTheGreatestGuest/Scripts/refs/heads/main/Admin-Slap-For-DOORS-made-by-Celestian-(Guestly)-on-Discord"))()
-		end
-
-		v2:Notify(p2 .. " loaded!", 3)
-	end
-})
-v19:AddDropdown("Additional Mods", {
-	Values = {
-		"Giggle in jail :(",
-		"Enable Jump",
-		"Eat Everything",
-		"Sprint bar",
-		"Speedrun Timer",
-		"Coolkid Seek",
-		"Chill Seek",
-		"Chill Light"
-	},
-	Default = "Giggle In Jail :(",
-	Multi = false,
-	Text = "Cool additions!",
-	Callback = function(p3)
-		if p3 == "Giggle in jail :()" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/OoOoALemon/OL1/refs/heads/main/README.md"))()
-		elseif p3 == "Enable Jump" then
-			game.Players.LocalPlayer.Character:SetAttribute("CanJump", true)
-		elseif p3 == "Eat Everything" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua"))()
-		elseif p3 == "Sprint bar" then
-			_G.msrhyan_config_sprint = {
-				timetospeedexpire = 25,
-				cooldowntime = 5,
-				sprintspeed = 50,
-				speedapplytime = 0.3,
-				speedremovetime = 0.5,
-				staminarecovertime = 10,
-				effectfadetime = 0.2,
-				showstaminamessages = true,
-				customstaminamessage = "SUA STAMINA ACABOU, AGUARDE %ds!",
-				enableeffects = true,
-				effectcolor = {
-					100,
-					200,
-					255
-				},
-				staminabarcolor = {
-					0,
-					162,
-					255
-				},
-				sprintfov = 120,
-				normalfov = 70,
-				usewhileloading = false
-			}
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/refs/heads/main/projects/DOORS-SPRINT.lua"))()
-		elseif p3 == "Speedrun Timer" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer"))()
-		elseif p3 == "Coolkid Seek" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/c00lkiddSeek"))()
-		elseif p3 == "Chill Seek" then
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/Idk-lol2/chill-seek/refs/heads/main/chillseklal.Pl.txt"))()
-		elseif p3 == "Chill Light" then
-			loadstring(game:HttpGet("https://pastebin.com/raw/nCYbqkAb"))()
-		end
-
-		v2:Notify(p3 .. " loaded!", 3)
-	end
-})
-loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()({
-	Title = "Thanks for using admin panel by lkagod",
-	Desc = "You are cool guy",
-	Reason = "Executed lkagod's admin panel",
-	Image = "rbxassetid://17857830685"
-})
-v3:SetLibrary(v2)
-v3:SetFolder("DoorsModsHub")
-v3:ApplyToGroupbox(v22)
-v4:SetLibrary(v2)
-v4:SetFolder("DoorsModsHub")
-v4:ApplyToGroupbox(v22)
+SaveManager:SetLibrary(Obsidian)
+SaveManager:SetFolder("DoorsModsHub")
+SaveManager:ApplyToGroupbox(SettingsBox)
