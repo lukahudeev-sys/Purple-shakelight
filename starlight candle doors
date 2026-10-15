@@ -1,102 +1,62 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- Загружаем свечу
 local tool = LoadCustomInstance("rbxassetid://110853297264350")
-tool.Name = "Star Candle"
-tool.Parent = LocalPlayer.Backpack
+tool.Parent = game:GetService("Players").LocalPlayer.Backpack
+tool.Name = "Glitch Candle"
 
--- Папка для подсветки дверей
-local espFolder = Instance.new("Folder")
-espFolder.Name = "StarCandleESP"
-espFolder.Parent = game:GetService("CoreGui")
-
-local tracked = {}
-local connection = nil
-local active = false
-
--- Проверка: это дверь?
-local function isDoor(obj)
-    if not obj or not obj:IsA("BasePart") then return false end
-
-    local n = string.lower(obj.Name)
-    -- В Doors двери называются "Door", "ExitDoor", "Door1", "Door2" и т.д.
-    if not string.find(n, "door") then return false end
-
-    -- Отсекаем мелкие объекты (ручки, замки, таблички)
-    if obj.Size.Y < 4 then return false end
-
-    return true
+-- Функция сохранения яркости при смене цвета на фиолетовый
+local function purpleKeepBrightness(color)
+	local _, _, v = Color3.toHSV(color)
+	return Color3.fromHSV(0.78, 1, v) -- фиолетовый
 end
 
-local function createESP(door)
-    if tracked[door] then return end
-
-    -- Рамка вокруг двери
-    local box = Instance.new("SelectionBox")
-    box.Name = "StarCandleBox"
-    box.Adornee = door
-    box.Color3 = Color3.fromRGB(255, 220, 120)  -- Тёплый жёлтый, как у пламени свечи
-    box.LineThickness = 0.12
-    box.SurfaceTransparency = 1
-    box.Transparency = 0
-    box.Parent = espFolder
-
-    -- Мягкая заливка через Highlight
-    local hl = Instance.new("Highlight")
-    hl.Name = "StarCandleHL"
-    hl.Adornee = door
-    hl.FillColor = Color3.fromRGB(255, 220, 120)
-    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-    hl.FillTransparency = 0.65
-    hl.OutlineTransparency = 1
-    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    hl.Parent = espFolder
-
-    tracked[door] = {hl = hl, box = box}
+-- Перекраска всех объектов инструмента
+for _, obj in ipairs(tool:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.Color = purpleKeepBrightness(obj.Color)
+	elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+		obj.Color = purpleKeepBrightness(obj.Color)
+	elseif obj:IsA("ParticleEmitter") then
+		if obj.Name ~= "FireParticle" then
+			local newKeys = {}
+			for _, key in ipairs(obj.Color.Keypoints) do
+				table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+			end
+			obj.Color = ColorSequence.new(newKeys)
+		end
+	elseif obj:IsA("Trail") then
+		local newKeys = {}
+		for _, key in ipairs(obj.Color.Keypoints) do
+			table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+		end
+		obj.Color = ColorSequence.new(newKeys)
+	elseif obj:IsA("Beam") then
+		local newKeys = {}
+		for _, key in ipairs(obj.Color.Keypoints) do
+			table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+		end
+		obj.Color = ColorSequence.new(newKeys)
+	end
 end
 
-local function clearAll()
-    for door, data in pairs(tracked) do
-        if data.hl then data.hl:Destroy() end
-        if data.box then data.box:Destroy() end
-    end
-    tracked = {}
+-- Создаём источник света для подсветки при экипировке
+local handle = tool:FindFirstChild("Handle")
+if handle then
+	local glowLight = Instance.new("PointLight")
+	glowLight.Name = "EquipGlow"
+	glowLight.Color = Color3.fromHSV(0.78, 1, 1) -- фиолетовый
+	glowLight.Range = 12
+	glowLight.Brightness = 2.5
+	glowLight.Enabled = false -- изначально выключен
+	glowLight.Parent = handle
+
+	-- Включаем свет при экипировке
+	tool.Equipped:Connect(function()
+		glowLight.Enabled = true
+	end)
+
+	-- Выключаем свет при снятии
+	tool.Unequipped:Connect(function()
+		glowLight.Enabled = false
+	end)
 end
-
-local function scanDoors()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if isDoor(obj) then
-            createESP(obj)
-        end
-    end
-end
-
-local function onEquip()
-    if active then return end
-    active = true
-
-    scanDoors()
-
-    connection = workspace.DescendantAdded:Connect(function(obj)
-        if not active then return end
-        task.wait(0.2)
-        if isDoor(obj) then
-            createESP(obj)
-        end
-    end)
-end
-
-local function onUnequip()
-    active = false
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
-    clearAll()
-end
-
-tool.Equipped:Connect(onEquip)
-tool.Unequipped:Connect(onUnequip)
