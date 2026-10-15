@@ -4,63 +4,71 @@ local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Parent = game:GetService("Players").LocalPlayer.Backpack
 tool.Name = "Glitch Candle"
 
+-- Безопасная установка анимации и текстуры (если есть)
+if tool:FindFirstChild("Animations") and tool.Animations:FindFirstChild("idle") then
+    tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
+end
+if tool:IsA("Tool") then
+    tool.TextureId = "rbxassetid://103455405358047"
+end
+
 -- Функция сохранения яркости при смене цвета на фиолетовый
 local function purpleKeepBrightness(color)
-	local _, _, v = Color3.toHSV(color)
-	return Color3.fromHSV(0.78, 1, v) -- фиолетовый
+    local _, _, v = Color3.toHSV(color)
+    return Color3.fromHSV(0.78, 1, v) -- фиолетовый
 end
 
 -- Перекраска всех объектов инструмента
 for _, obj in ipairs(tool:GetDescendants()) do
-	if obj:IsA("BasePart") then
-		obj.Color = purpleKeepBrightness(obj.Color)
-	elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-		obj.Color = purpleKeepBrightness(obj.Color)
-	elseif obj:IsA("ParticleEmitter") then
-		if obj.Name ~= "FireParticle" then
-			local newKeys = {}
-			for _, key in ipairs(obj.Color.Keypoints) do
-				table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
-			end
-			obj.Color = ColorSequence.new(newKeys)
-		end
-	elseif obj:IsA("Trail") then
-		local newKeys = {}
-		for _, key in ipairs(obj.Color.Keypoints) do
-			table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
-		end
-		obj.Color = ColorSequence.new(newKeys)
-	elseif obj:IsA("Beam") then
-		local newKeys = {}
-		for _, key in ipairs(obj.Color.Keypoints) do
-			table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
-		end
-		obj.Color = ColorSequence.new(newKeys)
-	end
+    if obj:IsA("BasePart") then
+        obj.Color = purpleKeepBrightness(obj.Color)
+    elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+        obj.Color = purpleKeepBrightness(obj.Color)
+    elseif obj:IsA("ParticleEmitter") then
+        if obj.Name ~= "FireParticle" then
+            local newKeys = {}
+            for _, key in ipairs(obj.Color.Keypoints) do
+                table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+            end
+            obj.Color = ColorSequence.new(newKeys)
+        end
+    elseif obj:IsA("Trail") then
+        local newKeys = {}
+        for _, key in ipairs(obj.Color.Keypoints) do
+            table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+        end
+        obj.Color = ColorSequence.new(newKeys)
+    elseif obj:IsA("Beam") then
+        local newKeys = {}
+        for _, key in ipairs(obj.Color.Keypoints) do
+            table.insert(newKeys, ColorSequenceKeypoint.new(key.Time, purpleKeepBrightness(key.Value)))
+        end
+        obj.Color = ColorSequence.new(newKeys)
+    end
 end
 
 -- Запоминаем исходные материалы всех BasePart
 local originalMaterials = {}
 for _, obj in ipairs(tool:GetDescendants()) do
-	if obj:IsA("BasePart") then
-		originalMaterials[obj] = obj.Material
-	end
+    if obj:IsA("BasePart") then
+        originalMaterials[obj] = obj.Material
+    end
 end
 
--- Включаем свечение при экипировке
+-- Включаем свечение при экипировке (только сама свеча, без освещения вокруг)
 tool.Equipped:Connect(function()
-	for part, _ in pairs(originalMaterials) do
-		if part and part.Parent then
-			part.Material = Enum.Material.Neon
-		end
-	end
+    for part, _ in pairs(originalMaterials) do
+        if part and part.Parent then
+            part.Material = Enum.Material.Neon
+        end
+    end
 end)
 
 -- Возвращаем исходные материалы при снятии
 tool.Unequipped:Connect(function()
-	for part, material in pairs(originalMaterials) do
-		if part and part.Parent then
-			part.Material = material
-		end
-	end
+    for part, material in pairs(originalMaterials) do
+        if part and part.Parent then
+            part.Material = material
+        end
+    end
 end)
