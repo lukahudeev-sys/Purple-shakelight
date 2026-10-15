@@ -4,7 +4,6 @@ local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Parent = game:GetService("Players").LocalPlayer.Backpack
 tool.Name = "Glitch Candle"
 
--- Безопасная установка анимации и текстуры (если есть)
 if tool:FindFirstChild("Animations") and tool.Animations:FindFirstChild("idle") then
     tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
 end
@@ -26,34 +25,60 @@ end
 local Workspace = game:GetService("Workspace")
 
 local stopped = true
-local activeHighlights = {}
+local activeHighlight = nil
 local connections = {}
 
 local FILL_COLOR = Color3.fromRGB(255, 220, 80)
 local OUTLINE_COLOR = Color3.fromRGB(255, 170, 0)
 
+-- Имена комнат, где лежит главная дверь (лобби)
+local LOBBY_NAMES = {["lobby"]=true, ["room0"]=true, ["0"]=true, ["start"]=true, ["startroom"]=true, ["lobbydoor"]=true}
+
 local function isMainDoor(inst)
-    return inst:IsA("Model") and inst.Name == "Door"
+    if not inst:IsA("Model") then return false end
+    if inst.Name ~= "Door" then return false end
+
+    -- Проверяем, что дверь лежит в комнате-лобби
+    local parent = inst.Parent
+    if parent then
+        local pname = parent.Name:lower()
+        if LOBBY_NAMES[pname] then
+            return true
+        end
+        -- Иногда дверь лежит глубже: Room0.Lobby.Door
+        local grand = parent.Parent
+        if grand and LOBBY_NAMES[grand.Name:lower()] then
+            return true
+        end
+    end
+    return false
 end
 
-local function process(inst)
+local function applyHighlight(inst)
+    if activeHighlight and activeHighlight.Parent then return end
+    local h = Instance.new("Highlight")
+    h.FillColor = FILL_COLOR
+    h.OutlineColor = OUTLINE_COLOR
+    h.FillTransparency = 0.35
+    h.OutlineTransparency = 0
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = inst
+    activeHighlight = h
+end
+
+local function tryHighlight(inst)
     if stopped then return end
-    if isMainDoor(inst) and not inst:FindFirstChildOfClass("Highlight") then
-        local h = Instance.new("Highlight")
-        h.FillColor = FILL_COLOR
-        h.OutlineColor = OUTLINE_COLOR
-        h.FillTransparency = 0.4
-        h.OutlineTransparency = 0
-        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        h.Parent = inst
-        table.insert(activeHighlights, h)
+    if activeHighlight and activeHighlight.Parent then return end
+    if isMainDoor(inst) then
+        applyHighlight(inst)
     end
 end
 
 local function scanContainer(container)
     if stopped or not container then return end
     for _, v in ipairs(container:GetDescendants()) do
-        process(v)
+        tryHighlight(v)
+        if activeHighlight and activeHighlight.Parent then return end
     end
 end
 
@@ -62,7 +87,7 @@ local function hookContainer(container)
     local conn = container.DescendantAdded:Connect(function(v)
         if stopped then return end
         task.wait()
-        process(v)
+        tryHighlight(v)
     end)
     table.insert(connections, conn)
 end
@@ -70,7 +95,7 @@ end
 local function startDoorHighlight()
     if not stopped then return end
     stopped = false
-    activeHighlights = {}
+    activeHighlight = nil
     connections = {}
 
     task.spawn(function()
@@ -106,12 +131,10 @@ local function stopDoorHighlight()
     end
     connections = {}
 
-    for _, h in ipairs(activeHighlights) do
-        if h and h.Parent then
-            h:Destroy()
-        end
+    if activeHighlight and activeHighlight.Parent then
+        activeHighlight:Destroy()
     end
-    activeHighlights = {}
+    activeHighlight = nil
 end
 
 -- =========================
