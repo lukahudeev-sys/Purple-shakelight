@@ -1,253 +1,99 @@
---\\ Утилиты // --
-local unpack = unpack or table.unpack
-local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
 
-local function safeLoad(url, label)
-    print("[Hub] Загружаю:", label, url)
-    local ok, err = pcall(function()
-        local src = game:HttpGet(url)
-        print("[Hub] Получено байт:", #src)
-        if #src < 10 or src:find("^404") then
-            error("HTTP вернул пустой ответ / 404")
-        end
-        local fn, parseErr = loadstring(src)
-        if not fn then error("loadstring: " .. tostring(parseErr)) end
-        fn()
-    end)
-    if not ok then
-        warn("[Hub] FAIL " .. (label or "?") .. ": " .. tostring(err))
-        pcall(function() Obsidian:Notify("Ошибка: " .. (label or "?"), 4) end)
-    else
-        print("[Hub] OK:", label)
-    end
-    return ok
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Загружаем свечу по указанному ID
+local tool = LoadCustomInstance("rbxassetid://110853297264350")
+tool.Name = "Star Candle"
+tool.Parent = LocalPlayer.Backpack
+
+-- Папка для подсветки дверей
+local highlightFolder = Instance.new("Folder")
+highlightFolder.Name = "StarCandleHighlights"
+highlightFolder.Parent = workspace
+
+local activeHighlights = {}
+
+local function isDoor(obj)
+	if not obj or not obj:IsA("BasePart") then return false end
+	local n = string.lower(obj.Name)
+	if string.find(n, "door") or string.find(n, "двер") then
+		return true
+	end
+	return false
 end
 
---\\ Окно // --
-local Window = Obsidian:CreateWindow({
-    Title = "Doors Items Hub",
-    Footer = "Version: Revamped",
-    Icon = 95816097006870,
-    NotifySide = "Right",
-    ShowCustomCursor = true,
-    AutoShow = true,
-    ToggleKeybind = Enum.KeyCode.RightShift
-})
-Obsidian:Notify("Hub loaded!", 4)
+local function addHighlight(door)
+	if activeHighlights[door] then return end
 
---\\ Watermark // --
-local Watermark = Obsidian:AddDraggableLabel("Doors Items Hub")
-Watermark:SetVisible(true)
+	local hl = Instance.new("Highlight")
+	hl.Name = "StarCandleHL"
+	hl.Adornee = door
+	hl.FillColor = Color3.fromRGB(255, 220, 120)   -- звёздный жёлтый
+	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+	hl.FillTransparency = 0.55
+	hl.OutlineTransparency = 0.15
+	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	hl.Parent = highlightFolder
 
-do
-    local frames = 0
-    local fps = 60
-    local lastUpdate = tick()
-    game:GetService("RunService").RenderStepped:Connect(function()
-        frames += 1
-        if tick() - lastUpdate >= 1 then
-            fps = frames
-            frames = 0
-            lastUpdate = tick()
-        end
-        local ping = 0
-        pcall(function()
-            ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-        Watermark:SetText(("Doors Items Hub | %d fps | %d ms"):format(fps, ping))
-    end)
+	local light = Instance.new("PointLight")
+	light.Name = "StarCandleLight"
+	light.Color = Color3.fromRGB(255, 230, 150)
+	light.Range = 18
+	light.Brightness = 2.5
+	light.Parent = door
+
+	activeHighlights[door] = {Highlight = hl, Light = light}
 end
 
---\\ Табы // --
-local Tabs = {
-    Items = Window:AddTab("Items", "package"),
-    Credits = Window:AddTab("Credits", "graduation-cap"),
-    Settings = Window:AddTab("Settings", "settings"),
-}
-print("[Hub] Табы созданы")
-
---\\ Groupbox'ы // --
-local ItemsBox = Tabs.Items:AddLeftGroupbox("Items")
-local CreditsBox = Tabs.Credits:AddLeftGroupbox("Credits")
-local SettingsBox = Tabs.Settings:AddLeftGroupbox("Settings")
-local OptionsBox = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
-print("[Hub] Groupbox'ы созданы")
-
---\\ Credits // --
-for _, name in ipairs({ "Credits to:", "lkagod", "noxwellor" }) do
-    CreditsBox:AddLabel(name)
+local function removeAllHighlights()
+	for door, data in pairs(activeHighlights) do
+		if data.Highlight then data.Highlight:Destroy() end
+		if data.Light then data.Light:Destroy() end
+	end
+	activeHighlights = {}
 end
 
---\\ Кнопки // --
-local watermarkVisible = true
-OptionsBox:AddButton({
-    Text = "Toggle Watermark",
-    Func = function()
-        watermarkVisible = not watermarkVisible
-        Watermark:SetVisible(watermarkVisible)
-        Obsidian:Notify("Watermark " .. (watermarkVisible and "enabled" or "disabled"), 2)
-    end
-})
-OptionsBox:AddButton({
-    Text = "Unload",
-    Func = function() Obsidian:Unload() end
-})
-OptionsBox:AddButton({
-    Text = "Copy Discord Link",
-    Func = function()
-        setclipboard("https://discord.gg/HNyjBHJJTM")
-        Obsidian:Notify("Discord link copied!", 3)
-    end
-})
-print("[Hub] Кнопки добавлены")
-
---\\ Таблицы // --
-local ITEMS = {
-    ["starlight candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20candle%20doors",
-    ["Barrel of starlight"]  = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Barrel%20of%20Starlight",
-    ["Spiral Bottle"]        = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
-    ["Figure potion"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Figure%20potion",
-    ["Scanner"]              = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
-    ["Moon Bottle"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Moon%20Bottle",
-    ["Moon Jug"]             = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Moon%20Jug",
-    ["Ambush potion"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/ambush%20potion",
-    ["glitch bottle"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20bottle",
-    ["glitch candle"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20candle",
-    ["glitch jug"]           = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20jug",
-    ["glitch vial"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20vial",
-    ["Lotus bottle"]         = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotus%20bottle",
-    ["Lotus vial"]           = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotus%20vial%20doors",
-    ["Lotus Jug"]            = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotusjug",
-    ["michevious bottle"]    = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20bottle",
-    ["michevious jug"]       = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20jug",
-    ["michevious vial"]      = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20vial",
-    ["moon vial"]            = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/moon%20vial",
-    ["rush potion"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/rush%20potion",
-    ["seek potion"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/seek%20potion",
-    ["Starlight bottle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20bottle",
-    ["Starlight vial"]       = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20vial",
-    ["viridis vial"]         = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/viridis%20small%20vial",
-    ["Viridis jug"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/viridis%20spiral%20jug",
-}
-
-local EXTRAS = {
-    ["Giggle in jail :("] = "https://raw.githubusercontent.com/OoOoALemon/OL1/main/README.md",
-    ["Eat Everything"]    = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
-    ["Speedrun Timer"]    = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
-    ["Coolkid Seek"]      = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/main/c00lkiddSeek",
-    ["Chill Seek"]        = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/main/chillseklal.Pl.txt",
-    ["Chill Light"]       = "https://pastebin.com/raw/nCYbqkAb",
-}
-
-local function collectKeys(t)
-    local keys = {}
-    for k in pairs(t) do table.insert(keys, k) end
-    table.sort(keys)
-    return keys
+local function scanDoors()
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") then
+			for _, part in ipairs(obj:GetDescendants()) do
+				if isDoor(part) then
+					addHighlight(part)
+				end
+			end
+		elseif isDoor(obj) then
+			addHighlight(obj)
+		end
+	end
 end
 
---\\ Дропдаун предметов // --
--- ВАЖНО: Default НЕ должен совпадать со "starlight candle", иначе callback не вызовется при выборе.
-ItemsBox:AddDropdown("Items", {
-    Values = collectKeys(ITEMS),
-    Default = "Scanner",              -- ← было "starlight candle"
-    Multi = false,
-    Text = "Select the item",
-    Callback = function(choice)
-        print("[Hub] Items dropdown выбрал:", choice)   -- дебаг
-        local url = ITEMS[choice]
-        if not url then
-            Obsidian:Notify(choice .. " — скрипт пока недоступен", 3)
-            return
-        end
-        safeLoad(url, choice)
-        Obsidian:Notify(choice .. " loaded!", 3)
-    end
-})
+-- Следим за новыми дверями, пока свеча экипирована
+local connection
+local function startScanning()
+	scanDoors()
+	connection = workspace.DescendantAdded:Connect(function(obj)
+		task.wait(0.1)
+		if isDoor(obj) then
+			addHighlight(obj)
+		end
+	end)
+end
 
---\\ Кнопка принудительной загрузки свечи // --
-ItemsBox:AddButton({
-    Text = "Force load: starlight candle",
-    Func = function()
-        safeLoad(ITEMS["starlight candle"], "starlight candle (force)")
-        Obsidian:Notify("starlight candle loaded (force)!", 3)
-    end
-})
+local function stopScanning()
+	if connection then
+		connection:Disconnect()
+		connection = nil
+	end
+	removeAllHighlights()
+end
 
---\\ Дропдаун дополнений // --
-local extrasList = collectKeys(EXTRAS)
-table.insert(extrasList, "Enable Jump")
-table.insert(extrasList, "Sprint bar")
+tool.Equipped:Connect(startScanning)
+tool.Unequipped:Connect(stopScanning)
 
-ItemsBox:AddDropdown("Additional Mods", {
-    Values = extrasList,
-    Default = "Enable Jump",
-    Multi = false,
-    Text = "Cool additions!",
-    Callback = function(choice)
-        print("[Hub] Additional Mods выбрал:", choice)   -- дебаг
-        if choice == "Enable Jump" then
-            local char = game.Players.LocalPlayer.Character
-            if not char then
-                char = game.Players.LocalPlayer.CharacterAdded:Wait()
-            end
-            char:SetAttribute("CanJump", true)
-            Obsidian:Notify("Jump enabled!", 3)
-            return
-        elseif choice == "Sprint bar" then
-            _G.msrhyan_config_sprint = {
-                timetospeedexpire = 25,
-                cooldowntime = 5,
-                sprintspeed = 50,
-                speedapplytime = 0.3,
-                speedremovetime = 0.5,
-                staminarecovertime = 10,
-                effectfadetime = 0.2,
-                showstaminamessages = true,
-                customstaminamessage = "SUA STAMINA ACABOU, AGUARDE %ds!",
-                enableeffects = true,
-                effectcolor = { 100, 200, 255 },
-                staminabarcolor = { 0, 162, 255 },
-                sprintfov = 120,
-                normalfov = 70,
-                usewhileloading = false
-            }
-            safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/main/projects/DOORS-SPRINT.lua", "Sprint bar")
-            Obsidian:Notify("Sprint bar loaded!", 3)
-            return
-        end
-
-        local url = EXTRAS[choice]
-        if not url then
-            Obsidian:Notify(choice .. " — скрипт недоступен", 3)
-            return
-        end
-        safeLoad(url, choice)
-        Obsidian:Notify(choice .. " loaded!", 3)
-    end
-})
-
---\\ Ачивка // --
-pcall(function()
-    loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
-    )())({
-        Title = "Thanks for using Grampy's Doors hub!",
-        Desc = "Your part of the cool ones now!",
-        Reason = "Executed Grampy's Doors Hub.",
-        Image = "rbxassetid://17857830685"
-    })
-end)
-
---\\ Тема и сохранения // --
-ThemeManager:SetLibrary(Obsidian)
-ThemeManager:SetFolder("DoorsModsHub_v2")     -- ← новая папка (сброс старого кэша)
-ThemeManager:ApplyToGroupbox(SettingsBox)
-
-SaveManager:SetLibrary(Obsidian)
-SaveManager:SetFolder("DoorsModsHub_v2")      -- ← новая папка (сброс старого кэша)
-SaveManager:ApplyToGroupbox(SettingsBox)
-
-print("[Hub] Готово!")
+-- Если уже в руках при загрузке
+if tool.Parent == LocalPlayer.Character then
+	startScanning()
+end
