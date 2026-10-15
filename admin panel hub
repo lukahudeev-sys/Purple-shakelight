@@ -38,7 +38,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
 	v25:SetText(("Doors Mods Hub | %s fps | %s ms"):format(v26, v1(t1)))
 end)
 
-local v13 = v8:AddTab("Modes", "user")
 local v14 = v8:AddTab("Items", "package")
 local v15 = v8:AddTab("Utilities", "boxes")
 local v16 = v8:AddTab("Credits", "graduation-cap")
