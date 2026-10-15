@@ -20,20 +20,104 @@ for _, obj in ipairs(tool:GetDescendants()) do
     end
 end
 
--- Включаем свечение при экипировке (только сама свеча, без освещения вокруг)
+-- =========================
+-- ПОДСВЕТКА ДВЕРЕЙ (из Viridis Jug)
+-- =========================
+local Workspace = game:GetService("Workspace")
+
+local stopped = false
+local activeHighlights = {}
+local doorConn
+
+local FILL_COLOR = Color3.fromRGB(180, 120, 255)   -- фиолетовый
+local OUTLINE_COLOR = Color3.fromRGB(120, 60, 255)
+
+local function createHighlight(inst)
+    local h = Instance.new("Highlight")
+    h.FillColor = FILL_COLOR
+    h.OutlineColor = OUTLINE_COLOR
+    h.FillTransparency = 0.4
+    h.OutlineTransparency = 0
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = inst
+
+    table.insert(activeHighlights, h)
+end
+
+local function process(inst)
+    if stopped then return end
+
+    if inst:IsA("Model") and (inst.Name == "Door" or inst.Name == "KeyObtain") then
+        if not inst:FindFirstChildOfClass("Highlight") then
+            createHighlight(inst)
+        end
+    end
+end
+
+local function scanRooms()
+    if stopped then return end
+    local rooms = Workspace:FindFirstChild("CurrentRooms")
+    if not rooms then return end
+    for _, v in ipairs(rooms:GetDescendants()) do
+        process(v)
+    end
+end
+
+local function startDoorHighlights()
+    if doorConn then return end
+    stopped = false
+
+    scanRooms()
+
+    local rooms = Workspace:WaitForChild("CurrentRooms", 10)
+    if rooms then
+        doorConn = rooms.DescendantAdded:Connect(function(v)
+            if stopped then return end
+            task.wait()
+            process(v)
+        end)
+    end
+end
+
+local function stopDoorHighlights()
+    stopped = true
+
+    if doorConn then
+        doorConn:Disconnect()
+        doorConn = nil
+    end
+
+    for _, h in ipairs(activeHighlights) do
+        if h and h.Parent then
+            h:Destroy()
+        end
+    end
+    activeHighlights = {}
+end
+
+-- =========================
+-- ЭКИПИРОВКА / СНЯТИЕ
+-- =========================
 tool.Equipped:Connect(function()
+    -- Свечение самой свечи (Neon, не освещает шкафы)
     for part, _ in pairs(originalMaterials) do
         if part and part.Parent then
             part.Material = Enum.Material.Neon
         end
     end
+
+    -- Подсветка дверей
+    startDoorHighlights()
 end)
 
--- Возвращаем исходные материалы при снятии
 tool.Unequipped:Connect(function()
+    -- Возвращаем исходные материалы свечи
     for part, material in pairs(originalMaterials) do
         if part and part.Parent then
             part.Material = material
         end
     end
+
+    -- Убираем подсветку дверей
+    stopDoorHighlights()
 end)
