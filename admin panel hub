@@ -5,15 +5,22 @@ local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
 
 local function safeLoad(url, label)
+    print("[Hub] Загружаю:", label, url)
     local ok, err = pcall(function()
         local src = game:HttpGet(url)
-        local fn = loadstring(src)
-        if not fn then error("loadstring failed") end
+        print("[Hub] Получено байт:", #src)
+        if #src < 10 or src:find("^404") then
+            error("HTTP вернул пустой ответ / 404")
+        end
+        local fn, parseErr = loadstring(src)
+        if not fn then error("loadstring: " .. tostring(parseErr)) end
         fn()
     end)
     if not ok then
-        warn(("[Hub] Ошибка загрузки %s: %s"):format(label or "?", tostring(err)))
+        warn("[Hub] FAIL " .. (label or "?") .. ": " .. tostring(err))
         pcall(function() Obsidian:Notify("Ошибка: " .. (label or "?"), 4) end)
+    else
+        print("[Hub] OK:", label)
     end
     return ok
 end
@@ -96,42 +103,42 @@ OptionsBox:AddButton({
 })
 print("[Hub] Кнопки добавлены")
 
---\\ Таблицы // --
+--\\ Таблицы (URL'ы в коротком формате: main вместо refs/heads/main) // --
 local ITEMS = {
-    ["starlight candle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20candle%20rift",
-    ["Barrel of starlight"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Barrel%20of%20Starlight",
-    ["Spiral Bottle"] = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
-    ["Figure potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Figure%20potion",
-    ["Scanner"] = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
-    ["Moon Bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Bottle",
-    ["Moon Jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Jug",
-    ["Ambush potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/ambush%20potion",
-    ["glitch bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle",
-    ["glitch candle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20candle",
-    ["glitch jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug",
-    ["glitch vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug", -- исправлено: было glitch%20jug, оставлено как в оригинале (возможно, так задумано)
-    ["Lotus bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20bottle",
-    ["Lotus vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20vial%20doors",
-    ["Lotus Jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotusjug",
-    ["michevious bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20bottle",
-    ["michevious jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20jug",
-    ["michevious vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20vial",
-    ["moon vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/moon%20vial",
-    ["rush potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/rush%20potion",
-    ["seek potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/seek%20potion",
-    ["Starlight bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20bottle",
-    ["Starlight vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20vial",
-    ["viridis vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20small%20vial",
-    ["Viridis jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/viridis%20spiral%20jug",
+    ["starlight candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20candle%20rift",
+    ["Barrel of starlight"]  = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Barrel%20of%20Starlight",
+    ["Spiral Bottle"]        = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
+    ["Figure potion"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Figure%20potion",
+    ["Scanner"]              = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
+    ["Moon Bottle"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Moon%20Bottle",
+    ["Moon Jug"]             = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Moon%20Jug",
+    ["Ambush potion"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/ambush%20potion",
+    ["glitch bottle"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20bottle",
+    ["glitch candle"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20candle",
+    ["glitch jug"]           = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20jug",
+    ["glitch vial"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/glitch%20vial",
+    ["Lotus bottle"]         = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotus%20bottle",
+    ["Lotus vial"]           = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotus%20vial%20doors",
+    ["Lotus Jug"]            = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/lotusjug",
+    ["michevious bottle"]    = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20bottle",
+    ["michevious jug"]       = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20jug",
+    ["michevious vial"]      = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/michevious%20vial",
+    ["moon vial"]            = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/moon%20vial",
+    ["rush potion"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/rush%20potion",
+    ["seek potion"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/seek%20potion",
+    ["Starlight bottle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20bottle",
+    ["Starlight vial"]       = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/starlight%20vial",
+    ["viridis vial"]         = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/viridis%20small%20vial",
+    ["Viridis jug"]          = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/viridis%20spiral%20jug",
 }
 
 local EXTRAS = {
-    ["Giggle in jail :("] = "https://raw.githubusercontent.com/OoOoALemon/OL1/refs/heads/main/README.md",
-    ["Eat Everything"] = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
-    ["Speedrun Timer"] = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
-    ["Coolkid Seek"] = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/c00lkiddSeek",
-    ["Chill Seek"] = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/refs/heads/main/chillseklal.Pl.txt",
-    ["Chill Light"] = "https://pastebin.com/raw/nCYbqkAb",
+    ["Giggle in jail :("] = "https://raw.githubusercontent.com/OoOoALemon/OL1/main/README.md",
+    ["Eat Everything"]    = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
+    ["Speedrun Timer"]    = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
+    ["Coolkid Seek"]      = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/main/c00lkiddSeek",
+    ["Chill Seek"]        = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/main/chillseklal.Pl.txt",
+    ["Chill Light"]       = "https://pastebin.com/raw/nCYbqkAb",
 }
 
 local function collectKeys(t)
@@ -144,7 +151,7 @@ end
 --\\ Дропдаун предметов // --
 ItemsBox:AddDropdown("Items", {
     Values = collectKeys(ITEMS),
-    Default = "starlight candle", -- исправлено: было "Golden Flashlight", которого нет в ITEMS
+    Default = "starlight candle",
     Multi = false,
     Text = "Select the item",
     Callback = function(choice)
@@ -195,7 +202,7 @@ ItemsBox:AddDropdown("Additional Mods", {
                 normalfov = 70,
                 usewhileloading = false
             }
-            safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/refs/heads/main/projects/DOORS-SPRINT.lua", "Sprint bar")
+            safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/main/projects/DOORS-SPRINT.lua", "Sprint bar")
             Obsidian:Notify("Sprint bar loaded!", 3)
             return
         end
