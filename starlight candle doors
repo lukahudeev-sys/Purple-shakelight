@@ -19,7 +19,7 @@ for _, obj in ipairs(tool:GetDescendants()) do
 end
 
 -- =========================
--- ПОДСВЕТКА ДВЕРЕЙ 2..100 (не запертых)
+-- ПОДСВЕТКА ДВЕРЕЙ
 -- =========================
 local Workspace = game:GetService("Workspace")
 
@@ -30,11 +30,10 @@ local stopped = true
 local activeHighlights = {}
 local connections = {}
 
--- Настройки подсветки: только контур, заливка почти прозрачная
-local FILL_COLOR      = Color3.fromRGB(255, 220, 80)
-local OUTLINE_COLOR   = Color3.fromRGB(255, 200, 40)
-local FILL_TRANSP     = 0.9   -- 0.9 = почти не видно заливки
-local OUTLINE_TRANSP  = 0     -- контур яркий
+local FILL_COLOR     = Color3.fromRGB(255, 220, 80)
+local OUTLINE_COLOR  = Color3.fromRGB(255, 200, 40)
+local FILL_TRANSP    = 0.85
+local OUTLINE_TRANSP = 0
 
 local ATTRIBUTE_NAMES = {
     "Code", "Number", "RoomNumber", "DoorNumber",
@@ -42,75 +41,80 @@ local ATTRIBUTE_NAMES = {
 }
 
 local function extractNumber(str)
-    if not str then return nil end
+    if str == nil then return nil end
     str = tostring(str)
     local digits = str:match("(%d+)")
     if not digits then return nil end
     return tonumber(digits)
 end
 
-local function getDoorNumber(door)
+-- Ищем номер в атрибутах, во всех TextLabel/TextButton/TextBox, в имени
+local function findNumber(obj)
     for _, attr in ipairs(ATTRIBUTE_NAMES) do
-        local v = door:GetAttribute(attr)
+        local v = obj:GetAttribute(attr)
         if v ~= nil then
             local n = extractNumber(v)
             if n then return n end
         end
     end
 
-    for _, d in ipairs(door:GetDescendants()) do
+    for _, d in ipairs(obj:GetDescendants()) do
         if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
             local n = extractNumber(d.Text)
             if n then return n end
         end
     end
 
-    local n = extractNumber(door.Name)
-    if n then return n end
-
-    return nil
+    return extractNumber(obj.Name)
 end
 
--- Проверка на запертую дверь
 local function isLocked(door)
-    local lockedAttr = door:GetAttribute("Locked") or door:GetAttribute("IsLocked")
-    if lockedAttr == true then return true end
-
+    local la = door:GetAttribute("Locked") or door:GetAttribute("IsLocked")
+    if la == true then return true end
     for _, d in ipairs(door:GetDescendants()) do
-        if d.Name == "Lock" or d.Name:lower():find("lock") then
-            return true
+        local n = d.Name:lower()
+        if n:find("lock") then return true end
+    end
+    return false
+end
+
+local function looksLikeDoor(obj)
+    local n = obj.Name:lower()
+    if n == "door" or n:find("door") then return true end
+    -- если внутри есть SurfaceGui/BillboardGui с цифрой — тоже дверь
+    for _, d in ipairs(obj:GetDescendants()) do
+        if d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
+            for _, t in ipairs(d:GetDescendants()) do
+                if t:IsA("TextLabel") and t.Text:match("%d+") then
+                    return true
+                end
+            end
         end
     end
     return false
 end
 
-local function isDoorModel(inst)
-    if not inst:IsA("Model") then return false end
-    local n = inst.Name:lower()
-    return n == "door" or n:find("door") ~= nil
-end
-
-local function applyHighlight(door)
-    if activeHighlights[door] then return end
-
+local function applyHighlight(obj)
+    if activeHighlights[obj] then return end
     local h = Instance.new("Highlight")
     h.FillColor = FILL_COLOR
     h.OutlineColor = OUTLINE_COLOR
     h.FillTransparency = FILL_TRANSP
     h.OutlineTransparency = OUTLINE_TRANSP
     h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    h.Parent = door
-
-    activeHighlights[door] = h
+    h.Parent = obj
+    activeHighlights[obj] = h
+    print("[GlitchCandle] Подсвечена дверь:", obj:GetFullName())
 end
 
 local function process(inst)
     if stopped then return end
-    if not isDoorModel(inst) then return end
+    if not (inst:IsA("Model") or inst:IsA("BasePart")) then return end
+    if not looksLikeDoor(inst) then return end
 
-    local n = getDoorNumber(inst)
-    if not n or n < MIN_NUM or n > MAX_NUM then return end
-
+    local n = findNumber(inst)
+    if not n then return end
+    if n < MIN_NUM or n > MAX_NUM then return end
     if isLocked(inst) then return end
 
     applyHighlight(inst)
@@ -140,6 +144,7 @@ local function startHighlight()
     connections = {}
 
     task.spawn(function()
+        print("[GlitchCandle] Сканирую Workspace...")
         scanContainer(Workspace)
 
         local rooms = Workspace:FindFirstChild("CurrentRooms")
@@ -147,8 +152,11 @@ local function startHighlight()
             rooms = Workspace:WaitForChild("CurrentRooms", 15)
         end
         if rooms then
+            print("[GlitchCandle] Сканирую CurrentRooms...")
             scanContainer(rooms)
             hookContainer(rooms)
+        else
+            warn("[GlitchCandle] CurrentRooms не найден")
         end
 
         local wsConn = Workspace.ChildAdded:Connect(function(child)
@@ -161,21 +169,18 @@ local function startHighlight()
         table.insert(connections, wsConn)
 
         hookContainer(Workspace)
+        print("[GlitchCandle] Готово. Если дверей не видно — покажи этот лог в F9.")
     end)
 end
 
 local function stopHighlight()
     stopped = true
-
     for _, conn in ipairs(connections) do
         if conn then conn:Disconnect() end
     end
     connections = {}
-
     for door, h in pairs(activeHighlights) do
-        if h and h.Parent then
-            h:Destroy()
-        end
+        if h and h.Parent then h:Destroy() end
     end
     activeHighlights = {}
 end
