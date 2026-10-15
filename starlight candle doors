@@ -8,7 +8,7 @@ local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 
--- Папка для ESP (создаётся 1 раз)
+-- Папка для ESP
 local espFolder = Instance.new("Folder")
 espFolder.Name = "StarCandleESP"
 espFolder.Parent = game:GetService("CoreGui")
@@ -32,8 +32,8 @@ local function createESP(door)
 	hl.Adornee = door
 	hl.FillColor = Color3.fromRGB(255, 235, 160)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 0.75
-	hl.OutlineTransparency = 0.4
+	hl.FillTransparency = 0.85
+	hl.OutlineTransparency = 0.5
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	hl.Parent = espFolder
 
@@ -58,12 +58,12 @@ local function createESP(door)
 	label.Font = Enum.Font.GothamBold
 	label.Parent = billboard
 
-	-- Мягкий свет как у обычной свечи
+	-- ОЧЕНЬ мягкий свет как у обычной свечи
 	local light = Instance.new("PointLight")
 	light.Name = "StarCandleLight"
-	light.Color = Color3.fromRGB(255, 210, 140)
-	light.Range = 9
-	light.Brightness = 0.9
+	light.Color = Color3.fromRGB(255, 200, 120)
+	light.Range = 6          -- маленький радиус
+	light.Brightness = 0.35  -- почти не видно
 	light.Shadows = false
 	light.Parent = door
 
@@ -87,14 +87,12 @@ local function scanDoors()
 	end
 end
 
--- ▶ ВКЛЮЧАЕТСЯ только при экипировке
 local function onEquip()
 	if active then return end
 	active = true
 
-	scanDoors() -- подсветить уже существующие двери
+	scanDoors()
 
-	-- следить за новыми дверями
 	connection = workspace.DescendantAdded:Connect(function(obj)
 		if not active then return end
 		task.wait(0.1)
@@ -104,7 +102,6 @@ local function onEquip()
 	end)
 end
 
--- ⏹ ВЫКЛЮЧАЕТСЯ при снятии свечи
 local function onUnequip()
 	active = false
 	if connection then
