@@ -8,7 +8,7 @@ if tool:FindFirstChild("Animations") and tool.Animations:FindFirstChild("idle") 
     tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
 end
 if tool:IsA("Tool") then
-    tool.TextureId = "rbxassetid://103455405358047"
+    tool.TextureId = "rbxassetid://126780606943963"
 end
 
 local originalMaterials = {}
