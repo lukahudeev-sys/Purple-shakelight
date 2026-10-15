@@ -17,13 +17,12 @@ local tracked = {}
 local connection = nil
 local active = false
 
+-- Проверка: объект называется РОВНО "door" (или "Door", "DOOR" и т.д.)
 local function isDoor(obj)
 	if not obj or not obj:IsA("BasePart") then return false end
-	local n = string.lower(obj.Name)
-	return string.find(n, "door") or string.find(n, "двер")
+	return string.lower(obj.Name) == "door"
 end
 
--- Только контур на дверь. НИКАКОГО текста, НИЧЕГО не трогаем больше.
 local function createESP(door)
 	if tracked[door] then return end
 
