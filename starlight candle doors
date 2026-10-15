@@ -19,7 +19,7 @@ for _, obj in ipairs(tool:GetDescendants()) do
 end
 
 -- =========================
--- ПОДСВЕТКА ДВЕРЕЙ В ДИАПАЗОНЕ 2..100
+-- ПОДСВЕТКА ДВЕРЕЙ С НОМЕРАМИ 2..100
 -- =========================
 local Workspace = game:GetService("Workspace")
 
@@ -32,66 +32,40 @@ local connections = {}
 
 local FILL_COLOR    = Color3.fromRGB(255, 220, 80)
 local OUTLINE_COLOR = Color3.fromRGB(255, 170, 0)
-local TEXT_COLOR    = Color3.fromRGB(255, 235, 120)
 
 local ATTRIBUTE_NAMES = {
     "Code", "Number", "RoomNumber", "DoorNumber",
     "NumberCode", "Num", "Room", "RoomId", "Id", "ID"
 }
 
--- Извлекаем число из строки (поддерживает "0001", "Door 12", "№7")
 local function extractNumber(str)
     if not str then return nil end
     str = tostring(str)
-    -- сначала ищем последовательность цифр
     local digits = str:match("(%d+)")
     if not digits then return nil end
-    local n = tonumber(digits)
-    return n, digits
+    return tonumber(digits)
 end
 
 local function getDoorNumber(door)
-    -- 1) Атрибуты двери
     for _, attr in ipairs(ATTRIBUTE_NAMES) do
         local v = door:GetAttribute(attr)
         if v ~= nil then
-            local n, digits = extractNumber(v)
-            if n then return n, digits end
+            local n = extractNumber(v)
+            if n then return n end
         end
     end
 
-    -- 2) Все TextLabel / TextButton / TextBox внутри двери
     for _, d in ipairs(door:GetDescendants()) do
         if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-            local n, digits = extractNumber(d.Text)
-            if n then return n, digits end
+            local n = extractNumber(d.Text)
+            if n then return n end
         end
     end
 
-    -- 3) SurfaceGui / BillboardGui — иногда текст в свойстве Name или DisplayName
-    for _, d in ipairs(door:GetDescendants()) do
-        if d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
-            local n, digits = extractNumber(d.Name)
-            if n then return n, digits end
-        end
-    end
-
-    -- 4) Из имени самой двери (Door0001, Door_12, Room7 и т.д.)
-    local n, digits = extractNumber(door.Name)
-    if n then return n, digits end
-
-    -- 5) Из имени родителя (если дверь внутри Room0X)
-    if door.Parent then
-        local n, digits = extractNumber(door.Parent.Name)
-        if n then return n, digits end
-    end
+    local n = extractNumber(door.Name)
+    if n then return n end
 
     return nil
-end
-
-local function inRange(n)
-    if not n then return false end
-    return n >= MIN_NUM and n <= MAX_NUM
 end
 
 local function isDoorModel(inst)
@@ -100,15 +74,7 @@ local function isDoorModel(inst)
     return n == "door" or n:find("door") ~= nil
 end
 
-local function getDoorPrimaryPart(door)
-    local p = door.PrimaryPart
-    if not p then
-        p = door:FindFirstChildWhichIsA("BasePart", true)
-    end
-    return p
-end
-
-local function applyToDoor(door, digits)
+local function applyHighlight(door)
     if activeHighlights[door] then return end
 
     local h = Instance.new("Highlight")
@@ -119,40 +85,18 @@ local function applyToDoor(door, digits)
     h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     h.Parent = door
 
-    local billboard
-    local part = getDoorPrimaryPart(door)
-    if part then
-        billboard = Instance.new("BillboardGui")
-        billboard.Name = "GlitchDoorNumber"
-        billboard.Size = UDim2.new(0, 160, 0, 60)
-        billboard.StudsOffset = Vector3.new(0, 4, 0)
-        billboard.AlwaysOnTop = true
-        billboard.MaxDistance = 500
-        billboard.Parent = part
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 1, 0)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = digits
-        lbl.TextColor3 = TEXT_COLOR
-        lbl.TextStrokeTransparency = 0.4
-        lbl.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
-        lbl.TextScaled = true
-        lbl.Font = Enum.Font.GothamBold
-        lbl.Parent = billboard
-    end
-
-    activeHighlights[door] = {highlight = h, billboard = billboard}
+    activeHighlights[door] = h
 end
 
 local function process(inst)
     if stopped then return end
     if not isDoorModel(inst) then return end
 
-    local n, digits = getDoorNumber(inst)
-    if not inRange(n) then return end
+    local n = getDoorNumber(inst)
+    if not n then return end
+    if n < MIN_NUM or n > MAX_NUM then return end
 
-    applyToDoor(inst, digits)
+    applyHighlight(inst)
 end
 
 local function scanContainer(container)
@@ -211,12 +155,9 @@ local function stopHighlight()
     end
     connections = {}
 
-    for door, data in pairs(activeHighlights) do
-        if data.highlight and data.highlight.Parent then
-            data.highlight:Destroy()
-        end
-        if data.billboard and data.billboard.Parent then
-            data.billboard:Destroy()
+    for door, h in pairs(activeHighlights) do
+        if h and h.Parent then
+            h:Destroy()
         end
     end
     activeHighlights = {}
