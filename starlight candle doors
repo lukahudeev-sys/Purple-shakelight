@@ -105,7 +105,6 @@ print("[Hub] Кнопки добавлены")
 
 --\\ Таблицы // --
 local ITEMS = {
-    -- ЗАМЕНЕНО: новая ссылка на starlight candle doors
     ["starlight candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20candle%20doors",
     ["Barrel of starlight"]  = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/main/Barrel%20of%20Starlight",
     ["Spiral Bottle"]        = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
@@ -150,12 +149,14 @@ local function collectKeys(t)
 end
 
 --\\ Дропдаун предметов // --
+-- ВАЖНО: Default НЕ должен совпадать со "starlight candle", иначе callback не вызовется при выборе.
 ItemsBox:AddDropdown("Items", {
     Values = collectKeys(ITEMS),
-    Default = "starlight candle",
+    Default = "Scanner",              -- ← было "starlight candle"
     Multi = false,
     Text = "Select the item",
     Callback = function(choice)
+        print("[Hub] Items dropdown выбрал:", choice)   -- дебаг
         local url = ITEMS[choice]
         if not url then
             Obsidian:Notify(choice .. " — скрипт пока недоступен", 3)
@@ -163,6 +164,15 @@ ItemsBox:AddDropdown("Items", {
         end
         safeLoad(url, choice)
         Obsidian:Notify(choice .. " loaded!", 3)
+    end
+})
+
+--\\ Кнопка принудительной загрузки свечи // --
+ItemsBox:AddButton({
+    Text = "Force load: starlight candle",
+    Func = function()
+        safeLoad(ITEMS["starlight candle"], "starlight candle (force)")
+        Obsidian:Notify("starlight candle loaded (force)!", 3)
     end
 })
 
@@ -177,6 +187,7 @@ ItemsBox:AddDropdown("Additional Mods", {
     Multi = false,
     Text = "Cool additions!",
     Callback = function(choice)
+        print("[Hub] Additional Mods выбрал:", choice)   -- дебаг
         if choice == "Enable Jump" then
             local char = game.Players.LocalPlayer.Character
             if not char then
@@ -232,11 +243,11 @@ end)
 
 --\\ Тема и сохранения // --
 ThemeManager:SetLibrary(Obsidian)
-ThemeManager:SetFolder("DoorsModsHub")
+ThemeManager:SetFolder("DoorsModsHub_v2")     -- ← новая папка (сброс старого кэша)
 ThemeManager:ApplyToGroupbox(SettingsBox)
 
 SaveManager:SetLibrary(Obsidian)
-SaveManager:SetFolder("DoorsModsHub")
+SaveManager:SetFolder("DoorsModsHub_v2")      -- ← новая папка (сброс старого кэша)
 SaveManager:ApplyToGroupbox(SettingsBox)
 
 print("[Hub] Готово!")
