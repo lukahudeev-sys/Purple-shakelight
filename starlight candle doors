@@ -8,30 +8,12 @@ local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 
--- Скрываем название инструмента (текст над свечой в руке / в хотбаре)
-tool.CanBeDropped = false
-pcall(function()
-	tool:SetAttribute("NameDisplayDistance", 0)
-end)
-
--- Убираем ЛЮБОЙ текст внутри самой свечи (BillboardGui, TextLabel, SurfaceGui)
-for _, obj in ipairs(tool:GetDescendants()) do
-	if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") or obj:IsA("TextLabel") or obj:IsA("TextButton") then
-		obj.Enabled = false
-		obj.Visible = false
-		if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-			obj.Enabled = false
-		end
-	end
-end
-
 -- Папка для ESP
 local espFolder = Instance.new("Folder")
 espFolder.Name = "StarCandleESP"
 espFolder.Parent = game:GetService("CoreGui")
 
 local tracked = {}
-local hiddenGuis = {}   -- спрятанные изначальные тексты дверей
 local connection = nil
 local active = false
 
@@ -41,7 +23,7 @@ local function isDoor(obj)
 	return string.find(n, "door") or string.find(n, "двер")
 end
 
--- ESP на дверь (ТОЛЬКО контур, никакого текста)
+-- Только контур на дверь. НИКАКОГО текста, НИЧЕГО не трогаем больше.
 local function createESP(door)
 	if tracked[door] then return end
 
@@ -50,31 +32,12 @@ local function createESP(door)
 	hl.Adornee = door
 	hl.FillColor = Color3.fromRGB(255, 235, 160)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 1        -- без заливки
-	hl.OutlineTransparency = 0.2   -- видно контур
+	hl.FillTransparency = 1
+	hl.OutlineTransparency = 0.2
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	hl.Parent = espFolder
 
 	tracked[door] = hl
-
-	-- Прячем текст, который уже есть у двери от игры
-	for _, obj in ipairs(door:GetDescendants()) do
-		if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-			if obj.Enabled then
-				hiddenGuis[obj] = true
-				obj.Enabled = false
-			end
-		end
-	end
-	-- на случай если у самой двери (не в потомках) висит gui
-	for _, obj in ipairs(door:GetChildren()) do
-		if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-			if obj.Enabled then
-				hiddenGuis[obj] = true
-				obj.Enabled = false
-			end
-		end
-	end
 end
 
 local function clearAll()
@@ -82,14 +45,6 @@ local function clearAll()
 		if hl then hl:Destroy() end
 	end
 	tracked = {}
-
-	-- возвращаем изначальные тексты дверей
-	for gui in pairs(hiddenGuis) do
-		if gui and gui.Parent then
-			gui.Enabled = true
-		end
-	end
-	hiddenGuis = {}
 end
 
 local function scanDoors()
