@@ -23,21 +23,20 @@ local function isDoor(obj)
 	return string.find(n, "door") or string.find(n, "двер")
 end
 
+-- ESP на дверь (БЕЗ света)
 local function createESP(door)
 	if tracked[door] then return end
 
-	-- Контур двери (ESP)
 	local hl = Instance.new("Highlight")
 	hl.Name = "StarCandleHL"
 	hl.Adornee = door
 	hl.FillColor = Color3.fromRGB(255, 235, 160)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 0.85
-	hl.OutlineTransparency = 0.5
+	hl.FillTransparency = 0.9      -- почти прозрачная заливка
+	hl.OutlineTransparency = 0.35
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	hl.Parent = espFolder
 
-	-- Текст с именем двери
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "StarCandleName"
 	billboard.Adornee = door
@@ -52,22 +51,14 @@ local function createESP(door)
 	label.BackgroundTransparency = 1
 	label.Text = "🚪 " .. door.Name
 	label.TextColor3 = Color3.fromRGB(255, 240, 180)
-	label.TextStrokeTransparency = 0.2
+	label.TextStrokeTransparency = 0.3
 	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	label.TextScaled = true
 	label.Font = Enum.Font.GothamBold
 	label.Parent = billboard
 
-	-- ОЧЕНЬ мягкий свет как у обычной свечи
-	local light = Instance.new("PointLight")
-	light.Name = "StarCandleLight"
-	light.Color = Color3.fromRGB(255, 200, 120)
-	light.Range = 6          -- маленький радиус
-	light.Brightness = 0.35  -- почти не видно
-	light.Shadows = false
-	light.Parent = door
-
-	tracked[door] = {Highlight = hl, Billboard = billboard, Light = light}
+	-- никакого PointLight на двери
+	tracked[door] = {Highlight = hl, Billboard = billboard}
 end
 
 local function clearAll()
