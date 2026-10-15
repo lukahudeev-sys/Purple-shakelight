@@ -3,12 +3,10 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utiliti
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Загружаем свечу
 local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 
--- Папка для ESP
 local espFolder = Instance.new("Folder")
 espFolder.Name = "StarCandleESP"
 espFolder.Parent = game:GetService("CoreGui")
@@ -17,10 +15,22 @@ local tracked = {}
 local connection = nil
 local active = false
 
--- Проверка: объект называется РОВНО "door" (или "Door", "DOOR" и т.д.)
+local doorFolder = workspace:FindFirstChild("Doors") or workspace:FindFirstChild("Door")
+
 local function isDoor(obj)
 	if not obj or not obj:IsA("BasePart") then return false end
-	return string.lower(obj.Name) == "door"
+
+	if doorFolder then
+		return obj:IsDescendantOf(doorFolder)
+	end
+
+	if string.lower(obj.Name) ~= "door" then return false end
+
+	local size = obj.Size
+	if size.Y < 4 then return false end
+	if size.Y <= size.X or size.Y <= size.Z then return false end
+
+	return true
 end
 
 local function createESP(door)
@@ -29,11 +39,11 @@ local function createESP(door)
 	local hl = Instance.new("Highlight")
 	hl.Name = "StarCandleHL"
 	hl.Adornee = door
-	hl.FillColor = Color3.fromRGB(255, 235, 160)
-	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0.2
-	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	hl.FillColor = Color3.fromRGB(255, 220, 120)     -- тёплый жёлтый
+	hl.OutlineColor = Color3.fromRGB(255, 255, 255)  -- белый контур
+	hl.FillTransparency = 0.55                       -- видно заливку (не яркая)
+	hl.OutlineTransparency = 0                              -- контур чёткий
+	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop      -- видно сквозь стены
 	hl.Parent = espFolder
 
 	tracked[door] = hl
