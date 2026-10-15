@@ -8,7 +8,7 @@ local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 
--- Папка для ESP
+-- Папка для подсветки дверей
 local espFolder = Instance.new("Folder")
 espFolder.Name = "StarCandleESP"
 espFolder.Parent = game:GetService("CoreGui")
@@ -19,100 +19,83 @@ local active = false
 
 -- Проверка: это дверь?
 local function isDoor(obj)
-	if not obj or not obj:IsA("BasePart") then return false end
+    if not obj or not obj:IsA("BasePart") then return false end
 
-	local n = string.lower(obj.Name)
-	-- В Doors двери называются "Door", "ExitDoor", "Door1", "Door2" и т.д.
-	if not string.find(n, "door") then return false end
+    local n = string.lower(obj.Name)
+    -- В Doors двери называются "Door", "ExitDoor", "Door1", "Door2" и т.д.
+    if not string.find(n, "door") then return false end
 
-	-- Отсекаем мелкие объекты (ручки, замки, таблички)
-	if obj.Size.Y < 4 then return false end
+    -- Отсекаем мелкие объекты (ручки, замки, таблички)
+    if obj.Size.Y < 4 then return false end
 
-	return true
-end
-
--- Собираем все дочерние BasePart двери для рамки вокруг всей двери
-local function getDoorParts(door)
-	local parts = {}
-	for _, obj in ipairs(door:GetDescendants()) do
-		if obj:IsA("BasePart") then
-			table.insert(parts, obj)
-		end
-	end
-	if #parts == 0 and door:IsA("BasePart") then
-		table.insert(parts, door)
-	end
-	return parts
+    return true
 end
 
 local function createESP(door)
-	if tracked[door] then return end
+    if tracked[door] then return end
 
-	local parts = getDoorParts(door)
-	if #parts == 0 then return end
+    -- Рамка вокруг двери
+    local box = Instance.new("SelectionBox")
+    box.Name = "StarCandleBox"
+    box.Adornee = door
+    box.Color3 = Color3.fromRGB(255, 220, 120)  -- Тёплый жёлтый, как у пламени свечи
+    box.LineThickness = 0.12
+    box.SurfaceTransparency = 1
+    box.Transparency = 0
+    box.Parent = espFolder
 
-	-- Рамка вокруг двери
-	local box = Instance.new("SelectionBox")
-	box.Name = "StarCandleBox"
-	box.Adornee = door
-	box.Color3 = Color3.fromRGB(255, 220, 120)
-	box.LineThickness = 0.12
-	box.SurfaceTransparency = 1
-	box.Transparency = 0
-	box.Parent = espFolder
+    -- Мягкая заливка через Highlight
+    local hl = Instance.new("Highlight")
+    hl.Name = "StarCandleHL"
+    hl.Adornee = door
+    hl.FillColor = Color3.fromRGB(255, 220, 120)
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+    hl.FillTransparency = 0.65
+    hl.OutlineTransparency = 1
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Parent = espFolder
 
-	-- Мягкая заливка через Highlight
-	local hl = Instance.new("Highlight")
-	hl.Name = "StarCandleHL"
-	hl.Adornee = door
-	hl.FillColor = Color3.fromRGB(255, 220, 120)
-	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 0.65
-	hl.OutlineTransparency = 1
-	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	hl.Parent = espFolder
-
-	tracked[door] = {hl = hl, box = box}
+    tracked[door] = {hl = hl, box = box}
 end
 
 local function clearAll()
-	for door, data in pairs(tracked) do
-		if data.hl then data.hl:Destroy() end
-		if data.box then data.box:Destroy() end
-	end
-	tracked = {}
+    for door, data in pairs(tracked) do
+        if data.hl then data.hl:Destroy() end
+        if data.box then data.box:Destroy() end
+    end
+    tracked = {}
 end
 
 local function scanDoors()
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if isDoor(obj) then
-			createESP(obj)
-		end
-	end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isDoor(obj) then
+            createESP(obj)
+        end
+    end
 end
 
 local function onEquip()
-	if active then return end
-	active = true
+    if active then return end
+    active = true
 
-	scanDoors()
+    scanDoors()
 
-	connection = workspace.DescendantAdded:Connect(function(obj)
-		if not active then return end
-		task.wait(0.2)
-		if isDoor(obj) then
-			createESP(obj)
-		end
-	end)
+    connection = workspace.DescendantAdded:Connect(function(obj)
+        if not active then return end
+        task.wait(0.2)
+        if isDoor(obj) then
+            createESP(obj)
+        end
+    end)
 end
 
 local function onUnequip()
-	active = false
-	if connection then
-		connection:Disconnect()
-		connection = nil
-	end
-	clearAll()
+    active = false
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    clearAll()
 end
 
 tool.Equipped:Connect(onEquip)
