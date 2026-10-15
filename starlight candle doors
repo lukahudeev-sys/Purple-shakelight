@@ -39,24 +39,28 @@ for _, obj in ipairs(tool:GetDescendants()) do
 	end
 end
 
--- Создаём источник света для подсветки при экипировке
-local handle = tool:FindFirstChild("Handle")
-if handle then
-	local glowLight = Instance.new("PointLight")
-	glowLight.Name = "EquipGlow"
-	glowLight.Color = Color3.fromHSV(0.78, 1, 1) -- фиолетовый
-	glowLight.Range = 12
-	glowLight.Brightness = 2.5
-	glowLight.Enabled = false -- изначально выключен
-	glowLight.Parent = handle
-
-	-- Включаем свет при экипировке
-	tool.Equipped:Connect(function()
-		glowLight.Enabled = true
-	end)
-
-	-- Выключаем свет при снятии
-	tool.Unequipped:Connect(function()
-		glowLight.Enabled = false
-	end)
+-- Запоминаем исходные материалы всех BasePart
+local originalMaterials = {}
+for _, obj in ipairs(tool:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		originalMaterials[obj] = obj.Material
+	end
 end
+
+-- Включаем свечение при экипировке
+tool.Equipped:Connect(function()
+	for part, _ in pairs(originalMaterials) do
+		if part and part.Parent then
+			part.Material = Enum.Material.Neon
+		end
+	end
+end)
+
+-- Возвращаем исходные материалы при снятии
+tool.Unequipped:Connect(function()
+	for part, material in pairs(originalMaterials) do
+		if part and part.Parent then
+			part.Material = material
+		end
+	end
+end)
