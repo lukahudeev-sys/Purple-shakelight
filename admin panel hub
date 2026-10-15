@@ -58,7 +58,6 @@ end
 --\\ Табы // --
 local Tabs = {
     Items     = Window:AddTab("Items", "package"),
-    Utilities = Window:AddTab("Utilities", "boxes"),
     Credits   = Window:AddTab("Credits", "graduation-cap"),
     Settings  = Window:AddTab("Settings", "settings"),
 }
@@ -70,8 +69,6 @@ local CreditsBox  = Tabs.Credits:AddLeftGroupbox("Credits")
 local SettingsBox = Tabs.Settings:AddLeftGroupbox("Settings")
 local OptionsBox  = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
 print("[Hub] Groupbox'ы созданы")
-
-Tabs.Utilities:AddLeftGroupbox("Utilities", "user"):AddLabel("STILL IN DEVELOPMENT")
 
 --\\ Credits // --
 for _, name in ipairs({
@@ -211,7 +208,7 @@ pcall(function()
     })
 end)
 
---\\ ВАЖНО: ThemeManager и SaveManager — В САМОМ КОНЦЕ // --
+--\\ Тема и сохранения // --
 ThemeManager:SetLibrary(Obsidian)
 ThemeManager:SetFolder("DoorsModsHub")
 ThemeManager:ApplyToGroupbox(SettingsBox)
@@ -220,4 +217,4 @@ SaveManager:SetLibrary(Obsidian)
 SaveManager:SetFolder("DoorsModsHub")
 SaveManager:ApplyToGroupbox(SettingsBox)
 
-print("[Hub] Theme и Save подключены. Всё готово!")
+print("[Hub] Готово!")
