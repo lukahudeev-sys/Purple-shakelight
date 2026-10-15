@@ -17,6 +17,42 @@ newCloneEffect.Name = "GuidingLightPotion"
 newCloneEffect.Visible = false
 newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
 
+-- 🎀 РОЗОВЫЙ ЦВЕТ
+local PINK = Color3.fromRGB(255, 105, 180)
+
+-- 🎀 ПЕРЕКРАШИВАЕМ ЛИСТИК (HerbGreenEffect) В РОЗОВЫЙ
+local function makePink(obj)
+	pcall(function()
+		if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+			obj.ImageColor3 = PINK
+		elseif obj:IsA("Frame") or obj:IsA("TextLabel") or obj:IsA("TextButton") then
+			obj.BackgroundColor3 = PINK
+		elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+			obj.Color = ColorSequence.new(PINK)
+		elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+			obj.Color = PINK
+		end
+	end)
+
+	for _, d in ipairs(obj:GetDescendants()) do
+		pcall(function()
+			if d:IsA("ImageLabel") or d:IsA("ImageButton") then
+				d.ImageColor3 = PINK
+			elseif d:IsA("Frame") or d:IsA("TextLabel") or d:IsA("TextButton") then
+				d.BackgroundColor3 = PINK
+			elseif d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Beam") then
+				d.Color = ColorSequence.new(PINK)
+			elseif d:IsA("PointLight") or d:IsA("SpotLight") or d:IsA("SurfaceLight") then
+				d.Color = PINK
+			elseif d:IsA("UIGradient") then
+				d.Color = ColorSequence.new(PINK)
+			end
+		end)
+	end
+end
+
+makePink(newCloneEffect)
+
 local ohhmydayz = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.idle)
 local ohhmydayz2 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.bals.open)
 local ohhmydayz3 = game.Players.LocalPlayer.Character:WaitForChild("Humanoid"):LoadAnimation(toolNew.Animations.open)
@@ -45,7 +81,7 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 local potionLight = Instance.new("PointLight")
 potionLight.Name = "ViridisLight"
-potionLight.Color = Color3.fromRGB(255, 105, 180) -- 💗 PINK
+potionLight.Color = PINK -- 💗 PINK
 potionLight.Brightness = 2
 potionLight.Range = 0
 potionLight.Shadows = false
@@ -205,7 +241,7 @@ label.Size = UDim2.new(0, 200, 0, 40)
 label.Position = UDim2.new(0.5, -100, 0, 10)
 label.BackgroundTransparency = 0.5          -- 🔧 FIX: лёгкий фон, чтобы было видно
 label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-label.TextColor3 = Color3.fromRGB(255, 105, 180) -- 💗 PINK
+label.TextColor3 = PINK -- 💗 PINK
 label.TextStrokeTransparency = 0.3
 label.Font = Enum.Font.GothamBold
 label.TextSize = 22
@@ -279,7 +315,7 @@ if game.GameId == 6627207668 then
 		label.Position = UDim2.new(0.5, -100, 0, 10)
 		label.BackgroundTransparency = 0.5
 		label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-		label.TextColor3 = Color3.fromRGB(255, 105, 180)
+		label.TextColor3 = PINK
 		label.TextStrokeTransparency = 0.3
 		label.Font = Enum.Font.GothamBold
 		label.TextSize = 22
@@ -302,8 +338,8 @@ local function EffectOnScreen()
 		local clone = MainUI_upvr.MainFrame.WhiteVignette:Clone()
 		if clone then
 			local clone_2 = clone:Clone()
-			clone_2.Name ..= "Live"
-			clone_2.ImageColor3 = Color3.fromRGB(255, 105, 180) -- 💗 PINK
+			clone_2.Name = clone_2.Name .. "Live"          -- 🔧 FIX: было `..=` (синтаксическая ошибка)
+			clone_2.ImageColor3 = PINK                     -- 💗 PINK
 			clone_2.ImageTransparency = 1
 			clone_2.Parent = MainUI_upvr.MainFrame
 			clone_2.Visible = true
