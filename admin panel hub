@@ -5,7 +5,6 @@ local Obsidian       = loadstring(game:HttpGet("https://raw.githubusercontent.co
 local ThemeManager   = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
 local SaveManager    = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
 
--- Безопасная загрузка любых внешних скриптов
 local function safeLoad(url, label)
     local ok, err = pcall(function()
         local src = game:HttpGet(url)
@@ -48,13 +47,10 @@ do
             frames = 0
             lastUpdate = tick()
         end
-
         local ping = 0
         pcall(function()
-            local stats = game:GetService("Stats")
-            ping = math.floor(stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
         end)
-
         Watermark:SetText(("Doors Items Hub | %d fps | %d ms"):format(fps, ping))
     end)
 end
@@ -66,11 +62,14 @@ local Tabs = {
     Credits   = Window:AddTab("Credits", "graduation-cap"),
     Settings  = Window:AddTab("Settings", "settings"),
 }
+print("[Hub] Табы созданы")
 
+--\\ Groupbox'ы // --
 local ItemsBox    = Tabs.Items:AddLeftGroupbox("Items")
 local CreditsBox  = Tabs.Credits:AddLeftGroupbox("Credits")
 local SettingsBox = Tabs.Settings:AddLeftGroupbox("Settings")
 local OptionsBox  = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
+print("[Hub] Groupbox'ы созданы")
 
 Tabs.Utilities:AddLeftGroupbox("Utilities", "user"):AddLabel("STILL IN DEVELOPMENT")
 
@@ -83,8 +82,9 @@ for _, name in ipairs({
     CreditsBox:AddLabel(name)
 end
 
---\\ Options // --
+--\\ Кнопки // --
 local watermarkVisible = true
+
 OptionsBox:AddButton({
     Text = "Toggle Watermark",
     Func = function()
@@ -105,7 +105,9 @@ OptionsBox:AddButton({
     end
 })
 
---\\ Таблицы предметов и дополнений // --
+print("[Hub] Кнопки добавлены")
+
+--\\ Таблицы // --
 local ITEMS = {
     ["Golden Flashlight"] = "https://raw.githubusercontent.com/aadyian9000/the-thing/main/GoldenGummyFlashlight.lua",
     ["OLD Flashlight"]    = "https://raw.githubusercontent.com/thelostw3r/Scripts/refs/heads/main/FlashlightOLD.lua",
@@ -141,7 +143,6 @@ local function collectKeys(t)
     return keys
 end
 
---\\ Dropdown предметов // --
 ItemsBox:AddDropdown("Items", {
     Values  = collectKeys(ITEMS),
     Default = "Golden Flashlight",
@@ -158,7 +159,6 @@ ItemsBox:AddDropdown("Items", {
     end
 })
 
---\\ Дополнительные моды // --
 local extrasList = collectKeys(EXTRAS)
 table.insert(extrasList, "Enable Jump")
 table.insert(extrasList, "Sprint bar")
@@ -175,30 +175,20 @@ ItemsBox:AddDropdown("Additional Mods", {
             char:SetAttribute("CanJump", true)
             Obsidian:Notify("Jump enabled!", 3)
             return
-
         elseif choice == "Sprint bar" then
             _G.msrhyan_config_sprint = {
-                timetospeedexpire    = 25,
-                cooldowntime         = 5,
-                sprintspeed          = 50,
-                speedapplytime       = 0.3,
-                speedremovetime      = 0.5,
-                staminarecovertime   = 10,
-                effectfadetime       = 0.2,
-                showstaminamessages  = true,
+                timetospeedexpire    = 25, cooldowntime = 5, sprintspeed = 50,
+                speedapplytime = 0.3, speedremovetime = 0.5, staminarecovertime = 10,
+                effectfadetime = 0.2, showstaminamessages = true,
                 customstaminamessage = "SUA STAMINA ACABOU, AGUARDE %ds!",
-                enableeffects        = true,
-                effectcolor          = { 100, 200, 255 },
-                staminabarcolor      = { 0, 162, 255 },
-                sprintfov            = 120,
-                normalfov            = 70,
-                usewhileloading      = false
+                enableeffects = true, effectcolor = { 100, 200, 255 },
+                staminabarcolor = { 0, 162, 255 }, sprintfov = 120,
+                normalfov = 70, usewhileloading = false
             }
             safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/refs/heads/main/projects/DOORS-SPRINT.lua", "Sprint bar")
             Obsidian:Notify("Sprint bar loaded!", 3)
             return
         end
-
         local url = EXTRAS[choice]
         if not url then
             Obsidian:Notify(choice .. " — скрипт недоступен", 3)
@@ -209,7 +199,7 @@ ItemsBox:AddDropdown("Additional Mods", {
     end
 })
 
---\\ Кастомная ачивка // --
+--\\ Ачивка // --
 pcall(function()
     loadstring(game:HttpGet(
         "https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
@@ -221,7 +211,7 @@ pcall(function()
     })
 end)
 
---\\ Тема и сохранения // --
+--\\ ВАЖНО: ThemeManager и SaveManager — В САМОМ КОНЦЕ // --
 ThemeManager:SetLibrary(Obsidian)
 ThemeManager:SetFolder("DoorsModsHub")
 ThemeManager:ApplyToGroupbox(SettingsBox)
@@ -229,3 +219,5 @@ ThemeManager:ApplyToGroupbox(SettingsBox)
 SaveManager:SetLibrary(Obsidian)
 SaveManager:SetFolder("DoorsModsHub")
 SaveManager:ApplyToGroupbox(SettingsBox)
+
+print("[Hub] Theme и Save подключены. Всё готово!")
