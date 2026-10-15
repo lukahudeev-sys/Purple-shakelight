@@ -1,99 +1,118 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Загружаем свечу по указанному ID
+-- Загружаем свечу
 local tool = LoadCustomInstance("rbxassetid://110853297264350")
 tool.Name = "Star Candle"
 tool.Parent = LocalPlayer.Backpack
 
--- Папка для подсветки дверей
-local highlightFolder = Instance.new("Folder")
-highlightFolder.Name = "StarCandleHighlights"
-highlightFolder.Parent = workspace
+-- Папка для ESP (создаётся 1 раз)
+local espFolder = Instance.new("Folder")
+espFolder.Name = "StarCandleESP"
+espFolder.Parent = game:GetService("CoreGui")
 
-local activeHighlights = {}
+local tracked = {}
+local connection = nil
+local active = false
 
 local function isDoor(obj)
 	if not obj or not obj:IsA("BasePart") then return false end
 	local n = string.lower(obj.Name)
-	if string.find(n, "door") or string.find(n, "двер") then
-		return true
-	end
-	return false
+	return string.find(n, "door") or string.find(n, "двер")
 end
 
-local function addHighlight(door)
-	if activeHighlights[door] then return end
+local function createESP(door)
+	if tracked[door] then return end
 
+	-- Контур двери (ESP)
 	local hl = Instance.new("Highlight")
 	hl.Name = "StarCandleHL"
 	hl.Adornee = door
-	hl.FillColor = Color3.fromRGB(255, 220, 120)   -- звёздный жёлтый
+	hl.FillColor = Color3.fromRGB(255, 235, 160)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-	hl.FillTransparency = 0.55
-	hl.OutlineTransparency = 0.15
+	hl.FillTransparency = 0.75
+	hl.OutlineTransparency = 0.4
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	hl.Parent = highlightFolder
+	hl.Parent = espFolder
 
+	-- Текст с именем двери
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "StarCandleName"
+	billboard.Adornee = door
+	billboard.Size = UDim2.new(0, 200, 0, 40)
+	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+	billboard.AlwaysOnTop = true
+	billboard.MaxDistance = 250
+	billboard.Parent = espFolder
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = "🚪 " .. door.Name
+	label.TextColor3 = Color3.fromRGB(255, 240, 180)
+	label.TextStrokeTransparency = 0.2
+	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.Parent = billboard
+
+	-- Мягкий свет как у обычной свечи
 	local light = Instance.new("PointLight")
 	light.Name = "StarCandleLight"
-	light.Color = Color3.fromRGB(255, 230, 150)
-	light.Range = 18
-	light.Brightness = 2.5
+	light.Color = Color3.fromRGB(255, 210, 140)
+	light.Range = 9
+	light.Brightness = 0.9
+	light.Shadows = false
 	light.Parent = door
 
-	activeHighlights[door] = {Highlight = hl, Light = light}
+	tracked[door] = {Highlight = hl, Billboard = billboard, Light = light}
 end
 
-local function removeAllHighlights()
-	for door, data in pairs(activeHighlights) do
+local function clearAll()
+	for door, data in pairs(tracked) do
 		if data.Highlight then data.Highlight:Destroy() end
+		if data.Billboard then data.Billboard:Destroy() end
 		if data.Light then data.Light:Destroy() end
 	end
-	activeHighlights = {}
+	tracked = {}
 end
 
 local function scanDoors()
 	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("Model") then
-			for _, part in ipairs(obj:GetDescendants()) do
-				if isDoor(part) then
-					addHighlight(part)
-				end
-			end
-		elseif isDoor(obj) then
-			addHighlight(obj)
+		if isDoor(obj) then
+			createESP(obj)
 		end
 	end
 end
 
--- Следим за новыми дверями, пока свеча экипирована
-local connection
-local function startScanning()
-	scanDoors()
+-- ▶ ВКЛЮЧАЕТСЯ только при экипировке
+local function onEquip()
+	if active then return end
+	active = true
+
+	scanDoors() -- подсветить уже существующие двери
+
+	-- следить за новыми дверями
 	connection = workspace.DescendantAdded:Connect(function(obj)
+		if not active then return end
 		task.wait(0.1)
 		if isDoor(obj) then
-			addHighlight(obj)
+			createESP(obj)
 		end
 	end)
 end
 
-local function stopScanning()
+-- ⏹ ВЫКЛЮЧАЕТСЯ при снятии свечи
+local function onUnequip()
+	active = false
 	if connection then
 		connection:Disconnect()
 		connection = nil
 	end
-	removeAllHighlights()
+	clearAll()
 end
 
-tool.Equipped:Connect(startScanning)
-tool.Unequipped:Connect(stopScanning)
-
--- Если уже в руках при загрузке
-if tool.Parent == LocalPlayer.Character then
-	startScanning()
-end
+tool.Equipped:Connect(onEquip)
+tool.Unequipped:Connect(onUnequip)
