@@ -17,37 +17,68 @@ local active = false
 
 local doorFolder = workspace:FindFirstChild("Doors") or workspace:FindFirstChild("Door")
 
+-- Проверка: есть ли в двери табличка с номером (цифрами)
+local function hasNumber(door)
+	for _, obj in ipairs(door:GetDescendants()) do
+		-- TextLabel с цифрами
+		if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+			if string.match(obj.Text, "%d") then
+				return true
+			end
+		-- SurfaceGui / BillboardGui / Decal — если в имени есть "number" / "num"
+		elseif obj:IsA("SurfaceGui") or obj:IsA("BillboardGui") then
+			local n = string.lower(obj.Name)
+			if string.find(n, "num") or string.find(n, "plate") or string.find(n, "sign") then
+				return true
+			end
+		-- Part / Decal с номером в имени
+		elseif obj:IsA("BasePart") or obj:IsA("Decal") then
+			if string.match(obj.Name, "%d") then
+				return true
+			end
+		end
+	end
+	-- Номер может быть в имени самой двери (door1, door_23)
+	if string.match(door.Name, "%d") then
+		return true
+	end
+	return false
+end
+
 local function isDoor(obj)
 	if not obj or not obj:IsA("BasePart") then return false end
 
+	-- Проверка папки
 	if doorFolder then
-		return obj:IsDescendantOf(doorFolder)
+		if not obj:IsDescendantOf(doorFolder) then return false end
+	else
+		-- Имя должно содержать "door"
+		local n = string.lower(obj.Name)
+		if not string.find(n, "door") then return false end
+
+		-- Проверка размера (дверь высокая)
+		local size = obj.Size
+		if size.Y < 4 then return false end
+		if size.Y <= size.X or size.Y <= size.Z then return false end
 	end
 
-	if string.lower(obj.Name) ~= "door" then return false end
-
-	local size = obj.Size
-	if size.Y < 4 then return false end
-	if size.Y <= size.X or size.Y <= size.Z then return false end
-
-	return true
+	-- Только двери С номером
+	return hasNumber(obj)
 end
 
 local function createESP(door)
 	if tracked[door] then return end
 
-	-- Заливка двери
 	local hl = Instance.new("Highlight")
 	hl.Name = "StarCandleHL"
 	hl.Adornee = door
 	hl.FillColor = Color3.fromRGB(255, 220, 120)
 	hl.OutlineColor = Color3.fromRGB(255, 255, 255)
 	hl.FillTransparency = 0.6
-	hl.OutlineTransparency = 1       -- контур Highlight выключаем (будет SelectionBox)
+	hl.OutlineTransparency = 1
 	hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	hl.Parent = espFolder
 
-	-- Чёткая рамка вокруг двери
 	local box = Instance.new("SelectionBox")
 	box.Name = "StarCandleBox"
 	box.Adornee = door
@@ -84,7 +115,7 @@ local function onEquip()
 
 	connection = workspace.DescendantAdded:Connect(function(obj)
 		if not active then return end
-		task.wait(0.1)
+		task.wait(0.3)
 		if isDoor(obj) then
 			createESP(obj)
 		end
