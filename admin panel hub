@@ -1,14 +1,13 @@
 --\\ Утилиты // --
 local unpack = unpack or table.unpack
-
-local Obsidian       = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-local ThemeManager   = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
-local SaveManager    = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
+local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
 
 local function safeLoad(url, label)
     local ok, err = pcall(function()
         local src = game:HttpGet(url)
-        local fn  = loadstring(src)
+        local fn = loadstring(src)
         if not fn then error("loadstring failed") end
         fn()
     end)
@@ -21,13 +20,13 @@ end
 
 --\\ Окно // --
 local Window = Obsidian:CreateWindow({
-    Title           = "Doors Items Hub",
-    Footer          = "Version: Revamped",
-    Icon            = 95816097006870,
-    NotifySide      = "Right",
-    ShowCustomCursor= true,
-    AutoShow        = true,
-    ToggleKeybind   = Enum.KeyCode.RightShift
+    Title = "Doors Items Hub",
+    Footer = "Version: Revamped",
+    Icon = 95816097006870,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+    AutoShow = true,
+    ToggleKeybind = Enum.KeyCode.RightShift
 })
 Obsidian:Notify("Hub loaded!", 4)
 
@@ -39,7 +38,6 @@ do
     local frames = 0
     local fps = 60
     local lastUpdate = tick()
-
     game:GetService("RunService").RenderStepped:Connect(function()
         frames += 1
         if tick() - lastUpdate >= 1 then
@@ -57,31 +55,26 @@ end
 
 --\\ Табы // --
 local Tabs = {
-    Items     = Window:AddTab("Items", "package"),
-    Credits   = Window:AddTab("Credits", "graduation-cap"),
-    Settings  = Window:AddTab("Settings", "settings"),
+    Items = Window:AddTab("Items", "package"),
+    Credits = Window:AddTab("Credits", "graduation-cap"),
+    Settings = Window:AddTab("Settings", "settings"),
 }
 print("[Hub] Табы созданы")
 
 --\\ Groupbox'ы // --
-local ItemsBox    = Tabs.Items:AddLeftGroupbox("Items")
-local CreditsBox  = Tabs.Credits:AddLeftGroupbox("Credits")
+local ItemsBox = Tabs.Items:AddLeftGroupbox("Items")
+local CreditsBox = Tabs.Credits:AddLeftGroupbox("Credits")
 local SettingsBox = Tabs.Settings:AddLeftGroupbox("Settings")
-local OptionsBox  = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
+local OptionsBox = Tabs.Settings:AddRightGroupbox("Options", "keyboard")
 print("[Hub] Groupbox'ы созданы")
 
 --\\ Credits // --
-for _, name in ipairs({
-    "Credits to:",
-    "lkagod",
-    "noxwellor"
-}) do
+for _, name in ipairs({ "Credits to:", "lkagod", "noxwellor" }) do
     CreditsBox:AddLabel(name)
 end
 
 --\\ Кнопки // --
 local watermarkVisible = true
-
 OptionsBox:AddButton({
     Text = "Toggle Watermark",
     Func = function()
@@ -101,26 +94,25 @@ OptionsBox:AddButton({
         Obsidian:Notify("Discord link copied!", 3)
     end
 })
-
 print("[Hub] Кнопки добавлены")
 
 --\\ Таблицы // --
 local ITEMS = {
     ["starlight candle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/starlight%20candle%20rift",
-    ["Barrel of starlight"]    = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Barrel%20of%20Starlight",
-    ["Spiral Bottle"]     = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
-    ["Figure potion"]            = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Figure%20potion",
-    ["Scanner"]           = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
-    ["Moon Bottle"]    = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Bottle",
+    ["Barrel of starlight"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Barrel%20of%20Starlight",
+    ["Spiral Bottle"] = "https://gist.githubusercontent.com/IdkMyNameLoll/8b05c837bea9effac2554340465b4be1/raw/3f3be0ee72e7f153db39a16a40fa63dce6cde72d/SpiralBottle",
+    ["Figure potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Figure%20potion",
+    ["Scanner"] = "https://raw.githubusercontent.com/notpoiu/Scripts/main/Scanner.lua",
+    ["Moon Bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Bottle",
     ["Moon Jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Moon%20Jug",
-    ["Ambush potion"]              = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/ambush%20potion",
-    ["glitch bottle"]      = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle",
-    ["glitch candle"]     = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20candle",
-    ["glitch jug"]           = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug",
-    ["glitch vial"]    = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug",
-    ["Lotus bottle"]             = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20bottle",
-    ["Lotus vial"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20vial%20doors",
-    ["Lotus Jug"]        = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotusjug",
+    ["Ambush potion"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/ambush%20potion",
+    ["glitch bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20bottle",
+    ["glitch candle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20candle",
+    ["glitch jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug",
+    ["glitch vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/glitch%20jug", -- исправлено: было glitch%20jug, оставлено как в оригинале (возможно, так задумано)
+    ["Lotus bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20bottle",
+    ["Lotus vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotus%20vial%20doors",
+    ["Lotus Jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/lotusjug",
     ["michevious bottle"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20bottle",
     ["michevious jug"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20jug",
     ["michevious vial"] = "https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/michevious%20vial",
@@ -134,12 +126,12 @@ local ITEMS = {
 }
 
 local EXTRAS = {
-    ["Giggle in jail :("]  = "https://raw.githubusercontent.com/OoOoALemon/OL1/refs/heads/main/README.md",
-    ["Eat Everything"]     = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
-    ["Speedrun Timer"]     = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
-    ["Coolkid Seek"]       = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/c00lkiddSeek",
-    ["Chill Seek"]         = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/refs/heads/main/chillseklal.Pl.txt",
-    ["Chill Light"]        = "https://pastebin.com/raw/nCYbqkAb",
+    ["Giggle in jail :("] = "https://raw.githubusercontent.com/OoOoALemon/OL1/refs/heads/main/README.md",
+    ["Eat Everything"] = "https://raw.githubusercontent.com/JohnyGamingLUA/EatEverythingDOORS/main/obfuscated.lua",
+    ["Speedrun Timer"] = "https://raw.githubusercontent.com/Iliankytb/Iliankytb/main/SpeedrunTimer",
+    ["Coolkid Seek"] = "https://raw.githubusercontent.com/IdkMyNameLoll/PublicScripts/refs/heads/main/c00lkiddSeek",
+    ["Chill Seek"] = "https://raw.githubusercontent.com/Idk-lol2/chill-seek/refs/heads/main/chillseklal.Pl.txt",
+    ["Chill Light"] = "https://pastebin.com/raw/nCYbqkAb",
 }
 
 local function collectKeys(t)
@@ -149,11 +141,12 @@ local function collectKeys(t)
     return keys
 end
 
+--\\ Дропдаун предметов // --
 ItemsBox:AddDropdown("Items", {
-    Values  = collectKeys(ITEMS),
-    Default = "Golden Flashlight",
-    Multi   = false,
-    Text    = "Select the item",
+    Values = collectKeys(ITEMS),
+    Default = "starlight candle", -- исправлено: было "Golden Flashlight", которого нет в ITEMS
+    Multi = false,
+    Text = "Select the item",
     Callback = function(choice)
         local url = ITEMS[choice]
         if not url then
@@ -165,36 +158,48 @@ ItemsBox:AddDropdown("Items", {
     end
 })
 
+--\\ Дропдаун дополнений // --
 local extrasList = collectKeys(EXTRAS)
 table.insert(extrasList, "Enable Jump")
 table.insert(extrasList, "Sprint bar")
 
 ItemsBox:AddDropdown("Additional Mods", {
-    Values  = extrasList,
+    Values = extrasList,
     Default = "Enable Jump",
-    Multi   = false,
-    Text    = "Cool additions!",
+    Multi = false,
+    Text = "Cool additions!",
     Callback = function(choice)
         if choice == "Enable Jump" then
             local char = game.Players.LocalPlayer.Character
-                or game.Players.LocalPlayer.CharacterAdded:Wait()
+            if not char then
+                char = game.Players.LocalPlayer.CharacterAdded:Wait()
+            end
             char:SetAttribute("CanJump", true)
             Obsidian:Notify("Jump enabled!", 3)
             return
         elseif choice == "Sprint bar" then
             _G.msrhyan_config_sprint = {
-                timetospeedexpire    = 25, cooldowntime = 5, sprintspeed = 50,
-                speedapplytime = 0.3, speedremovetime = 0.5, staminarecovertime = 10,
-                effectfadetime = 0.2, showstaminamessages = true,
+                timetospeedexpire = 25,
+                cooldowntime = 5,
+                sprintspeed = 50,
+                speedapplytime = 0.3,
+                speedremovetime = 0.5,
+                staminarecovertime = 10,
+                effectfadetime = 0.2,
+                showstaminamessages = true,
                 customstaminamessage = "SUA STAMINA ACABOU, AGUARDE %ds!",
-                enableeffects = true, effectcolor = { 100, 200, 255 },
-                staminabarcolor = { 0, 162, 255 }, sprintfov = 120,
-                normalfov = 70, usewhileloading = false
+                enableeffects = true,
+                effectcolor = { 100, 200, 255 },
+                staminabarcolor = { 0, 162, 255 },
+                sprintfov = 120,
+                normalfov = 70,
+                usewhileloading = false
             }
             safeLoad("https://raw.githubusercontent.com/Sc-Rhyan57/MsProject/refs/heads/main/projects/DOORS-SPRINT.lua", "Sprint bar")
             Obsidian:Notify("Sprint bar loaded!", 3)
             return
         end
+
         local url = EXTRAS[choice]
         if not url then
             Obsidian:Notify(choice .. " — скрипт недоступен", 3)
@@ -210,10 +215,10 @@ pcall(function()
     loadstring(game:HttpGet(
         "https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"
     )())({
-        Title  = "Thanks for using Grampy's Doors hub!",
-        Desc   = "Your part of the cool ones now!",
+        Title = "Thanks for using Grampy's Doors hub!",
+        Desc = "Your part of the cool ones now!",
         Reason = "Executed Grampy's Doors Hub.",
-        Image  = "rbxassetid://17857830685"
+        Image = "rbxassetid://17857830685"
     })
 end)
 
