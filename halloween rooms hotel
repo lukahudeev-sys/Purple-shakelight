@@ -2,7 +2,7 @@
 --// HALLOWEEN / ORANGE MODE — Hotel rooms
 --// Скрипт: Chill guy (edited)
 --// - Музыка убрана
---// - Всё → оранжевый (255, 145, 20)
+--// - Всё → оранжевый (255, 145, 20), включая стены
 --// - Снежинки → rbxassetid://8249343390
 --// - ЭКРАН (screen/монитор/ТВ) — обычный, не оранжевый
 --// ============================================================
@@ -62,20 +62,7 @@ end
 addLightingEffects()
 
 --// ============================================================
---// 2. МУЗЫКА — УБРАНА
---// ============================================================
---[[
-local sound = Instance.new("Sound")
-sound.Name = "BackgroundMusic"
-sound.SoundId = "rbxassetid://0"
-sound.Looped = true
-sound.Volume = 0.45
-sound.Parent = workspace
-sound:Play()
---]]
-
---// ============================================================
---// 3. КОВРЫ
+--// 2. КОВРЫ
 --// ============================================================
 local function paintObjectOrange(object)
 	if object:IsA("BasePart") and not isScreen(object) then
@@ -99,11 +86,12 @@ game.DescendantAdded:Connect(function(descendant)
 end)
 
 --// ============================================================
---// 4. СТЕНЫ / ОБОИ
+--// 3. СТЕНЫ / ОБОИ (ТЕПЕРЬ ТОЖЕ ОРАНЖЕВЫЕ)
 --// ============================================================
 local function paintWallAndWallpaper(part)
 	if part:IsA("BasePart") and part.Name == "Wall" and not isScreen(part) then
-		part.BrickColor = BrickColor.new("White")
+		-- Убрали принудительный белый цвет, теперь стена красится в оранжевый
+		part.Color = ORANGE
 		part.Material = Enum.Material.SmoothPlastic
 
 		local wallpaper = part:FindFirstChild("Wallpaper")
@@ -123,7 +111,7 @@ workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 --// ============================================================
---// 5. Window_Tall — Skybox → оранжевый (как в оригинале)
+--// 4. Window_Tall — Skybox → оранжевый
 --// ============================================================
 local function processWindowTallModel(windowTallModel)
 	for _, descendant in ipairs(windowTallModel:GetDescendants()) do
@@ -163,7 +151,7 @@ local function processWindowTallModel(windowTallModel)
 end
 
 --// ============================================================
---// 6. Window — Skybox → оранжевый
+--// 5. Window — Skybox → оранжевый
 --// ============================================================
 local function processWindowModel(windowModel)
 	for _, descendant in ipairs(windowModel:GetDescendants()) do
@@ -203,7 +191,7 @@ local function processWindowModel(windowModel)
 end
 
 --// ============================================================
---// 7. Запуск в CurrentRooms
+--// 6. Запуск в CurrentRooms
 --// ============================================================
 local currentRooms = workspace:FindFirstChild("CurrentRooms")
 if currentRooms and currentRooms:IsA("Folder") then
