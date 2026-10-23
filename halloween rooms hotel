@@ -2,7 +2,7 @@
 --// HALLOWEEN / ORANGE MODE — Hotel rooms
 --// Скрипт: Chill guy (edited)
 --// - Музыка убрана
---// - Всё → оранжевый (255, 145, 20), включая стены
+--// - Всё → оранжевый (255, 145, 20), включая стены и текстуры
 --// - Снежинки → rbxassetid://8249343390
 --// - ЭКРАН (screen/монитор/ТВ) — обычный, не оранжевый
 --// ============================================================
@@ -86,18 +86,30 @@ game.DescendantAdded:Connect(function(descendant)
 end)
 
 --// ============================================================
---// 3. СТЕНЫ / ОБОИ (ТЕПЕРЬ ТОЖЕ ОРАНЖЕВЫЕ)
+--// 3. СТЕНЫ / ОБОИ И ТЕКСТУРЫ (ПОЛНОСТЬЮ ОРАНЖЕВЫЕ)
 --// ============================================================
 local function paintWallAndWallpaper(part)
 	if part:IsA("BasePart") and part.Name == "Wall" and not isScreen(part) then
-		-- Убрали принудительный белый цвет, теперь стена красится в оранжевый
+		-- Красим саму стену
 		part.Color = ORANGE
 		part.Material = Enum.Material.SmoothPlastic
 
+		-- Ищем обои и делаем их полностью оранжевыми и непрозрачными
 		local wallpaper = part:FindFirstChild("Wallpaper")
-		if wallpaper and wallpaper:IsA("Part") then
-			wallpaper.Color = ORANGE
-			wallpaper.Transparency = 0.7
+		if wallpaper then
+			if wallpaper:IsA("BasePart") then
+				wallpaper.Color = ORANGE
+				wallpaper.Transparency = 0 -- Убираем прозрачность, чтобы не было белого
+			elseif wallpaper:IsA("Texture") or wallpaper:IsA("Decal") then
+				wallpaper.Color3 = ORANGE -- Перекрашиваем текстуру
+			end
+		end
+
+		-- На всякий случай красим все текстуры (ромбики), прикрепленные к стене
+		for _, child in ipairs(part:GetChildren()) do
+			if child:IsA("Texture") or child:IsA("Decal") then
+				child.Color3 = ORANGE
+			end
 		end
 	end
 end
@@ -131,8 +143,6 @@ local function processWindowTallModel(windowTallModel)
 				end
 			end
 		end
-	else
-		warn("Skybox не найден в модели Window_Tall.")
 	end
 
 	local rainParticle = windowTallModel:FindFirstChild("RainParticle", true)
@@ -171,8 +181,6 @@ local function processWindowModel(windowModel)
 				end
 			end
 		end
-	else
-		warn("Skybox не найден в модели Window.")
 	end
 
 	local rainParticle = windowModel:FindFirstChild("RainParticle", true)
