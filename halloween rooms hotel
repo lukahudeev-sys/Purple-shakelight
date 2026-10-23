@@ -1,9 +1,6 @@
 --// ============================================================
---// HALLOWEEN / ORANGE MODE — Hotel rooms
---// Скрипт: Chill guy (edited)
---// - Убрана музыка
---// - Все цвета → оранжевый (255, 145, 20)
---// - Снежинки → rbxassetid://8249343390
+--// HALLOWEEN / ORANGE MODE — Hotel rooms (edited)
+--// Всё оранжевое, КРОМЕ экрана (ТВ / монитор / дисплей / GUI)
 --// ============================================================
 
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
@@ -13,59 +10,70 @@ require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
 local ORANGE = Color3.fromRGB(255, 145, 20)
 local SNOW_TEXTURE = "rbxassetid://8249343390"
 
+--// ---------- Слова-маркеры "экрана" ----------
+-- Если в имени объекта (или его родителя) есть одно из этих слов —
+-- объект считается экраном и НЕ перекрашивается.
+local SCREEN_KEYWORDS = {
+	"screen", "display", "monitor", "tv", "television",
+	"video", "cinema", "projector", "gui", "ui",
+	"label", "image", "text", "phone", "tablet", "laptop", "computer"
+}
+
+local function isScreenRelated(instance)
+	local current = instance
+	while current and current ~= workspace do
+		local n = string.lower(current.Name)
+		for _, kw in ipairs(SCREEN_KEYWORDS) do
+			if string.find(n, kw, 1, true) then
+				return true
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
 --// ============================================================
---// 1. ЭФФЕКТЫ ОСВЕЩЕНИЯ
+--// 1. ЭФФЕКТЫ ОСВЕЩЕНИЯ (БЕЗ оранжевого тонирования)
 --// ============================================================
 local function addLightingEffects()
 	local lighting = game:GetService("Lighting")
 
-	-- Bloom
 	local bloom = lighting:FindFirstChildOfClass("BloomEffect")
 		or Instance.new("BloomEffect", lighting)
 	bloom.Intensity = 0.3
 	bloom.Size = 40
-	bloom.Threshold = 0.05   -- ИСПРАВЛЕНО: было "0,05" (запятая)
+	bloom.Threshold = 0.05
 
-	-- ColorCorrection
 	local colorCorrection = lighting:FindFirstChildOfClass("ColorCorrectionEffect")
 		or Instance.new("ColorCorrectionEffect", lighting)
-	colorCorrection.TintColor = ORANGE
+	-- ВАЖНО: именно оранжевый TintColor делал ВЕСЬ экран оранжевым.
+	-- Ставим нейтральный белый — экран остаётся нормальным.
+	colorCorrection.TintColor = Color3.fromRGB(255, 255, 255)
 	colorCorrection.Brightness = 0.01
 	colorCorrection.Contrast = 0.05
-	colorCorrection.Saturation = -0.1
+	colorCorrection.Saturation = 0.0
 
-	-- Blur
 	local blur = lighting:FindFirstChildOfClass("BlurEffect")
 		or Instance.new("BlurEffect", lighting)
 	blur.Name = "OxygenBlur"
 	blur.Size = 0
 end
-
 addLightingEffects()
 
 --// ============================================================
---// 2. МУЗЫКА — УБРАНА
+--// 2. МУЗЫКА — УБРАНА (как и было)
 --// ============================================================
---[[  ЗАКОММЕНТИРОВАНО: звук больше не проигрывается
-local sound = Instance.new("Sound")
-sound.Name = "BackgroundMusic"
-sound.SoundId = "rbxassetid://0"
-sound.Looped = true
-sound.Volume = 0.45
-sound.Parent = workspace
-sound:Play()
---]]
 
 --// ============================================================
---// 3. ОКРАШИВАНИЕ КОВРОВ
+--// 3. КОВРЫ — ОРАНЖЕВЫЕ
 --// ============================================================
 local function paintObjectOrange(object)
-	if object:IsA("BasePart") then
+	if object:IsA("BasePart") and not isScreenRelated(object) then
 		object.Color = ORANGE
 	end
 end
 
--- Существующие объекты
 for _, object in ipairs(workspace:GetDescendants()) do
 	if object:IsA("BasePart")
 		and (object.Name == "Carpet" or object.Name == "CarpetLight") then
@@ -73,7 +81,6 @@ for _, object in ipairs(workspace:GetDescendants()) do
 	end
 end
 
--- Новые объекты
 game.DescendantAdded:Connect(function(descendant)
 	if (descendant:IsA("Model") and descendant.Name == "Rug")
 		or (descendant:IsA("BasePart")
@@ -83,11 +90,11 @@ game.DescendantAdded:Connect(function(descendant)
 end)
 
 --// ============================================================
---// 4. ОКРАШИВАНИЕ СТЕН И ОБОЕВ
+--// 4. СТЕНЫ / ОБОИ — ОРАНЖЕВЫЕ
 --// ============================================================
 local function paintWallAndWallpaper(part)
-	if part:IsA("BasePart") and part.Name == "Wall" then
-		part.BrickColor = BrickColor.new("White")
+	if part:IsA("BasePart") and part.Name == "Wall" and not isScreenRelated(part) then
+		part.Color = ORANGE
 		part.Material = Enum.Material.SmoothPlastic
 
 		local wallpaper = part:FindFirstChild("Wallpaper")
@@ -107,44 +114,26 @@ workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 --// ============================================================
---// 5. ОБРАБОТКА МОДЕЛИ "Window_Tall"
+--// 5. Window_Tall — Skybox НЕ перекрашиваем (это "экран"/вид)
 --// ============================================================
 local function processWindowTallModel(windowTallModel)
-	-- Удаляем все звуки внутри модели
+	-- удаляем звуки
 	for _, descendant in ipairs(windowTallModel:GetDescendants()) do
 		if descendant:IsA("Sound") then
 			descendant:Destroy()
 		end
 	end
 
-	-- Перекрашиваем Skybox
-	local skybox = windowTallModel:FindFirstChild("Skybox", true)
-	if skybox then
-		if skybox:IsA("MeshPart") then
-			skybox.Color = ORANGE
-			print("Skybox (MeshPart) найден и перекрашен в оранжевый.")
-		elseif skybox:IsA("Model") then
-			for _, part in ipairs(skybox:GetDescendants()) do
-				if part:IsA("MeshPart") then
-					part.Color = ORANGE
-				end
-			end
-			print("Skybox (Model) найден, все MeshPart перекрашены.")
-		end
-	else
-		warn("Skybox не найден в модели Window_Tall.")
-	end
-
-	-- Снежинки → новая текстура
+	-- снежинки
 	local rainParticle = windowTallModel:FindFirstChild("RainParticle", true)
 	if rainParticle and rainParticle:IsA("ParticleEmitter") then
-		rainParticle.Texture = SNOW_TEXTURE   -- ЗАМЕНЕНО
+		rainParticle.Texture = SNOW_TEXTURE
 		rainParticle.Rate = 3
 		rainParticle.Lifetime = NumberRange.new(10, 10)
 		rainParticle.Speed = NumberRange.new(3, 3)
 	end
 
-	-- Удаляем остальные ParticleEmitter
+	-- прочие эмиттеры убираем
 	for _, descendant in ipairs(windowTallModel:GetDescendants()) do
 		if descendant:IsA("ParticleEmitter") and descendant.Name ~= "RainParticle" then
 			descendant:Destroy()
@@ -153,44 +142,23 @@ local function processWindowTallModel(windowTallModel)
 end
 
 --// ============================================================
---// 6. ОБРАБОТКА МОДЕЛИ "Window"
+--// 6. Window — Skybox НЕ перекрашиваем (это "экран"/вид)
 --// ============================================================
 local function processWindowModel(windowModel)
-	-- Удаляем все звуки внутри модели
 	for _, descendant in ipairs(windowModel:GetDescendants()) do
 		if descendant:IsA("Sound") then
 			descendant:Destroy()
 		end
 	end
 
-	-- Перекрашиваем Skybox
-	local skybox = windowModel:FindFirstChild("Skybox", true)
-	if skybox then
-		if skybox:IsA("MeshPart") then
-			skybox.Color = ORANGE
-			print("Skybox (MeshPart) найден и перекрашен в оранжевый.")
-		elseif skybox:IsA("Model") then
-			for _, part in ipairs(skybox:GetDescendants()) do
-				if part:IsA("MeshPart") then
-					part.Color = ORANGE
-				end
-			end
-			print("Skybox (Model) найден, все MeshPart перекрашены.")
-		end
-	else
-		warn("Skybox не найден в модели Window.")
-	end
-
-	-- Снежинки → новая текстура
 	local rainParticle = windowModel:FindFirstChild("RainParticle", true)
 	if rainParticle and rainParticle:IsA("ParticleEmitter") then
-		rainParticle.Texture = SNOW_TEXTURE   -- ЗАМЕНЕНО
+		rainParticle.Texture = SNOW_TEXTURE
 		rainParticle.Rate = 1.5
 		rainParticle.Lifetime = NumberRange.new(6, 6)
 		rainParticle.Speed = NumberRange.new(1, 1)
 	end
 
-	-- Удаляем остальные ParticleEmitter
 	for _, descendant in ipairs(windowModel:GetDescendants()) do
 		if descendant:IsA("ParticleEmitter") and descendant.Name ~= "RainParticle" then
 			descendant:Destroy()
@@ -199,11 +167,40 @@ local function processWindowModel(windowModel)
 end
 
 --// ============================================================
---// 7. ЗАПУСК ОБРАБОТКИ В CurrentRooms
+--// 7. ОБЩАЯ ПОКРАСКА: всё оранжевое, КРОМЕ экранов
+--// ============================================================
+local function paintPartOrange(part)
+	if not part:IsA("BasePart") then return end
+	if isScreenRelated(part) then return end              -- экран — не трогаем
+	if part.Transparency >= 0.5 then return end           -- стекло не трогаем
+	if part.Name == "Wall" or part.Name == "Carpet" or part.Name == "CarpetLight" then
+		return                                            -- уже обработаны выше
+	end
+
+	-- части внутри оконных моделей не трогаем (там свой вид/Skybox)
+	local p = part.Parent
+	while p and p ~= workspace do
+		if p.Name == "Window" or p.Name == "Window_Tall" then
+			return
+		end
+		p = p.Parent
+	end
+
+	part.Color = ORANGE
+end
+
+local function paintAllInRoot(root)
+	for _, obj in ipairs(root:GetDescendants()) do
+		paintPartOrange(obj)
+	end
+end
+
+--// ============================================================
+--// 8. ЗАПУСК В CurrentRooms
 --// ============================================================
 local currentRooms = workspace:FindFirstChild("CurrentRooms")
 if currentRooms and currentRooms:IsA("Folder") then
-	-- Существующие модели
+	-- окна (существующие)
 	for _, model in ipairs(currentRooms:GetDescendants()) do
 		if model:IsA("Model") then
 			if model.Name == "Window_Tall" then
@@ -214,7 +211,10 @@ if currentRooms and currentRooms:IsA("Folder") then
 		end
 	end
 
-	-- Новые модели
+	-- всё остальное — в оранжевый
+	paintAllInRoot(currentRooms)
+
+	-- новые объекты
 	currentRooms.DescendantAdded:Connect(function(descendant)
 		if descendant:IsA("Model") then
 			if descendant.Name == "Window_Tall" then
@@ -223,6 +223,7 @@ if currentRooms and currentRooms:IsA("Folder") then
 				processWindowModel(descendant)
 			end
 		end
+		paintPartOrange(descendant)
 	end)
 else
 	warn("Папка CurrentRooms не найдена или не является папкой.")
