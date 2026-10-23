@@ -184,7 +184,7 @@ local function spawnNearRift()
 
 	sanitizeModel(model)
 
-	local spawnPos = Vector3.new(229, -0, -7)
+	local spawnPos = Vector3.new(277, -0, -7)
 	model:PivotTo(CFrame.new(spawnPos))
 end
 
