@@ -181,7 +181,7 @@ end
 -- spawn logic
 local function spawnNearRift()
 
-	local objs = game:GetObjects("rbxassetid://117227761103692")
+	local objs = game:GetObjects("rbxassetid://124535071985637")
 	local model = objs[1]
 
 	if not model then
