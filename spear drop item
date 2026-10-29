@@ -1,177 +1,223 @@
--- Fixed version of spear drop item
--- Note: a model spawned by a LocalScript/client executor is normally visible only to that client.
-
+-- spear drop item (fixed + rotation)
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local MODEL_ID = "rbxassetid://124535071985637"
-local TEXTURE_ID = "rbxassetid://126780606943963"
-local MODEL_NAME = "starlight candle pentagram"
-local SPAWN_POSITION = Vector3.new(278, 0, -27)
-
+-- ===== helpers =====
 local function shiftToYellowOrange(color)
-    local _, saturation, value = color:ToHSV()
-    return Color3.fromHSV(0.095, saturation, value)
+	local _, s, v = color:ToHSV()
+	return Color3.fromHSV(0.095, s, v)
 end
 
-local function recolorSequence(sequence)
-    local keypoints = {}
-    for _, keypoint in ipairs(sequence.Keypoints) do
-        table.insert(keypoints, ColorSequenceKeypoint.new(
-            keypoint.Time,
-            shiftToYellowOrange(keypoint.Value)
-        ))
-    end
-    return ColorSequence.new(keypoints)
+local function safeSet(obj, prop, value)
+	pcall(function() obj[prop] = value end)
 end
 
-local function configureItemVisuals(model)
-    local starCenter = model:FindFirstChild("StarCenter", true)
-    local holder = starCenter and starCenter:FindFirstChild("ItemHolder", true)
-    local item = holder and holder:FindFirstChild("Item", true)
+-- ===== загрузка внешнего скрипта (выдача предмета) =====
+local function safeLoad(url)
+	task.spawn(function()
+		if not (game and typeof(game.HttpGet) == "function") then
+			warn("[safeLoad] HttpGet недоступен")
+			return
+		end
 
-    if item then
-        if item:IsA("ParticleEmitter") or item:IsA("Beam") or item:IsA("Trail") then
-            item.Enabled = true
-        elseif item:IsA("Decal") or item:IsA("Texture") then
-            item.Texture = TEXTURE_ID
-        end
-    end
+		local ok, result = pcall(function()
+			return game:HttpGet(url)
+		end)
+
+		if not ok then
+			warn("[safeLoad] HttpGet failed:", url)
+			warn(result)
+			return
+		end
+
+		if not result or result == "" then
+			warn("[safeLoad] пустой ответ от:", url)
+			return
+		end
+
+		if typeof(loadstring) ~= "function" then
+			warn("[safeLoad] loadstring недоступен")
+			return
+		end
+
+		local fn, compileErr = loadstring(result)
+		if not fn then
+			warn("[safeLoad] compile failed:", url)
+			warn(compileErr)
+			return
+		end
+
+		local success, err = pcall(fn)
+		if not success then
+			warn("[safeLoad] runtime failed:", url)
+			warn(err)
+		else
+			print("[safeLoad] OK:", url)
+		end
+	end)
 end
 
-local function hideModelExceptParticles(model, particleOut)
-    for _, object in ipairs(model:GetDescendants()) do
-        if particleOut and object:IsDescendantOf(particleOut) then
-            continue
-        end
-
-        if object:IsA("BasePart") then
-            object.Transparency = 1
-            object.CanCollide = false
-        elseif object:IsA("PointLight") or object:IsA("SpotLight") or object:IsA("SurfaceLight") then
-            object.Enabled = false
-        elseif object:IsA("ParticleEmitter") or object:IsA("Beam") or object:IsA("Trail") then
-            object.Enabled = false
-        end
-    end
-end
-
-local function connectPrompt(prompt, model)
-    prompt.HoldDuration = 3
-    prompt.MaxActivationDistance = 5
-    prompt:SetAttribute("CustomFrame", "Black")
-    prompt.Style = Enum.ProximityPromptStyle.Custom
-
-    local triggered = false
-    prompt.Triggered:Connect(function(triggeringPlayer)
-        if triggeringPlayer ~= player or triggered then
-            return
-        end
-        triggered = true
-
-        -- Intentionally does not download and execute remote code via loadstring.
-        prompt:Destroy()
-
-        local particleOut = model:FindFirstChild("ParticlesOut", true)
-        hideModelExceptParticles(model, particleOut)
-
-        local maxLifetime = 0
-        if particleOut then
-            for _, emitter in ipairs(particleOut:GetDescendants()) do
-                if emitter:IsA("ParticleEmitter") then
-                    local burstAmount = emitter:GetAttribute("BurstAmount") or 30
-                    emitter:Emit(burstAmount)
-                    emitter.Enabled = false
-                    maxLifetime = math.max(maxLifetime, emitter.Lifetime.Max)
-                end
-            end
-        end
-
-        task.delay(maxLifetime + 0.2, function()
-            if model and model.Parent then
-                model:Destroy()
-            end
-        end)
-    end)
-end
-
-
+-- ===== sanitize =====
 local function sanitizeModel(model)
-    if not model:IsA("Model") then
-        warn("Loaded asset is not a Model:", model.ClassName)
-        return false
-    end
+	if not model:IsA("Model") then
+		warn("sanitizeModel: не Model:", model.ClassName)
+		return
+	end
 
-    configureItemVisuals(model)
+	-- 1) Item
+	local item = model:FindFirstChild("Item", true)
+	if item then
+		safeSet(item, "Enabled", true)
+		if item:IsA("BasePart") then
+			safeSet(item, "TextureID", "rbxassetid://126780606943963")
+		else
+			safeSet(item, "Texture", "rbxassetid://126780606943963")
+		end
+	else
+		warn("sanitizeModel: 'Item' не найден")
+	end
 
-    for _, object in ipairs(model:GetDescendants()) do
-        if object:IsA("Beam") and (object.Name == "BeamFlat" or object.Name == "BeamGlow") then
-            object:Destroy()
-            continue
-        end
+	-- 2) основной проход
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
+			v:Destroy()
 
-        if object:IsA("BasePart") then
-            object.Anchored = true
-            object.CanCollide = false
-            object.Color = shiftToYellowOrange(object.Color)
-        elseif object:IsA("ParticleEmitter") then
-            object.Color = recolorSequence(object.Color)
-        elseif object:IsA("Beam") or object:IsA("Trail") then
-            object.Color = recolorSequence(object.Color)
-        elseif object:IsA("PointLight") or object:IsA("SpotLight") or object:IsA("SurfaceLight") then
-            object.Color = shiftToYellowOrange(object.Color)
-        end
+		elseif v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+			pcall(function() v.Color = shiftToYellowOrange(v.Color) end)
 
-        if object:IsA("ProximityPrompt") then
-            connectPrompt(object, model)
-        end
-    end
+		elseif v:IsA("ParticleEmitter") then
+			pcall(function()
+				local kps = {}
+				for _, kp in ipairs(v.Color.Keypoints) do
+					table.insert(kps, ColorSequenceKeypoint.new(kp.Time, shiftToYellowOrange(kp.Value)))
+				end
+				v.Color = ColorSequence.new(kps)
+			end)
 
-    local primaryPart = model:FindFirstChildWhichIsA("BasePart", true)
-    if primaryPart then
-        model.PrimaryPart = primaryPart
-    else
-        warn("Loaded model contains no BasePart; it may not display correctly.")
-    end
+		elseif v:IsA("Beam") or v:IsA("Trail") then
+			pcall(function()
+				local kps = {}
+				for _, kp in ipairs(v.Color.Keypoints) do
+					table.insert(kps, ColorSequenceKeypoint.new(kp.Time, shiftToYellowOrange(kp.Value)))
+				end
+				v.Color = ColorSequence.new(kps)
+			end)
 
-    return true
+		elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+			pcall(function() v.Color = shiftToYellowOrange(v.Color) end)
+
+		elseif v:IsA("ProximityPrompt") then
+			v.HoldDuration = 3
+			v.MaxActivationDistance = 5
+			v.Style = Enum.ProximityPromptStyle.Custom
+			v:SetAttribute("CustomFrame", "Black")
+
+			local triggered = false
+			v.Triggered:Connect(function(plr)
+				if plr ~= player or triggered then return end
+				triggered = true
+
+				-- выдача предмета
+				safeLoad("https://raw.githubusercontent.com/lukahudeev-sys/Purple-shakelight/refs/heads/main/Spare%20minecraft%20doors%20script")
+
+				local parentModel = model
+				v:Destroy()
+
+				local particleOut = parentModel:FindFirstChild("ParticlesOut", true)
+				for _, obj in ipairs(parentModel:GetDescendants()) do
+					if particleOut and obj:IsDescendantOf(particleOut) then
+						continue
+					end
+					if obj:IsA("BasePart") then
+						obj.Transparency = 1
+						obj.CanCollide = false
+					elseif obj:IsA("PointLight")
+						or obj:IsA("SpotLight")
+						or obj:IsA("SurfaceLight")
+						or obj:IsA("ParticleEmitter")
+						or obj:IsA("Beam")
+						or obj:IsA("Trail") then
+						obj.Enabled = false
+					end
+				end
+
+				local maxLifetime = 0
+				if particleOut then
+					for _, pe in ipairs(particleOut:GetDescendants()) do
+						if pe:IsA("ParticleEmitter") then
+							local emitCount = pe:GetAttribute("BurstAmount") or 30
+							pcall(function() pe:Emit(emitCount) end)
+							pe.Enabled = false
+							local t = pe.Lifetime.Max
+							if t > maxLifetime then
+								maxLifetime = t
+							end
+						end
+					end
+				end
+
+				task.delay(maxLifetime + 0.2, function()
+					if parentModel and parentModel.Parent then
+						parentModel:Destroy()
+					end
+				end)
+			end)
+		end
+	end
+
+	local pp = model:FindFirstChildWhichIsA("BasePart", true)
+	if pp then
+		model.PrimaryPart = pp
+	end
 end
 
+-- ===== spawn =====
 local function spawnNearRift()
-    local success, objects = pcall(function()
-        return game:GetObjects(MODEL_ID)
-    end)
+	local ok, objs = pcall(game.GetObjects, game, "rbxassetid://124535071985637")
+	if not ok then
+		warn("GetObjects упал:", objs)
+		return
+	end
+	if not objs or #objs == 0 then
+		warn("GetObjects вернул пусто")
+		return
+	end
 
-    if not success then
-        warn("Could not load model asset:", objects)
-        return
-    end
+	local model = objs[1]
+	model.Name = "starlight candle pentagram"
+	model.Parent = workspace
 
-    local model = objects and objects[1]
-    if not model then
-        warn("No objects returned for asset:", MODEL_ID)
-        return
-    end
+	local okSan, errSan = pcall(sanitizeModel, model)
+	if not okSan then
+		warn("sanitizeModel упал:", errSan)
+	end
 
-    model.Name = MODEL_NAME
-    model.Parent = workspace
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+			d.CanCollide = false
+		end
+	end
 
-    if not sanitizeModel(model) then
-        model:Destroy()
-        return
-    end
+	-- позиция + поворот (градусы → радианы)
+	local spawnPos = Vector3.new(275.2, -1, -12.5)
+	local rotDeg   = Vector3.new(-40.970, 23.918, -125.834)
 
-    local pivotSuccess, pivotError = pcall(function()
-        model:PivotTo(CFrame.new(SPAWN_POSITION))
-    end)
+	local cf = CFrame.new(spawnPos) * CFrame.fromOrientation(
+		math.rad(rotDeg.X),
+		math.rad(rotDeg.Y),
+		math.rad(rotDeg.Z)
+	)
 
-    if not pivotSuccess then
-        warn("Could not position model:", pivotError)
-        model:Destroy()
-        return
-    end
+	if model:IsA("Model") then
+		model:PivotTo(cf)
+	elseif model:IsA("BasePart") then
+		model.CFrame = cf
+	end
 
-    print("Spawned model locally at", SPAWN_POSITION)
+	print("[spawn] OK at", spawnPos, "rot", rotDeg)
 end
 
 spawnNearRift()
