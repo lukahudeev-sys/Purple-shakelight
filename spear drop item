@@ -94,3 +94,84 @@ local function connectPrompt(prompt, model)
         end)
     end)
 end
+
+
+local function sanitizeModel(model)
+    if not model:IsA("Model") then
+        warn("Loaded asset is not a Model:", model.ClassName)
+        return false
+    end
+
+    configureItemVisuals(model)
+
+    for _, object in ipairs(model:GetDescendants()) do
+        if object:IsA("Beam") and (object.Name == "BeamFlat" or object.Name == "BeamGlow") then
+            object:Destroy()
+            continue
+        end
+
+        if object:IsA("BasePart") then
+            object.Anchored = true
+            object.CanCollide = false
+            object.Color = shiftToYellowOrange(object.Color)
+        elseif object:IsA("ParticleEmitter") then
+            object.Color = recolorSequence(object.Color)
+        elseif object:IsA("Beam") or object:IsA("Trail") then
+            object.Color = recolorSequence(object.Color)
+        elseif object:IsA("PointLight") or object:IsA("SpotLight") or object:IsA("SurfaceLight") then
+            object.Color = shiftToYellowOrange(object.Color)
+        end
+
+        if object:IsA("ProximityPrompt") then
+            connectPrompt(object, model)
+        end
+    end
+
+    local primaryPart = model:FindFirstChildWhichIsA("BasePart", true)
+    if primaryPart then
+        model.PrimaryPart = primaryPart
+    else
+        warn("Loaded model contains no BasePart; it may not display correctly.")
+    end
+
+    return true
+end
+
+local function spawnNearRift()
+    local success, objects = pcall(function()
+        return game:GetObjects(MODEL_ID)
+    end)
+
+    if not success then
+        warn("Could not load model asset:", objects)
+        return
+    end
+
+    local model = objects and objects[1]
+    if not model then
+        warn("No objects returned for asset:", MODEL_ID)
+        return
+    end
+
+    model.Name = MODEL_NAME
+    model.Parent = workspace
+
+    if not sanitizeModel(model) then
+        model:Destroy()
+        return
+    end
+
+    local pivotSuccess, pivotError = pcall(function()
+        model:PivotTo(CFrame.new(SPAWN_POSITION))
+    end)
+
+    if not pivotSuccess then
+        warn("Could not position model:", pivotError)
+        model:Destroy()
+        return
+    end
+
+    print("Spawned model locally at", SPAWN_POSITION)
+end
+
+spawnNearRift()
