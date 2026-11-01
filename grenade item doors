@@ -1,0 +1,108 @@
+local v1 = game:GetObjects("rbxassetid://13106461116")[1]
+local Humanoid = game.Players.LocalPlayer.Character.Humanoid
+
+v1.Parent = game.Players.LocalPlayer.Backpack
+v1.Equipped:Connect(function()
+	Humanoid:LoadAnimation(v1.Animations.idle):Play()
+end)
+v1.Unequipped:Connect(function()
+	for _, v in pairs(Humanoid.Animator:GetPlayingAnimationTracks()) do
+		v:Stop()
+	end
+end)
+v1.Activated:Connect(function()
+	Humanoid:LoadAnimation(v1.Animations.throw):Play()
+	task.wait(0.5)
+	v1.throwsound:Play()
+
+	local Hit = game.Players.LocalPlayer:GetMouse().Hit
+	local clone = v1.Handle:Clone()
+
+	clone.Parent = game.Workspace
+	clone.Position = game.Players.LocalPlayer.Character.RightHand.Position
+
+	local BodyVelocity = Instance.new("BodyVelocity", clone)
+
+	BodyVelocity.Velocity = Hit.LookVector * 50
+	clone.CanCollide = true
+
+	local PointLight = Instance.new("PointLight")
+
+	PointLight.Brightness = 5
+	PointLight.Range = 5
+	PointLight.Parent = clone
+	task.wait(0.2)
+	BodyVelocity:Destroy()
+
+	local Sound = Instance.new("Sound")
+
+	Sound.SoundId = "rbxassetid://5699659105"
+	Sound.Volume = 10
+	Sound.TimePosition = 1
+	Sound.Parent = clone
+
+	local n1 = 0
+
+	repeat
+		Sound:Play()
+		n1 = n1 + 1
+		task.wait(0.2 + n1 / 10)
+	until n1 == 3
+
+	clone.Anchored = true
+	PointLight.Brightness = 10
+	PointLight.Range = 10
+
+	local Sound2 = Instance.new("Sound")
+
+	Sound2.SoundId = "rbxassetid://4854660190"
+	Sound2.Volume = 10
+	Sound2.Parent = clone
+	Sound2:Play()
+	Sound2.Ended:wait()
+	PointLight.Brightness = 25
+	PointLight.Range = 30
+
+	local Sound3 = Instance.new("Sound")
+
+	Sound3.SoundId = "rbxassetid://2814354338"
+	Sound3.Volume = 10
+	Sound3.Parent = clone
+	Sound3:Play()
+
+	local partBoundsInBox = game.Workspace:GetPartBoundsInBox(clone.CFrame, Vector3.new(30, 30, 30))
+	local v14, v15, v16 = ipairs(partBoundsInBox)
+	local t1 = {}
+
+	while true do
+		local v18
+
+		v16, v18 = v14(v15, v16)
+
+		if v16 == nil then
+			break
+		end
+
+		local name = v18.name
+
+		if ((string.find(name, "Wall") or string.find(name, "Floor")) and true or false) == false then
+			v18.Anchored = false
+
+			local v20 = (15 - (v18.Position - clone.Position).Magnitude) * 100
+			local BodyVelocity2 = Instance.new("BodyVelocity", v18)
+
+			BodyVelocity2.Velocity = v20 * (v18.Position - clone.Position).Unit
+			table.insert(t1, BodyVelocity2)
+			v18.CFrame = v18.CFrame * CFrame.new(math.random(1, 5), 0, math.random(1, 5))
+		end
+	end
+
+	task.wait(0.1)
+
+	for _, v in ipairs(t1) do
+		v:Destroy()
+	end
+
+	Sound3.Ended:wait()
+	clone:Destroy()
+end)
