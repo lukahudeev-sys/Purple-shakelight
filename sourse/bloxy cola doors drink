@@ -18,7 +18,7 @@ if game.GameId == 6627207668 then
     toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
     local ok, objs = pcall(function()
-        return game:GetObjects("rbxassetid://98706323894168")
+        return game:GetObjects("rbxassetid://72435488652713")
     end)
     toolNew = ok and objs and objs[1] or nil
 end
