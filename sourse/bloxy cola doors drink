@@ -7,7 +7,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://124759669702203")[1]
+	toolNew = game:GetObjects("rbxassetid://119864861756959")[1]
 end
 local drinked = false
 local CollisionLoopRunning = true
