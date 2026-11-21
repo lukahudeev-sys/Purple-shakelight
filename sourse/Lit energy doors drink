@@ -193,7 +193,7 @@ end
 
 toolNew.Parent = game.Players.LocalPlayer.Backpack
 toolNew.Name = "Viridislight Vial"
-toolNew.TextureId = "rbxassetid://78203107937345"
+toolNew.TextureId = "rbxassetid://79310862783714"
 
 toolNew.Equipped:Connect(function()
 	if game.GameId == 6627207668 then
